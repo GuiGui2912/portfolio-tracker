@@ -112,17 +112,7 @@ const INITIAL_ASSETS = [
 INITIAL_ASSETS.forEach(a => { a.histories = buildHistories(a.price); });
 
 const ASSET_COLORS = ["#F7931A","#627EEA","#A3B8C2","#76B900","#9945FF","#CC0000","#00A4EF","#E91E8C","#FFD700","#00BCD4"];
-const MOCK_BANKS = [
-  { id:"bnp", name:"BNP Paribas", color:"#00965E", logo:"BN",
-    accounts:[
-      { id:"bnp-1", label:"Compte courant", type:"checking", iban:"FR76 3000 4008 0300 0100 0000 0XX", balance:4823.50, history:[4200,4350,4100,4650,4500,4780,4600,4823] },
-      { id:"bnp-2", label:"Livret A",       type:"savings",  iban:"FR76 3000 4008 0300 0100 0000 0YY", balance:12500.00, history:[11000,11200,11500,11800,12000,12100,12300,12500] },
-    ]},
-  { id:"sg", name:"Société Générale", color:"#E60028", logo:"SG",
-    accounts:[
-      { id:"sg-1", label:"Compte courant", type:"checking", iban:"FR76 3000 3003 5000 0100 0000 0ZZ", balance:1247.80, history:[900,1100,980,1050,1200,1150,1300,1247] },
-    ]},
-];
+const MOCK_BANKS = [];
 const TINK_CONFIG = { clientId:"YOUR_TINK_CLIENT_ID", redirectUri:"https://yourapp.com/callback", market:"FR", locale:"fr_FR", scopes:"accounts:read,balances:read" };
 const ACCOUNT_TYPE_LABEL = { checking:"Compte courant", savings:"Livret / Épargne", credit:"Carte de crédit" };
 
