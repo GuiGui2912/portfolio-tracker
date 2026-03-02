@@ -1203,6 +1203,7 @@ export default function App() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [detailAsset, setDetailAsset]   = useState(null);
   const [listScale, setListScale]       = useState("1M");
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
   const dragItem    = useRef(null);
@@ -1392,6 +1393,16 @@ export default function App() {
     const { error } = await supabase.from("assets").delete().eq("id", assetId);
     if (error) console.error("deleteAsset:", error);
   };
+
+  // ── Fermer le menu profil si clic extérieur ──
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-profile-menu]")) setShowProfileMenu(false);
+    };
+    if (showProfileMenu) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showProfileMenu]);
 
   // ── Fetch prix réels ──
   useEffect(() => {
@@ -1594,8 +1605,23 @@ export default function App() {
               ))}
             </div>
             <div style={{position:"relative"}}>
-              <div style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009"}}>A</div>
+              <div onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
+                {user?.email?.[0]?.toUpperCase() ?? "A"}
+              </div>
               <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
+              {showProfileMenu && (
+                <div style={{position:"absolute",top:44,right:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:14,padding:"8px",minWidth:200,boxShadow:"0 8px 24px #000a"}}>
+                  <div style={{padding:"8px 10px 10px",borderBottom:"1px solid #252015",marginBottom:6}}>
+                    <div style={{color:"#F0EDE8",fontSize:12,fontWeight:600,fontFamily:"'DM Mono',monospace"}}>{user?.email?.split("@")[0]}</div>
+                    <div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{user?.email}</div>
+                  </div>
+                  <button onClick={handleLogout} style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#F87171",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#F8717115"}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    ⏻ Se déconnecter
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1606,13 +1632,7 @@ export default function App() {
             <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
               <div>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                  <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Valeur totale</div>
-                  <button onClick={handleLogout} title="Déconnexion" style={{background:"#1A1714",border:"1px solid #2A2520",color:"#5A5550",fontSize:9,cursor:"pointer",fontFamily:"'DM Mono',monospace",padding:"2px 7px",borderRadius:6,letterSpacing:0.5}}
-                    onMouseEnter={e=>e.currentTarget.style.color="#F87171"} onMouseLeave={e=>e.currentTarget.style.color="#5A5550"}>
-                    ⏻ {user?.email?.split("@")[0]}
-                  </button>
-                </div>
+                <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
                 <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
               </div>
               <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
