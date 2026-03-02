@@ -1156,16 +1156,8 @@ function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }: { ban
       {banks.map(bank => (
         <BankCard key={bank.id} bank={bank} onRemove={onRemove} expandedAccount={expandedAccount} setExpandedAccount={setExpandedAccount}/>
       ))}
-      <div style={{margin:"4px 20px 0"}}>
-        <button onClick={handleTinkConnect} style={{width:"100%",background:"transparent",border:"1.5px dashed #2A3A2A",borderRadius:18,padding:"16px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-          <div style={{width:32,height:32,borderRadius:10,background:"#1A2A1A",border:"1px solid #2A4A2A",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#4ADE80" strokeWidth="2" strokeLinecap="round"/></svg>
-          </div>
-          <div style={{textAlign:"left"}}>
-            <div style={{color:"#4ADE80",fontSize:13,fontWeight:600}}>Connecter une banque</div>
-            <div style={{color:"#3A5A40",fontSize:10,marginTop:1}}>via Tink Link · PSD2 · chiffrement bancaire</div>
-          </div>
-        </button>
+      <div style={{margin:"4px 20px 0",padding:"16px",textAlign:"center"}}>
+        <div style={{color:"#3A3530",fontSize:11,fontFamily:"'DM Mono',monospace"}}>Connexion bancaire — bientôt disponible</div>
       </div>
     </div>
   );
@@ -1584,23 +1576,14 @@ export default function App() {
 
         {/* Header */}
         <div style={{padding:"12px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div>
-            <div style={{color:"#5A5550",fontSize:11,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Bonjour 👋</div>
-            <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,marginTop:2,letterSpacing:-0.3}}>Mon Portefeuille</div>
-          </div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
-              {["USD","EUR"].map(c=>(
-                <button key={c} onClick={()=>setCurrency(c)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:currency===c?"#C8A96E":"transparent",color:currency===c?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{c}</button>
-              ))}
-            </div>
             <div style={{position:"relative"}}>
               <div onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
                 {user?.email?.[0]?.toUpperCase() ?? "A"}
               </div>
               <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
               {showProfileMenu && (
-                <div style={{position:"absolute",top:44,right:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:14,padding:"8px",minWidth:200,boxShadow:"0 8px 24px #000a"}}>
+                <div style={{position:"absolute",top:44,left:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:14,padding:"8px",minWidth:200,boxShadow:"0 8px 24px #000a"}}>
                   <div style={{padding:"8px 10px 10px",borderBottom:"1px solid #252015",marginBottom:6}}>
                     <div style={{color:"#F0EDE8",fontSize:12,fontWeight:600,fontFamily:"'DM Mono',monospace"}}>{user?.email?.split("@")[0]}</div>
                     <div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{user?.email}</div>
@@ -1613,6 +1596,12 @@ export default function App() {
                 </div>
               )}
             </div>
+            <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>Mon Portefeuille</div>
+          </div>
+          <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
+            {["USD","EUR"].map(c=>(
+              <button key={c} onClick={()=>setCurrency(c)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:currency===c?"#C8A96E":"transparent",color:currency===c?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{c}</button>
+            ))}
           </div>
         </div>
 
