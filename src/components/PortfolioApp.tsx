@@ -1542,7 +1542,7 @@ export default function App() {
   );
 
   return (
-    <div style={{fontFamily:"'DM Sans',sans-serif",background:"#0A0906",minHeight:"100vh",display:"flex",justifyContent:"center",alignItems:"flex-start",padding:"32px 16px"}}>
+    <div style={{fontFamily:"'DM Sans',sans-serif",background:"#0A0906",height:"100vh",width:"100vw",display:"flex",justifyContent:"center",alignItems:"center",overflow:"hidden"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
@@ -1560,12 +1560,12 @@ export default function App() {
         .add-btn{transition:transform 0.15s,box-shadow 0.15s;}
       `}</style>
 
-      <div style={{width:390,background:"#151210",borderRadius:50,overflow:"hidden",boxShadow:"0 50px 150px #000c, 0 0 0 1px #2A2520, inset 0 1px 0 #3A3528",minHeight:844,position:"relative"}}>
+      <div style={{width:"100%",maxWidth:430,background:"#151210",borderRadius:0,overflow:"hidden",height:"100vh",position:"relative",display:"flex",flexDirection:"column"}}>
 
         {/* Status bar */}
-        <div style={{height:50,background:"#111009",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 28px",fontSize:12,fontWeight:600,color:"#8B8580",fontFamily:"'DM Mono',monospace",position:"relative"}}>
-          <span>9:41</span>
-          <div style={{width:126,height:34,background:"#0A0906",borderRadius:20,position:"absolute",left:"50%",transform:"translateX(-50%)",border:"2px solid #1A1714"}}/>
+        <div style={{height:0,background:"#111009",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 28px",fontSize:12,fontWeight:600,color:"#8B8580",fontFamily:"'DM Mono',monospace",position:"relative"}}>
+          <span></span>
+          <div style={{display:"none"}}/>
           <div style={{display:"flex",gap:5,alignItems:"center"}}>
             <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="4" width="3" height="8" rx="1" fill="#5A5550"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#5A5550"/><rect x="9" y="1" width="3" height="11" rx="1" fill="#8B8580"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#F0EDE8"/></svg>
             <div style={{width:27,height:13,borderRadius:3,border:"1.5px solid #5A5550",padding:"2px 2.5px",display:"flex",alignItems:"center"}}>
@@ -1638,7 +1638,7 @@ export default function App() {
         )}
 
         {/* Content */}
-        <div style={{minHeight:380,overflowY:"auto",paddingBottom:100}}>
+        <div style={{flex:1,overflowY:"auto",paddingBottom:100}}>
 
           {/* ── ACTIFS ── */}
           {tab===0 && (
