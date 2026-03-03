@@ -1186,6 +1186,11 @@ export default function App() {
   const [detailAsset, setDetailAsset]   = useState(null);
   const [listScale, setListScale]       = useState("1M");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [portfolioName, setPortfolioName]     = useState("Mon Portefeuille");
+  const [profileName, setProfileName]         = useState("");
+  const [editPortfolioName, setEditPortfolioName] = useState("");
+  const [editProfileName, setEditProfileName]     = useState("");
   const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
   const dragItem    = useRef(null);
@@ -1575,12 +1580,26 @@ export default function App() {
               </div>
               <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
               {showProfileMenu && (
-                <div style={{position:"absolute",top:44,left:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:14,padding:"8px",minWidth:200,boxShadow:"0 8px 24px #000a"}}>
-                  <div style={{padding:"8px 10px 10px",borderBottom:"1px solid #252015",marginBottom:6}}>
-                    <div style={{color:"#F0EDE8",fontSize:12,fontWeight:600,fontFamily:"'DM Mono',monospace"}}>{user?.email?.split("@")[0]}</div>
-                    <div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{user?.email}</div>
+                <div style={{position:"absolute",top:44,left:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:16,padding:"8px",minWidth:220,boxShadow:"0 8px 24px #000a"}}>
+                  {/* Avatar + nom */}
+                  <div style={{padding:"10px 10px 12px",borderBottom:"1px solid #252015",marginBottom:4,display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{width:40,height:40,borderRadius:20,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#111009",flexShrink:0}}>
+                      {profileName ? profileName[0].toUpperCase() : user?.email?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600}}>{profileName || user?.email?.split("@")[0]}</div>
+                      <div style={{color:"#4A4540",fontSize:10,marginTop:1}}>{user?.email}</div>
+                    </div>
                   </div>
-                  <button onClick={handleLogout} style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#F87171",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
+                  {/* Options */}
+                  <button onClick={()=>{setShowProfileEdit(true);setShowProfileMenu(false);setEditProfileName(profileName);setEditPortfolioName(portfolioName);}}
+                    style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#C8A96E",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#C8A96E10"}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    ✏️ Modifier le profil
+                  </button>
+                  <button onClick={handleLogout}
+                    style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#F87171",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
                     onMouseEnter={e=>e.currentTarget.style.background="#F8717115"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                     ⏻ Se déconnecter
@@ -1588,7 +1607,7 @@ export default function App() {
                 </div>
               )}
             </div>
-            <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>Mon Portefeuille</div>
+            <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
           </div>
           <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
             {["USD","EUR"].map(c=>(
@@ -1902,6 +1921,37 @@ export default function App() {
           ))}
         </div>
       </div>
+
+      {/* Profile Edit Modal */}
+      {showProfileEdit && (
+        <div style={{position:"fixed",inset:0,zIndex:2000,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowProfileEdit(false)}>
+          <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"24px 20px 40px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"0 auto 20px"}}/>
+            <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:20}}>Modifier le profil</div>
+            {/* Nom d'affichage */}
+            <div style={{marginBottom:14}}>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:6,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Nom d'affichage</div>
+              <input value={editProfileName} onChange={e=>setEditProfileName(e.target.value)}
+                placeholder={user?.email?.split("@")[0]}
+                style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            </div>
+            {/* Nom du portefeuille */}
+            <div style={{marginBottom:20}}>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:6,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Nom du portefeuille</div>
+              <input value={editPortfolioName} onChange={e=>setEditPortfolioName(e.target.value)}
+                placeholder="Mon Portefeuille"
+                style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            </div>
+            <button onClick={()=>{
+              if(editProfileName) setProfileName(editProfileName);
+              if(editPortfolioName) setPortfolioName(editPortfolioName);
+              setShowProfileEdit(false);
+            }} style={{width:"100%",background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              Enregistrer
+            </button>
+          </div>
+        </div>
+      )}
 
       {showAddModal && <AddAssetModal onClose={()=>setShowAddModal(false)} onAdd={handleAddAsset}/>}
       {syncedDetailAsset && (
