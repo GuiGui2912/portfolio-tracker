@@ -1629,6 +1629,58 @@ export default function App() {
           </div>
         )}
 
+        {/* Fixed toolbar for Marchés */}
+        {tab===1 && (
+          <div style={{padding:"8px 20px 10px",background:"#151210"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
+                <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                  {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
+                  ))}
+                </div>
+                <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
+                <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fixed toolbar for Actifs */}
+        {tab===0 && (
+          <div style={{padding:"8px 20px 6px",background:"#151210"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
+                <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                  {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>setDragMode(d=>!d)} title="Réorganiser" style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
+                </button>
+                <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
+              {TIME_SCALES.map(ts => {
+                const active = listScale === ts.label;
+                return (
+                  <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:"none",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s",border:active?"1px solid #C8A96E35":"1px solid transparent"}}>{ts.label}</button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         </div>{/* end fixed top */}
 
         {/* Scrollable content */}
@@ -1637,35 +1689,6 @@ export default function App() {
           {/* ── ACTIFS ── */}
           {tab===0 && (
             <div className="fadein">
-              <div style={{padding:"0 20px 8px"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
-                    <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                      {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
-                        <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{display:"flex",gap:6}}>
-                    <button onClick={()=>setDragMode(d=>!d)} title="Réorganiser" style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
-                    </button>
-                    <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
-                    </button>
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
-                  {TIME_SCALES.map(ts => {
-                    const active = listScale === ts.label;
-                    return (
-                      <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:"none",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s",border:active?"1px solid #C8A96E35":"1px solid transparent"}}>{ts.label}</button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {viewMode === "grouped" ? (
                 assets.map((a, idx) => {
                   const scaleData  = a.histories?.[listScale] || [a.price];
@@ -1810,25 +1833,6 @@ export default function App() {
           {/* ── MARCHÉS ── */}
           {tab===1 && (
             <div className="fadein" style={{padding:"0 20px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
-                  <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                    {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                    ))}
-                  </div>
-                  <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>
-                    ⠿
-                  </button>
-                  <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>
-                    + Ajouter
-                  </button>
-                </div>
-              </div>
 
               {/* Barre d'ajout */}
               {showMktAdd && (
