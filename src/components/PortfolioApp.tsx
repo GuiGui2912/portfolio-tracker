@@ -1576,12 +1576,12 @@ export default function App() {
         <div style={{padding:"12px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{position:"relative"}}>
-              <div onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
+              <div data-profile-menu onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
                 {user?.email?.[0]?.toUpperCase() ?? "A"}
               </div>
               <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
               {showProfileMenu && (
-                <div style={{position:"absolute",top:44,left:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:16,padding:"8px",minWidth:220,boxShadow:"0 8px 24px #000a"}}>
+                <div data-profile-menu style={{position:"absolute",top:44,left:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:16,padding:"8px",minWidth:220,boxShadow:"0 8px 24px #000a"}}>
                   {/* Avatar + nom */}
                   <div style={{padding:"10px 10px 12px",borderBottom:"1px solid #252015",marginBottom:4,display:"flex",alignItems:"center",gap:10}}>
                     <div style={{width:40,height:40,borderRadius:20,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#111009",flexShrink:0}}>
