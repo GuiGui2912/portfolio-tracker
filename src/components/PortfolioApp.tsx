@@ -1194,6 +1194,7 @@ export default function App() {
   const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
   const dragItem    = useRef(null);
+  const swipeStartX = useRef(0);
   const dragOverItem = useRef(null);
   const dragMktItem    = useRef(null);
   const dragMktOverItem = useRef(null);
@@ -1588,11 +1589,11 @@ export default function App() {
                     </div>
                     <div>
                       <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600}}>{profileName || user?.email?.split("@")[0]}</div>
-                      <div style={{color:"#4A4540",fontSize:10,marginTop:1}}>{user?.email}</div>
+                      <div style={{color:"#4A4540",fontSize:10,marginTop:1,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.email}</div>
                     </div>
                   </div>
                   {/* Options */}
-                  <button onClick={()=>{setShowProfileEdit(true);setShowProfileMenu(false);setEditProfileName(profileName);setEditPortfolioName(portfolioName);}}
+                  <button onClick={()=>{setEditProfileName(profileName);setEditPortfolioName(portfolioName);setShowProfileMenu(false);setTimeout(()=>setShowProfileEdit(true),50);}}
                     style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#C8A96E",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
                     onMouseEnter={e=>e.currentTarget.style.background="#C8A96E10"}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
@@ -1703,7 +1704,15 @@ export default function App() {
         </div>{/* end fixed top */}
 
         {/* Scrollable content */}
-        <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}>
+        <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}
+          onTouchStart={e=>{ swipeStartX.current = e.touches[0].clientX; }}
+          onTouchEnd={e=>{
+            const dx = e.changedTouches[0].clientX - swipeStartX.current;
+            if (Math.abs(dx) > 60) {
+              if (dx < 0 && tab < 2) { setTab(tab+1); setDetailAsset(null); }
+              if (dx > 0 && tab > 0) { setTab(tab-1); setDetailAsset(null); }
+            }
+          }}>
 
           {/* ── ACTIFS ── */}
           {tab===0 && (
