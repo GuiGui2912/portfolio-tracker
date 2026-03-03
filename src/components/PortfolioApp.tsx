@@ -1562,17 +1562,9 @@ export default function App() {
 
       <div style={{width:"100%",maxWidth:430,background:"#151210",borderRadius:0,overflow:"hidden",height:"100vh",position:"relative",display:"flex",flexDirection:"column"}}>
 
-        {/* Status bar */}
-        <div style={{height:0,background:"#111009",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 28px",fontSize:12,fontWeight:600,color:"#8B8580",fontFamily:"'DM Mono',monospace",position:"relative"}}>
-          <span></span>
-          <div style={{display:"none"}}/>
-          <div style={{display:"flex",gap:5,alignItems:"center"}}>
-            <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="4" width="3" height="8" rx="1" fill="#5A5550"/><rect x="4.5" y="2.5" width="3" height="9.5" rx="1" fill="#5A5550"/><rect x="9" y="1" width="3" height="11" rx="1" fill="#8B8580"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#F0EDE8"/></svg>
-            <div style={{width:27,height:13,borderRadius:3,border:"1.5px solid #5A5550",padding:"2px 2.5px",display:"flex",alignItems:"center"}}>
-              <div style={{background:"#4ADE80",borderRadius:2,height:"100%",width:"70%"}}/>
-            </div>
-          </div>
-        </div>
+        {/* Fixed top section */}
+        <div style={{flexShrink:0}}>
+
 
         {/* Header */}
         <div style={{padding:"12px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1637,8 +1629,10 @@ export default function App() {
           </div>
         )}
 
-        {/* Content */}
-        <div style={{flex:1,overflowY:"auto",paddingBottom:100}}>
+        </div>{/* end fixed top */}
+
+        {/* Scrollable content */}
+        <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}>
 
           {/* ── ACTIFS ── */}
           {tab===0 && (
@@ -1894,7 +1888,7 @@ export default function App() {
         </div>
 
         {/* Bottom Nav */}
-        <div style={{position:"absolute",bottom:0,left:0,right:0,background:"#111009EE",borderTop:"1px solid #1E1B16",padding:"10px 0 26px",display:"flex",justifyContent:"space-around",backdropFilter:"blur(24px)"}}>
+        <div style={{flexShrink:0,background:"#111009EE",borderTop:"1px solid #1E1B16",padding:"10px 0 26px",display:"flex",justifyContent:"space-around",backdropFilter:"blur(24px)"}}>
           {navItems.map(({label,i,icon})=>(
             <button key={label} onClick={()=>{setTab(i);setDetailAsset(null);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",color:tab===i?(i===2?"#4ADE80":"#C8A96E"):"#2A2720",transition:"color 0.2s",fontFamily:"'DM Sans',sans-serif",padding:"0 8px"}}>
               {icon}
