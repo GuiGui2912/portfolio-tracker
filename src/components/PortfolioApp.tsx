@@ -1187,6 +1187,10 @@ export default function App() {
   const [listScale, setListScale]       = useState("1M");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [portfolios, setPortfolios]           = useState([{id:"default", name:"Mon Portefeuille"}]);
+  const [activePortfolioId, setActivePortfolioId] = useState("default");
+  const [showAddPortfolio, setShowAddPortfolio]   = useState(false);
+  const [newPortfolioName, setNewPortfolioName]   = useState("");
   const [portfolioName, setPortfolioName]     = useState("Mon Portefeuille");
   const [profileName, setProfileName]         = useState("");
   const [editPortfolioName, setEditPortfolioName] = useState("");
@@ -1591,6 +1595,51 @@ export default function App() {
                       <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600}}>{profileName || user?.email?.split("@")[0]}</div>
                       <div style={{color:"#4A4540",fontSize:10,marginTop:1,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.email}</div>
                     </div>
+                  </div>
+                  {/* Portefeuilles */}
+                  <div style={{padding:"8px 10px 4px",borderBottom:"1px solid #252015",marginBottom:4}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{color:"#6A6560",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Portefeuilles</div>
+                      <button onClick={()=>setShowAddPortfolio(v=>!v)} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:6,padding:"2px 8px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+</button>
+                    </div>
+                    {showAddPortfolio && (
+                      <div style={{display:"flex",gap:6,marginBottom:8}}>
+                        <input value={newPortfolioName} onChange={e=>setNewPortfolioName(e.target.value)}
+                          placeholder="Nom du portefeuille" autoFocus
+                          onKeyDown={e=>{
+                            if(e.key==="Enter" && newPortfolioName.trim()) {
+                              const id = Date.now().toString();
+                              setPortfolios(p=>[...p,{id,name:newPortfolioName.trim()}]);
+                              setNewPortfolioName(""); setShowAddPortfolio(false);
+                            }
+                          }}
+                          style={{flex:1,background:"#0E0D0A",border:"1px solid #252015",borderRadius:8,padding:"6px 10px",color:"#F0EDE8",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+                        <button onClick={()=>{
+                          if(newPortfolioName.trim()){
+                            const id = Date.now().toString();
+                            setPortfolios(p=>[...p,{id,name:newPortfolioName.trim()}]);
+                            setNewPortfolioName(""); setShowAddPortfolio(false);
+                          }
+                        }} style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"6px 10px",color:"#111009",fontSize:11,fontWeight:700,cursor:"pointer"}}>OK</button>
+                      </div>
+                    )}
+                    {portfolios.map(p=>(
+                      <div key={p.id} onClick={()=>{setActivePortfolioId(p.id);setPortfolioName(p.name);}}
+                        style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 8px",borderRadius:8,cursor:"pointer",background:activePortfolioId===p.id?"#C8A96E15":"transparent",marginBottom:2,transition:"background 0.15s"}}
+                        onMouseEnter={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"#1E1B16"}
+                        onMouseLeave={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"transparent"}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          {activePortfolioId===p.id && <div style={{width:4,height:4,borderRadius:2,background:"#C8A96E"}}/>}
+                          <span style={{color:activePortfolioId===p.id?"#C8A96E":"#8A8580",fontSize:12,fontWeight:activePortfolioId===p.id?600:400}}>{p.name}</span>
+                        </div>
+                        {portfolios.length > 1 && p.id !== "default" && (
+                          <button onClick={e=>{e.stopPropagation();setPortfolios(prev=>prev.filter(x=>x.id!==p.id));if(activePortfolioId===p.id){setActivePortfolioId("default");setPortfolioName(portfolios[0].name);}}}
+                            style={{background:"transparent",border:"none",color:"#3A3530",fontSize:12,cursor:"pointer",padding:"0 4px"}}
+                            onMouseEnter={e=>e.currentTarget.style.color="#F87171"}
+                            onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✕</button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                   {/* Options */}
                   <button onClick={()=>{setEditProfileName(profileName);setEditPortfolioName(portfolioName);setShowProfileMenu(false);setTimeout(()=>setShowProfileEdit(true),50);}}
