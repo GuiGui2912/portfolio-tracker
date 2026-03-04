@@ -1280,6 +1280,14 @@ export default function App() {
 
   // ── Supabase : charger les actifs ──
   useEffect(() => {
+    // Load persisted profile data
+    const savedPortfolios = localStorage.getItem("portfolios");
+    const savedProfileName = localStorage.getItem("profileName");
+    const savedActivePortfolio = localStorage.getItem("activePortfolioId");
+    if (savedPortfolios) { try { setPortfolios(JSON.parse(savedPortfolios)); } catch(e){} }
+    if (savedProfileName) setProfileName(savedProfileName);
+    if (savedActivePortfolio) setActivePortfolioId(savedActivePortfolio);
+
     const loadAssets = async () => {
       setDbLoading(true);
       try {
@@ -1291,6 +1299,7 @@ export default function App() {
           .from("assets")
           .select("*")
           .eq("user_id", user.id)
+          .eq("portfolio_id", localStorage.getItem("activePortfolioId") || "default")
           .order("created_at", { ascending: true });
         if (error) { console.error("Supabase load:", error); setDbLoading(false); return; }
         if (data && data.length > 0) {
@@ -1368,6 +1377,7 @@ export default function App() {
     const row = {
       id:              asset.id,
       user_id:         userId,
+      portfolio_id:    activePortfolioId,
       symbol:          asset.symbol,
       name:            asset.name,
       type:            asset.type,
@@ -1397,6 +1407,19 @@ export default function App() {
     if (showProfileMenu) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showProfileMenu]);
+
+  // ── Persister profil ──
+  useEffect(() => {
+    localStorage.setItem("portfolios", JSON.stringify(portfolios));
+  }, [portfolios]);
+
+  useEffect(() => {
+    localStorage.setItem("profileName", profileName);
+  }, [profileName]);
+
+  useEffect(() => {
+    localStorage.setItem("activePortfolioId", activePortfolioId);
+  }, [activePortfolioId]);
 
   // ── Fetch prix réels ──
   useEffect(() => {
@@ -1638,7 +1661,26 @@ export default function App() {
                               style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"5px 10px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
                           </div>
                         ) : (
-                          <div onClick={()=>{setActivePortfolioId(p.id);setPortfolioName(p.name);setAssets([]);setChartAsset(null);}}
+                          <div onClick={async ()=>{
+                              setActivePortfolioId(p.id);
+                              setPortfolioName(p.name);
+                              setDbLoading(true);
+                              const { data } = await supabase.from("assets").select("*")
+                                .eq("user_id", userId)
+                                .eq("portfolio_id", p.id)
+                                .order("created_at", { ascending: true });
+                              if (data && data.length > 0) {
+                                const loaded = data.map(row => ({
+                                  id: row.id, symbol: row.symbol, name: row.name, type: row.type,
+                                  qty: Number(row.qty), price: Number(row.current_price),
+                                  change: Number(row.price_change_24h ?? 0), color: row.color,
+                                  dividends: [], histories: buildHistories(Number(row.current_price)),
+                                  purchase: row.purchase_data ?? null,
+                                }));
+                                setAssets(loaded); setChartAsset(loaded[0]);
+                              } else { setAssets([]); setChartAsset(null); }
+                              setDbLoading(false);
+                            }}
                             style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 8px",borderRadius:8,cursor:"pointer",background:activePortfolioId===p.id?"#C8A96E15":"transparent",transition:"background 0.15s"}}
                             onMouseEnter={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"#1E1B16"}
                             onMouseLeave={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"transparent"}>
