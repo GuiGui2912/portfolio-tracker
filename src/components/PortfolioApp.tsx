@@ -1609,91 +1609,7 @@ export default function App() {
                   {user?.email?.[0]?.toUpperCase()??"A"}
                 </div>
                 <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
-                {showProfileMenu && (
-                  <div data-profile-menu style={{position:"fixed",inset:0,zIndex:500,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowProfileMenu(false)}>
-                  <div data-profile-menu style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"8px 8px calc(24px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",boxShadow:"0 -8px 32px #000d",maxHeight:"85vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-                  <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"8px auto 16px"}}/>
-                    <div style={{padding:"10px 10px 12px",borderBottom:"1px solid #252015",marginBottom:4,display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{width:40,height:40,borderRadius:20,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#111009",flexShrink:0}}>
-                        {profileName?profileName[0].toUpperCase():user?.email?.[0]?.toUpperCase()}
-                      </div>
-                      <div>
-                        <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600}}>{profileName||user?.email?.split("@")[0]}</div>
-                        <div style={{color:"#4A4540",fontSize:10,marginTop:1,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.email}</div>
-                      </div>
-                    </div>
-                    {/* Portefeuilles */}
-                    <div style={{padding:"8px 10px 4px",borderBottom:"1px solid #252015",marginBottom:4}}>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-                        <div style={{color:"#6A6560",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Portefeuilles</div>
-                        <button onClick={()=>setShowAddPortfolio(v=>!v)} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:6,padding:"2px 8px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+</button>
-                      </div>
-                      {showAddPortfolio && (
-                        <div style={{display:"flex",gap:6,marginBottom:8}}>
-                          <input value={newPortfolioName} onChange={e=>setNewPortfolioName(e.target.value)} placeholder="Nom du portefeuille" autoFocus
-                            onKeyDown={async e=>{if(e.key==="Enter"&&newPortfolioName.trim()&&userId){await createPortfolio(newPortfolioName.trim(),userId);setNewPortfolioName("");setShowAddPortfolio(false);}}}
-                            style={{flex:1,background:"#0E0D0A",border:"1px solid #252015",borderRadius:8,padding:"6px 10px",color:"#F0EDE8",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-                          <button onClick={async()=>{if(newPortfolioName.trim()&&userId){await createPortfolio(newPortfolioName.trim(),userId);setNewPortfolioName("");setShowAddPortfolio(false);}}}
-                            style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"6px 10px",color:"#111009",fontSize:11,fontWeight:700,cursor:"pointer"}}>OK</button>
-                        </div>
-                      )}
-                      {portfolios.map(p=>(
-                        <div key={p.id} style={{marginBottom:2}}>
-                          {editingPortfolioId===p.id ? (
-                            <div style={{display:"flex",gap:6,padding:"4px 0"}}>
-                              <input value={editingPortfolioName} onChange={e=>setEditingPortfolioName(e.target.value)} autoFocus
-                                onKeyDown={async e=>{if(e.key==="Enter"&&userId){await renamePortfolioInDB(p.id,editingPortfolioName,userId);setEditingPortfolioId(null);}}}
-                                style={{flex:1,background:"#0E0D0A",border:"1px solid #C8A96E40",borderRadius:8,padding:"5px 9px",color:"#F0EDE8",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-                              <button onClick={async()=>{if(userId){await renamePortfolioInDB(p.id,editingPortfolioName,userId);setEditingPortfolioId(null);}}}
-                                style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"5px 10px",color:"#111009",fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
-                              <button onClick={()=>setEditingPortfolioId(null)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"5px 10px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
-                            </div>
-                          ) : (
-                            <div onClick={(e)=>{
-                                e.stopPropagation();
-                                setShowProfileMenu(false);
-                                switchPortfolio(p.id, p.name);
-                              }}
-                              style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 8px",borderRadius:8,cursor:"pointer",background:activePortfolioId===p.id?"#C8A96E15":"transparent",transition:"background 0.15s"}}
-                              onMouseEnter={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"#1E1B16"}
-                              onMouseLeave={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"transparent"}>
-                              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                                {activePortfolioId===p.id&&<div style={{width:4,height:4,borderRadius:2,background:"#C8A96E",flexShrink:0}}/>}
-                                <span style={{color:activePortfolioId===p.id?"#C8A96E":"#8A8580",fontSize:12,fontWeight:activePortfolioId===p.id?600:400}}>{p.name}</span>
-                              </div>
-                              <div style={{display:"flex",gap:4}}>
-                                <button onClick={e=>{e.stopPropagation();setEditingPortfolioId(p.id);setEditingPortfolioName(p.name);}}
-                                  style={{background:"transparent",border:"none",color:"#3A3530",fontSize:11,cursor:"pointer",padding:"0 4px"}}
-                                  onMouseEnter={e=>e.currentTarget.style.color="#C8A96E"} onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✏️</button>
-                                {portfolios.length>1&&(
-                                  <button onClick={async e=>{e.stopPropagation();if(userId)await deletePortfolioFromDB(p.id,userId);}}
-                                    style={{background:"transparent",border:"none",color:"#3A3530",fontSize:12,cursor:"pointer",padding:"0 4px"}}
-                                    onMouseEnter={e=>e.currentTarget.style.color="#F87171"} onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✕</button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={()=>{setEditProfileName(profileName);setEditPortfolioName(portfolioName);setShowProfileMenu(false);setTimeout(()=>setShowProfileEdit(true),50);}}
-                      style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#C8A96E",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="#C8A96E10"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      ✏️ Modifier le profil
-                    </button>
-                    <button onClick={()=>{setShowProfileMenu(false);setTimeout(()=>setShowSettings(true),50);}}
-                      style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#8A8580",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="#FFFFFF08"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      ⚙️ Paramètres
-                    </button>
-                    <button onClick={handleLogout}
-                      style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#F87171",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
-                      onMouseEnter={e=>e.currentTarget.style.background="#F8717115"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      ⏻ Se déconnecter
-                    </button>
-                  </div>
-                  </div>
-                )}
+
               </div>
               <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
             </div>
@@ -2067,6 +1983,74 @@ export default function App() {
         </div>
       </div>
 
+      {/* ── Menu Profil (bottom sheet) ── */}
+      {showProfileMenu && (
+        <div style={{position:"fixed",inset:0,zIndex:1000,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowProfileMenu(false)}>
+          <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"0 0 calc(16px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",boxShadow:"0 -8px 32px #000d",maxHeight:"85vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            {/* Poignée */}
+            <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"12px auto 0",flexShrink:0}}/>
+            {/* Header user */}
+            <div style={{padding:"16px 20px 14px",borderBottom:"1px solid #252015",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
+              <div style={{width:44,height:44,borderRadius:22,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700,color:"#111009",flexShrink:0}}>
+                {profileName?profileName[0].toUpperCase():user?.email?.[0]?.toUpperCase()}
+              </div>
+              <div>
+                <div style={{color:"#F0EDE8",fontSize:14,fontWeight:600}}>{profileName||user?.email?.split("@")[0]}</div>
+                <div style={{color:"#4A4540",fontSize:11,marginTop:2}}>{user?.email}</div>
+              </div>
+            </div>
+            {/* Liste portefeuilles scrollable */}
+            <div style={{overflowY:"auto",flex:1,padding:"12px 12px 4px"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,padding:"0 4px"}}>
+                <div style={{color:"#6A6560",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Portefeuilles</div>
+                <button onClick={()=>setShowAddPortfolio(v=>!v)} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:6,padding:"2px 8px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+</button>
+              </div>
+              {showAddPortfolio && (
+                <div style={{display:"flex",gap:6,marginBottom:8}}>
+                  <input value={newPortfolioName} onChange={e=>setNewPortfolioName(e.target.value)} placeholder="Nom du portefeuille" autoFocus
+                    onKeyDown={async e=>{if(e.key==="Enter"&&newPortfolioName.trim()&&userId){await createPortfolio(newPortfolioName.trim(),userId);setNewPortfolioName("");setShowAddPortfolio(false);}}}
+                    style={{flex:1,background:"#0E0D0A",border:"1px solid #252015",borderRadius:8,padding:"6px 10px",color:"#F0EDE8",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+                  <button onClick={async()=>{if(newPortfolioName.trim()&&userId){await createPortfolio(newPortfolioName.trim(),userId);setNewPortfolioName("");setShowAddPortfolio(false);}}}
+                    style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"6px 10px",color:"#111009",fontSize:12,fontWeight:700,cursor:"pointer"}}>OK</button>
+                </div>
+              )}
+              {portfolios.map(p=>(
+                <div key={p.id} style={{marginBottom:4}}>
+                  {editingPortfolioId===p.id ? (
+                    <div style={{display:"flex",gap:6}}>
+                      <input value={editingPortfolioName} onChange={e=>setEditingPortfolioName(e.target.value)} autoFocus
+                        onKeyDown={async e=>{if(e.key==="Enter"&&userId){await renamePortfolioInDB(p.id,editingPortfolioName,userId);setEditingPortfolioId(null);}}}
+                        style={{flex:1,background:"#0E0D0A",border:"1px solid #C8A96E40",borderRadius:8,padding:"6px 10px",color:"#F0EDE8",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+                      <button onClick={async()=>{if(userId){await renamePortfolioInDB(p.id,editingPortfolioName,userId);setEditingPortfolioId(null);}}} style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"6px 10px",color:"#111009",fontSize:12,fontWeight:700,cursor:"pointer"}}>✓</button>
+                      <button onClick={()=>setEditingPortfolioId(null)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"6px 10px",color:"#5A5550",fontSize:12,cursor:"pointer"}}>✕</button>
+                    </div>
+                  ) : (
+                    <div onClick={(e)=>{e.stopPropagation();setShowProfileMenu(false);switchPortfolio(p.id,p.name);}}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",borderRadius:10,cursor:"pointer",background:activePortfolioId===p.id?"#C8A96E18":"#0E0D0A",border:`1px solid ${activePortfolioId===p.id?"#C8A96E40":"#1E1B16"}`}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        {activePortfolioId===p.id&&<div style={{width:6,height:6,borderRadius:3,background:"#C8A96E",flexShrink:0}}/>}
+                        <span style={{color:activePortfolioId===p.id?"#C8A96E":"#8A8580",fontSize:13,fontWeight:activePortfolioId===p.id?600:400}}>{p.name}</span>
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={e=>{e.stopPropagation();setEditingPortfolioId(p.id);setEditingPortfolioName(p.name);}} style={{background:"transparent",border:"none",color:"#3A3530",fontSize:13,cursor:"pointer",padding:"0 4px"}} onMouseEnter={e=>e.currentTarget.style.color="#C8A96E"} onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✏️</button>
+                        {portfolios.length>1&&<button onClick={async e=>{e.stopPropagation();if(userId)await deletePortfolioFromDB(p.id,userId);}} style={{background:"transparent",border:"none",color:"#3A3530",fontSize:13,cursor:"pointer",padding:"0 4px"}} onMouseEnter={e=>e.currentTarget.style.color="#F87171"} onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✕</button>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Bouton Paramètres */}
+            <div style={{padding:"8px 12px 0",borderTop:"1px solid #252015",flexShrink:0}}>
+              <button onClick={()=>{setShowProfileMenu(false);setTimeout(()=>setShowSettings(true),100);}}
+                style={{width:"100%",background:"#1E1B16",border:"1px solid #2A2520",borderRadius:12,padding:"14px 16px",color:"#F0EDE8",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:10,fontFamily:"'DM Sans',sans-serif"}}>
+                <span style={{fontSize:18}}>⚙️</span> Paramètres
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Profile Edit Modal */}
       {showProfileEdit && (
         <div style={{position:"fixed",inset:0,zIndex:2000,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowProfileEdit(false)}>
@@ -2091,42 +2075,56 @@ export default function App() {
       {/* Paramètres */}
       {showSettings && (
         <div style={{position:"fixed",inset:0,zIndex:2000,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowSettings(false)}>
-          <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"24px 20px 48px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
-            <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"0 auto 20px"}}/>
-            <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:24}}>⚙️ Paramètres</div>
+          <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"0 0 calc(24px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"12px auto 0",flexShrink:0}}/>
+            <div style={{padding:"20px 20px 16px",borderBottom:"1px solid #252015",flexShrink:0}}>
+              <div style={{color:"#F0EDE8",fontSize:18,fontWeight:700}}>⚙️ Paramètres</div>
+            </div>
 
-            {/* Durée de session */}
-            <div style={{marginBottom:8}}>
-              <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Durée de connexion</div>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {[
-                  {value:"1h",   label:"1 heure"},
-                  {value:"6h",   label:"6 heures"},
-                  {value:"12h",  label:"12 heures"},
-                  {value:"24h",  label:"24 heures"},
-                  {value:"always",label:"Toujours connecté"},
-                ].map(opt=>(
-                  <div key={opt.value} onClick={()=>{setSessionDuration(opt.value);try{localStorage.setItem("sessionDuration",opt.value);}catch{}}}
-                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:12,background:sessionDuration===opt.value?"#C8A96E15":"#0E0D0A",border:`1px solid ${sessionDuration===opt.value?"#C8A96E50":"#252015"}`,cursor:"pointer",transition:"all 0.15s"}}>
-                    <span style={{color:sessionDuration===opt.value?"#C8A96E":"#8A8580",fontSize:13,fontWeight:sessionDuration===opt.value?600:400}}>{opt.label}</span>
-                    {sessionDuration===opt.value && <div style={{width:8,height:8,borderRadius:4,background:"#C8A96E"}}/>}
+            <div style={{overflowY:"auto",flex:1,padding:"20px"}}>
+
+              {/* Modifier le profil */}
+              <div style={{marginBottom:24}}>
+                <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Profil</div>
+                <button onClick={()=>{setEditProfileName(profileName);setShowSettings(false);setTimeout(()=>setShowProfileEdit(true),100);}}
+                  style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"14px 16px",color:"#F0EDE8",fontSize:14,fontWeight:500,cursor:"pointer",display:"flex",alignItems:"center",gap:12,fontFamily:"'DM Sans',sans-serif",textAlign:"left"}}>
+                  <span style={{fontSize:20}}>✏️</span>
+                  <div>
+                    <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600}}>Modifier le profil</div>
+                    <div style={{color:"#5A5550",fontSize:11,marginTop:2}}>{profileName||user?.email?.split("@")[0]}</div>
                   </div>
-                ))}
+                </button>
+              </div>
+
+              {/* Durée de session */}
+              <div style={{marginBottom:24}}>
+                <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Durée de connexion</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {[
+                    {value:"1h",    label:"1 heure"},
+                    {value:"6h",    label:"6 heures"},
+                    {value:"12h",   label:"12 heures"},
+                    {value:"24h",   label:"24 heures"},
+                    {value:"always",label:"Toujours connecté"},
+                  ].map(opt=>(
+                    <div key={opt.value} onClick={()=>{setSessionDuration(opt.value);try{localStorage.setItem("sessionDuration",opt.value);}catch{}}}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 16px",borderRadius:12,background:sessionDuration===opt.value?"#C8A96E15":"#0E0D0A",border:`1px solid ${sessionDuration===opt.value?"#C8A96E50":"#252015"}`,cursor:"pointer",transition:"all 0.15s"}}>
+                      <span style={{color:sessionDuration===opt.value?"#C8A96E":"#8A8580",fontSize:13,fontWeight:sessionDuration===opt.value?600:400}}>{opt.label}</span>
+                      {sessionDuration===opt.value&&<div style={{width:8,height:8,borderRadius:4,background:"#C8A96E"}}/>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Déconnexion */}
+              <div>
+                <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Compte</div>
+                <button onClick={()=>{setShowSettings(false);handleLogout();}}
+                  style={{width:"100%",background:"#F8717110",border:"1px solid #F8717130",borderRadius:12,padding:"14px 16px",color:"#F87171",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:12,fontFamily:"'DM Sans',sans-serif"}}>
+                  <span style={{fontSize:20}}>⏻</span> Se déconnecter
+                </button>
               </div>
             </div>
-
-            <div style={{marginTop:20,padding:"12px 14px",borderRadius:12,background:"#0E0D0A",border:"1px solid #252015"}}>
-              <div style={{color:"#5A5550",fontSize:11,lineHeight:1.5}}>
-                {sessionDuration==="always"
-                  ? "Vous resterez connecté jusqu'à déconnexion manuelle."
-                  : `Vous serez déconnecté automatiquement ${["1h","6h","12h","24h"].includes(sessionDuration)?`après ${sessionDuration} de connexion`:"."}.`}
-              </div>
-            </div>
-
-            <button onClick={()=>setShowSettings(false)}
-              style={{width:"100%",background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:20}}>
-              Fermer
-            </button>
           </div>
         </div>
       )}
