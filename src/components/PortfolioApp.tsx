@@ -1764,19 +1764,7 @@ export default function App() {
           {/* ── MARCHÉS ── */}
           {tab===1 && (
             <div className="fadein" style={{padding:"0 20px"}}>
-              {showMktAdd && (
-                <div style={{marginBottom:12,background:"#111009",borderRadius:14,padding:"12px",border:"1px solid #252015"}}>
-                  <div style={{color:"#6A6560",fontSize:10,marginBottom:8,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Ajouter un symbole</div>
-                  <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                    <div style={{flex:1}}>
-                      <SymbolSearch value={mktAddSymbol} onChange={v=>{setMktAddSymbol(v);setMktAddError("");}} onSelect={s=>{setMktAddSymbol(s.symbol);setMktAddError("");}} placeholder="ex: DOGE, MSFT, AMZN…" error={mktAddError}/>
-                    </div>
-                    <button onClick={handleAddMarket} disabled={mktAddLoading} style={{background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:10,padding:"11px 16px",color:"#111009",fontWeight:700,fontSize:13,cursor:"pointer",minWidth:50,flexShrink:0}}>
-                      {mktAddLoading?"…":"OK"}
-                    </button>
-                  </div>
-                </div>
-              )}
+
               {mktList.map((a,idx)=>{
                 const realIdx=allMarket.indexOf(a);
                 const dbEntry=SYMBOL_DATABASE.find(s=>s.symbol===a.symbol);
@@ -1803,6 +1791,21 @@ export default function App() {
           {/* ── BANQUE ── */}
           {tab===2 && <BankTab banks={banks} onRemove={id=>setBanks(prev=>prev.filter(b=>b.id!==id))} expandedAccount={expandedAcc} setExpandedAccount={setExpandedAcc}/>}
         </div>
+
+        {/* Panneau ajout marché fixe */}
+        {showMktAdd && tab===1 && (
+          <div style={{flexShrink:0,background:"#151210",borderTop:"1px solid #2A2520",padding:"12px 20px",zIndex:10}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:8,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Ajouter un symbole</div>
+            <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+              <div style={{flex:1}}>
+                <SymbolSearch value={mktAddSymbol} onChange={v=>{setMktAddSymbol(v);setMktAddError("");}} onSelect={s=>{setMktAddSymbol(s.symbol);setMktAddError("");}} placeholder="ex: DOGE, MSFT, AMZN…" error={mktAddError}/>
+              </div>
+              <button onClick={handleAddMarket} disabled={mktAddLoading} style={{background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:10,padding:"11px 16px",color:"#111009",fontWeight:700,fontSize:13,cursor:"pointer",minWidth:50,flexShrink:0}}>
+                {mktAddLoading?"…":"OK"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Nav */}
         <div style={{flexShrink:0,background:"#111009EE",borderTop:"1px solid #1E1B16",paddingTop:10,paddingLeft:0,paddingRight:0,paddingBottom:"calc(10px + env(safe-area-inset-bottom, 0px))",display:"flex",justifyContent:"space-around",backdropFilter:"blur(24px)"}}>
