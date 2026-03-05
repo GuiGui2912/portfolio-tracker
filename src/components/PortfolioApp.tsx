@@ -1610,7 +1610,9 @@ export default function App() {
                 </div>
                 <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
                 {showProfileMenu && (
-                  <div data-profile-menu style={{position:"fixed",top:"calc(env(safe-area-inset-top, 0px) + 64px)",left:16,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:16,padding:"8px",minWidth:230,maxWidth:280,maxHeight:"80vh",overflowY:"auto",boxShadow:"0 8px 32px #000d"}}>
+                  <div data-profile-menu style={{position:"fixed",inset:0,zIndex:500,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowProfileMenu(false)}>
+                  <div data-profile-menu style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"8px 8px calc(24px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",boxShadow:"0 -8px 32px #000d",maxHeight:"85vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+                  <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"8px auto 16px"}}/>
                     <div style={{padding:"10px 10px 12px",borderBottom:"1px solid #252015",marginBottom:4,display:"flex",alignItems:"center",gap:10}}>
                       <div style={{width:40,height:40,borderRadius:20,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#111009",flexShrink:0}}>
                         {profileName?profileName[0].toUpperCase():user?.email?.[0]?.toUpperCase()}
@@ -1689,6 +1691,7 @@ export default function App() {
                       onMouseEnter={e=>e.currentTarget.style.background="#F8717115"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       ⏻ Se déconnecter
                     </button>
+                  </div>
                   </div>
                 )}
               </div>
