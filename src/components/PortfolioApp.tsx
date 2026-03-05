@@ -1452,10 +1452,10 @@ export default function App() {
                             </div>
                           ) : (
                             <div onClick={async()=>{
-                                setActivePortfolioId(p.id); setPortfolioName(p.name); setDbLoading(true);
+                                if(activePortfolioId===p.id){setShowProfileMenu(false);return;}
+                                setActivePortfolioId(p.id); setPortfolioName(p.name); setShowProfileMenu(false);
                                 const { data } = await supabase.from("assets").select("*").eq("user_id",userId).eq("portfolio_id",p.id).order("created_at",{ascending:true});
                                 if(data&&data.length>0){const loaded=data.map(row=>({id:row.id,symbol:row.symbol,name:row.name,type:row.type,qty:Number(row.qty),price:Number(row.current_price),change:Number(row.price_change_24h??0),color:row.color,dividends:[],histories:buildHistories(Number(row.current_price)),purchase:row.purchase_data??null}));setAssets(loaded);setChartAsset(loaded[0]);}else{setAssets([]);setChartAsset(null);}
-                                setDbLoading(false);
                               }}
                               style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 8px",borderRadius:8,cursor:"pointer",background:activePortfolioId===p.id?"#C8A96E15":"transparent",transition:"background 0.15s"}}
                               onMouseEnter={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"#1E1B16"}
