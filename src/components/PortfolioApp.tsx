@@ -1435,6 +1435,7 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500;600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
+        :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);}
         ::-webkit-scrollbar{display:none;}
         .asset-row{transition:background 0.15s;cursor:pointer;}
         .asset-row:hover{background:#181410!important;}
@@ -1453,7 +1454,7 @@ export default function App() {
         {/* Fixed top */}
         <div style={{flexShrink:0}}>
           {/* Header */}
-          <div style={{padding:"12px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{padding:"12px 20px 0",paddingTop:"calc(12px + env(safe-area-inset-top, 0px))",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <div style={{position:"relative"}}>
                 <div data-profile-menu onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
@@ -1804,7 +1805,7 @@ export default function App() {
         </div>
 
         {/* Bottom Nav */}
-        <div style={{flexShrink:0,background:"#111009EE",borderTop:"1px solid #1E1B16",padding:"10px 0 26px",display:"flex",justifyContent:"space-around",backdropFilter:"blur(24px)"}}>
+        <div style={{flexShrink:0,background:"#111009EE",borderTop:"1px solid #1E1B16",paddingTop:10,paddingLeft:0,paddingRight:0,paddingBottom:"calc(10px + env(safe-area-inset-bottom, 0px))",display:"flex",justifyContent:"space-around",backdropFilter:"blur(24px)"}}>
           {navItems.map(({label,i,icon})=>(
             <button key={label} onClick={()=>{setTab(i);setDetailAsset(null);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",color:tab===i?(i===2?"#4ADE80":"#C8A96E"):"#2A2720",transition:"color 0.2s",fontFamily:"'DM Sans',sans-serif",padding:"0 8px"}}>
               {icon}
