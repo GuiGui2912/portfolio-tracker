@@ -1610,7 +1610,7 @@ export default function App() {
                 </div>
                 <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
                 {showProfileMenu && (
-                  <div data-profile-menu style={{position:"absolute",top:44,left:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:16,padding:"8px",minWidth:220,boxShadow:"0 8px 24px #000a"}}>
+                  <div data-profile-menu style={{position:"fixed",top:"calc(env(safe-area-inset-top, 0px) + 64px)",left:16,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:16,padding:"8px",minWidth:230,maxWidth:280,maxHeight:"80vh",overflowY:"auto",boxShadow:"0 8px 32px #000d"}}>
                     <div style={{padding:"10px 10px 12px",borderBottom:"1px solid #252015",marginBottom:4,display:"flex",alignItems:"center",gap:10}}>
                       <div style={{width:40,height:40,borderRadius:20,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#111009",flexShrink:0}}>
                         {profileName?profileName[0].toUpperCase():user?.email?.[0]?.toUpperCase()}
