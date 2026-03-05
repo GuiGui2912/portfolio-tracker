@@ -1518,9 +1518,9 @@ export default function App() {
   if (!dbLoading && !user) {
     const isLogin = authMode === "login";
     return (
-      <div style={{fontFamily:"'DM Sans',sans-serif",background:"#0A0906",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0;}`}</style>
-        <div style={{width:"100%",maxWidth:380,background:"#1A1714",borderRadius:24,padding:"32px 28px",border:"1px solid #2A2520",boxShadow:"0 24px 60px #000a"}}>
+      <div style={{fontFamily:"'DM Sans',sans-serif",background:"#0A0906",minHeight:"100dvh",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"20px",paddingTop:"max(40px, env(safe-area-inset-top, 40px))",overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0;} body{height:100%;} html{height:100%;}`}</style>
+        <div style={{width:"100%",maxWidth:380,background:"#1A1714",borderRadius:24,padding:"32px 28px",border:"1px solid #2A2520",boxShadow:"0 24px 60px #000a",marginBottom:40}}>
           <div style={{textAlign:"center",marginBottom:28}}>
             <div style={{width:56,height:56,borderRadius:16,background:"linear-gradient(135deg,#C8A96E,#A08040)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 12px"}}>₿</div>
             <div style={{color:"#F0EDE8",fontSize:20,fontWeight:700}}>Portfolio Tracker</div>
