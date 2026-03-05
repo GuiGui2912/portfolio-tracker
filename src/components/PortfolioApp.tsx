@@ -1017,28 +1017,46 @@ export default function App() {
   const [editProfileName, setEditProfileName]     = useState("");
   const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
+  // ── Drag actifs (tout en refs pour éviter les problèmes de closure) ──
   const [assetDraggingIdx, setAssetDraggingIdx] = useState(null);
   const [assetDragOverIdx, setAssetDragOverIdx] = useState(null);
-  const [assetLongPressActive, setAssetLongPressActive] = useState(false);
-  const assetLongPressTimer = useRef(null);
   const [assetGhostPos, setAssetGhostPos] = useState({x:0,y:0});
   const [assetGhostItem, setAssetGhostItem] = useState(null);
-  const assetsListRef = useRef(null);
-  const dragItem        = useRef(null);
-  const swipeStartX     = useRef(0);
-  const dragOverItem    = useRef(null);
-  const dragMktItem     = useRef(null);
-  const dragMktOverItem = useRef(null);
+  const assetDragActive  = useRef(false);
+  const assetDragFrom    = useRef(null);
+  const assetDragTo      = useRef(null);
+  const assetLongTimer   = useRef(null);
+  const assetsListRef    = useRef(null);
+  // ── Drag marchés ──
   const [mktDraggingIdx, setMktDraggingIdx] = useState(null);
   const [mktDragOverIdx, setMktDragOverIdx] = useState(null);
-  const mktTouchStartY  = useRef(0);
-  const mktItemHeight   = useRef(65);
-  const mktListRef      = useRef(null);
-  const mktLongPressTimer = useRef(null);
-  const [mktLongPressActive, setMktLongPressActive] = useState(false);
   const [mktGhostPos, setMktGhostPos] = useState({x:0, y:0});
   const [mktGhostItem, setMktGhostItem] = useState(null);
+  const mktDragActive    = useRef(false);
+  const mktDragFrom      = useRef(null);
+  const mktDragTo        = useRef(null);
+  const mktLongTimer     = useRef(null);
+  const mktListRef       = useRef(null);
+  // ── Drag HTML5 (PC) ──
+  const dragItem         = useRef(null);
+  const dragOverItem     = useRef(null);
+  const dragMktItem      = useRef(null);
+  const dragMktOverItem  = useRef(null);
+  const swipeStartX      = useRef(0);
 
+  // ── Helper commun : trouve l'index d'insertion selon position Y du doigt ──
+  const getInsertIdx = (containerRef, clientY, dataAttr, listLength) => {
+    const container = containerRef.current;
+    if (!container) return listLength - 1;
+    const items = container.querySelectorAll(`[${dataAttr}]`);
+    for (let i = 0; i < items.length; i++) {
+      const rect = items[i].getBoundingClientRect();
+      if (clientY < rect.top + rect.height / 2) return parseInt(items[i].getAttribute(dataAttr));
+    }
+    return listLength - 1;
+  };
+
+  // ── Drag ACTIFS ──
   const handleDragSort = () => {
     if (dragItem.current === null || dragOverItem.current === null) return;
     const arr = [...assets];
@@ -1048,60 +1066,48 @@ export default function App() {
     setAssets(arr);
   };
 
-  // ── Touch drag pour ACTIFS ──
   const handleAssetTouchStart = (e, idx, asset) => {
     if (!dragMode) return;
-    assetLongPressTimer.current = setTimeout(() => {
-      dragItem.current = idx;
+    const touch = e.touches[0];
+    assetLongTimer.current = setTimeout(() => {
+      assetDragActive.current = true;
+      assetDragFrom.current = idx;
+      assetDragTo.current = idx;
       setAssetDraggingIdx(idx);
-      setAssetLongPressActive(true);
+      setAssetDragOverIdx(null);
       setAssetGhostItem(asset);
-      setAssetGhostPos({x: e.touches[0].clientX, y: e.touches[0].clientY});
+      setAssetGhostPos({x: touch.clientX, y: touch.clientY});
       if (navigator.vibrate) navigator.vibrate(40);
-    }, 200);
-  };
-
-  const handleAssetTouchCancel = () => {
-    if (assetLongPressTimer.current) clearTimeout(assetLongPressTimer.current);
-    setAssetLongPressActive(false);
+    }, 250);
   };
 
   const handleAssetTouchMove = (e) => {
-    if (!dragMode) return;
-    if (!assetLongPressActive && assetLongPressTimer.current) { clearTimeout(assetLongPressTimer.current); return; }
-    if (dragItem.current === null) return;
+    if (!assetDragActive.current) { clearTimeout(assetLongTimer.current); return; }
     e.preventDefault();
     const touch = e.touches[0];
     setAssetGhostPos({x: touch.clientX, y: touch.clientY});
-    const container = assetsListRef.current;
-    if (!container) return;
-    const items = container.querySelectorAll("[data-asset-item]");
-    let insertIdx = assets.length - 1;
-    for (let i = 0; i < items.length; i++) {
-      const rect = items[i].getBoundingClientRect();
-      if (touch.clientY < rect.top + rect.height / 2) { insertIdx = parseInt(items[i].dataset.assetItem); break; }
-    }
-    dragOverItem.current = insertIdx;
-    setAssetDragOverIdx(insertIdx);
+    const insertIdx = getInsertIdx(assetsListRef, touch.clientY, "data-asset-item", assets.length);
+    assetDragTo.current = insertIdx;
+    setAssetDragOverIdx(insertIdx !== assetDragFrom.current ? insertIdx : null);
   };
 
   const handleAssetTouchEnd = () => {
-    if (assetLongPressTimer.current) clearTimeout(assetLongPressTimer.current);
-    if (!dragMode) return;
-    if (assetLongPressActive && dragItem.current !== null && dragOverItem.current !== null && dragItem.current !== dragOverItem.current) {
+    clearTimeout(assetLongTimer.current);
+    if (assetDragActive.current && assetDragFrom.current !== null && assetDragTo.current !== null && assetDragFrom.current !== assetDragTo.current) {
       const arr = [...assets];
-      const dragged = arr.splice(dragItem.current, 1)[0];
-      arr.splice(dragOverItem.current, 0, dragged);
+      const dragged = arr.splice(assetDragFrom.current, 1)[0];
+      arr.splice(assetDragTo.current, 0, dragged);
       setAssets(arr);
     }
-    dragItem.current = null;
-    dragOverItem.current = null;
+    assetDragActive.current = false;
+    assetDragFrom.current = null;
+    assetDragTo.current = null;
     setAssetDraggingIdx(null);
     setAssetDragOverIdx(null);
-    setAssetLongPressActive(false);
     setAssetGhostItem(null);
   };
 
+  // ── Drag MARCHÉS ──
   const handleDragMktSort = () => {
     if (dragMktItem.current === null || dragMktOverItem.current === null) return;
     const arr = [...allMarket];
@@ -1113,61 +1119,45 @@ export default function App() {
 
   const handleMktTouchStart = (e, realIdx) => {
     if (!dragMktMode) return;
-    e.preventDefault(); // bloque scroll ET sélection texte
-    mktTouchStartY.current = e.touches[0].clientY;
-    dragMktItem.current = realIdx;
-    setMktDraggingIdx(realIdx);
-    setMktLongPressActive(true);
-    if (navigator.vibrate) navigator.vibrate(30);
-  };
-
-  const handleMktTouchCancel = () => {
-    if (mktLongPressTimer.current) clearTimeout(mktLongPressTimer.current);
-    dragMktItem.current = null;
-    dragMktOverItem.current = null;
-    setMktDraggingIdx(null);
-    setMktDragOverIdx(null);
-    setMktLongPressActive(false);
+    const touch = e.touches[0];
+    mktLongTimer.current = setTimeout(() => {
+      mktDragActive.current = true;
+      mktDragFrom.current = realIdx;
+      mktDragTo.current = realIdx;
+      setMktDraggingIdx(realIdx);
+      setMktDragOverIdx(null);
+      setMktGhostItem(allMarket[realIdx]);
+      setMktGhostPos({x: touch.clientX, y: touch.clientY});
+      if (navigator.vibrate) navigator.vibrate(40);
+    }, 250);
   };
 
   const handleMktTouchMove = (e) => {
-    if (!dragMktMode) return;
-    if (!mktLongPressActive && mktLongPressTimer.current) { clearTimeout(mktLongPressTimer.current); return; }
-    if (dragMktItem.current === null) return;
+    if (!mktDragActive.current) { clearTimeout(mktLongTimer.current); return; }
     e.preventDefault();
     const touch = e.touches[0];
-    const y = touch.clientY;
-    setMktGhostPos({x: touch.clientX, y});
-    const container = mktListRef.current;
-    if (!container) return;
-    // Trouver l'index d'insertion basé sur la mi-hauteur de chaque item
-    const items = container.querySelectorAll("[data-mkt-item]");
-    let insertIdx = allMarket.length - 1;
-    for (let i = 0; i < items.length; i++) {
-      const rect = items[i].getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
-      if (y < midY) { insertIdx = parseInt(items[i].dataset.mktItem); break; }
-    }
-    dragMktOverItem.current = insertIdx;
-    setMktDragOverIdx(insertIdx);
+    setMktGhostPos({x: touch.clientX, y: touch.clientY});
+    const insertIdx = getInsertIdx(mktListRef, touch.clientY, "data-mkt-item", allMarket.length);
+    mktDragTo.current = insertIdx;
+    setMktDragOverIdx(insertIdx !== mktDragFrom.current ? insertIdx : null);
   };
 
   const handleMktTouchEnd = () => {
-    if (mktLongPressTimer.current) clearTimeout(mktLongPressTimer.current);
-    if (!dragMktMode) return;
-    if (mktLongPressActive && dragMktItem.current !== null && dragMktOverItem.current !== null && dragMktItem.current !== dragMktOverItem.current) {
+    clearTimeout(mktLongTimer.current);
+    if (mktDragActive.current && mktDragFrom.current !== null && mktDragTo.current !== null && mktDragFrom.current !== mktDragTo.current) {
       const arr = [...allMarket];
-      const dragged = arr.splice(dragMktItem.current, 1)[0];
-      arr.splice(dragMktOverItem.current, 0, dragged);
+      const dragged = arr.splice(mktDragFrom.current, 1)[0];
+      arr.splice(mktDragTo.current, 0, dragged);
       setAllMarket(arr);
     }
-    dragMktItem.current = null;
-    dragMktOverItem.current = null;
+    mktDragActive.current = false;
+    mktDragFrom.current = null;
+    mktDragTo.current = null;
     setMktDraggingIdx(null);
     setMktDragOverIdx(null);
-    setMktLongPressActive(false);
     setMktGhostItem(null);
   };
+
 
   const DEFAULT_MARKET = [
     { symbol:"BTC",  name:"Bitcoin",   price:68420, change: 2.34, color:"#F7931A", type:"crypto" },
@@ -1788,8 +1778,8 @@ export default function App() {
                     <div className="asset-row"
                       data-asset-item={idx}
                       draggable={dragMode}
-                      onDragStart={()=>{dragItem.current=idx; setAssetDraggingIdx(idx);}}
-                      onDragEnter={()=>{dragOverItem.current=idx; setAssetDragOverIdx(idx);}}
+                      onDragStart={(e)=>{e.dataTransfer.effectAllowed="move"; dragItem.current=idx; setAssetDraggingIdx(idx); setAssetDragOverIdx(null);}}
+                      onDragEnter={()=>{dragOverItem.current=idx; setAssetDragOverIdx(idx!==dragItem.current?idx:null);}}
                       onDragEnd={()=>{handleDragSort(); setAssetDraggingIdx(null); setAssetDragOverIdx(null);}}
                       onDragOver={e=>e.preventDefault()}
                       onTouchStart={e=>handleAssetTouchStart(e, idx, a)}
