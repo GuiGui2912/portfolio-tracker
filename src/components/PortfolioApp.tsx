@@ -1041,7 +1041,7 @@ export default function App() {
     setAllMarket(arr);
   };
 
-  const [allMarket, setAllMarket] = useState([
+  const DEFAULT_MARKET = [
     { symbol:"BTC",  name:"Bitcoin",   price:68420, change: 2.34, color:"#F7931A", type:"crypto" },
     { symbol:"ETH",  name:"Ethereum",  price:3812,  change:-1.12, color:"#627EEA", type:"crypto" },
     { symbol:"SOL",  name:"Solana",    price:178.6, change:-3.5,  color:"#9945FF", type:"crypto" },
@@ -1050,7 +1050,15 @@ export default function App() {
     { symbol:"TSLA", name:"Tesla",     price:246.8, change:-0.43, color:"#CC0000", type:"stock"  },
     { symbol:"MSFT", name:"Microsoft", price:415.2, change: 1.05, color:"#00A4EF", type:"stock"  },
     { symbol:"XRP",  name:"Ripple",    price:0.62,  change: 6.4,  color:"#346AA9", type:"crypto" },
-  ]);
+  ];
+  const loadMarket = () => {
+    try {
+      const saved = localStorage.getItem("market_watchlist");
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return DEFAULT_MARKET;
+  };
+  const [allMarket, setAllMarket] = useState(loadMarket);
 
   const [showMktAdd, setShowMktAdd]       = useState(false);
   const [mktAddSymbol, setMktAddSymbol]   = useState("");
@@ -1157,16 +1165,22 @@ export default function App() {
   // ── Switch portefeuille ──
   const switchPortfolio = async (portfolioId, portfolioName) => {
     if (activePortfolioId === portfolioId) return;
+    // Récupérer le vrai userId depuis Supabase session (pas le state React qui peut être stale)
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const uid = currentUser?.id ?? userId;
+    if (!uid) { console.error("switchPortfolio: pas de userId"); return; }
     setActivePortfolioId(portfolioId);
     setPortfolioName(portfolioName);
     setAssets([]);
     setChartAsset(null);
     try {
+      console.log("switchPortfolio: uid=", uid, "portfolioId=", portfolioId);
       const { data, error } = await supabase
         .from("assets").select("*")
-        .eq("user_id", userId)
+        .eq("user_id", uid)
         .eq("portfolio_id", portfolioId)
         .order("created_at", { ascending: true });
+      console.log("switchPortfolio: data=", data, "error=", error);
       if (error) { console.error("switchPortfolio error:", error); return; }
       if (data && data.length > 0) {
         const loaded = data.map(row => ({
@@ -1273,6 +1287,11 @@ export default function App() {
     const { error } = await supabase.from("assets").delete().eq("id", assetId);
     if (error) console.error("deleteAsset:", error);
   };
+
+  // Persister la watchlist marchés
+  useEffect(() => {
+    try { localStorage.setItem("market_watchlist", JSON.stringify(allMarket)); } catch(e) {}
+  }, [allMarket]);
 
   useEffect(() => {
     const handler = (e) => { if (!e.target.closest("[data-profile-menu]")) setShowProfileMenu(false); };
