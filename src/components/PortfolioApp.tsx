@@ -1005,6 +1005,9 @@ export default function App() {
   const [listScale, setListScale]       = useState("1M");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [showSettings, setShowSettings]       = useState(false);
+  const [rememberMe, setRememberMe]           = useState(() => { try { return localStorage.getItem("rememberMe")==="true"; } catch { return false; } });
+  const [sessionDuration, setSessionDuration] = useState(() => { try { return localStorage.getItem("sessionDuration")||"always"; } catch { return "always"; } });
   const [portfolios, setPortfolios]           = useState([{id:"default", name:"Mon Portefeuille"}]);
   const [activePortfolioId, setActivePortfolioId] = useState("default");
   const [showAddPortfolio, setShowAddPortfolio]   = useState(false);
@@ -1377,6 +1380,12 @@ export default function App() {
       setAssets(loaded); setChartAsset(loaded[0]);
     }
     setDbLoading(false); setAuthLoading(false);
+    // Appliquer la durée de session si "rester connecté" n'est pas "toujours"
+    if (rememberMe && sessionDuration !== "always") {
+      const durations = {"1h":3600,"6h":21600,"12h":43200,"24h":86400};
+      const secs = durations[sessionDuration];
+      if (secs) setTimeout(() => supabase.auth.signOut(), secs * 1000);
+    }
   };
 
   const handleRegister = async () => {
@@ -1537,6 +1546,15 @@ export default function App() {
                 {authError}
               </div>
             )}
+            {isLogin && (
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"4px 2px"}}>
+                <div onClick={()=>{const v=!rememberMe;setRememberMe(v);try{localStorage.setItem("rememberMe",String(v));}catch{}}}
+                  style={{width:20,height:20,borderRadius:6,border:`2px solid ${rememberMe?"#C8A96E":"#3A3530"}`,background:rememberMe?"#C8A96E":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
+                  {rememberMe && <div style={{color:"#111009",fontSize:12,fontWeight:900,lineHeight:1}}>✓</div>}
+                </div>
+                <span style={{color:"#8A8580",fontSize:12,cursor:"pointer"}} onClick={()=>{const v=!rememberMe;setRememberMe(v);try{localStorage.setItem("rememberMe",String(v));}catch{}}}>Rester connecté</span>
+              </div>
+            )}
             <button onClick={isLogin?handleLogin:handleRegister} disabled={authLoading}
               style={{background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:12,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:4,opacity:authLoading?0.7:1}}>
               {authLoading?"…":isLogin?"Se connecter":"Créer le compte"}
@@ -1660,6 +1678,11 @@ export default function App() {
                       style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#C8A96E",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
                       onMouseEnter={e=>e.currentTarget.style.background="#C8A96E10"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       ✏️ Modifier le profil
+                    </button>
+                    <button onClick={()=>{setShowProfileMenu(false);setTimeout(()=>setShowSettings(true),50);}}
+                      style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#8A8580",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#FFFFFF08"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      ⚙️ Paramètres
                     </button>
                     <button onClick={handleLogout}
                       style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#F87171",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
@@ -2057,6 +2080,49 @@ export default function App() {
               setShowProfileEdit(false);
             }} style={{width:"100%",background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:6}}>
               Enregistrer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Paramètres */}
+      {showSettings && (
+        <div style={{position:"fixed",inset:0,zIndex:2000,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowSettings(false)}>
+          <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"24px 20px 48px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"0 auto 20px"}}/>
+            <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:24}}>⚙️ Paramètres</div>
+
+            {/* Durée de session */}
+            <div style={{marginBottom:8}}>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Durée de connexion</div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[
+                  {value:"1h",   label:"1 heure"},
+                  {value:"6h",   label:"6 heures"},
+                  {value:"12h",  label:"12 heures"},
+                  {value:"24h",  label:"24 heures"},
+                  {value:"always",label:"Toujours connecté"},
+                ].map(opt=>(
+                  <div key={opt.value} onClick={()=>{setSessionDuration(opt.value);try{localStorage.setItem("sessionDuration",opt.value);}catch{}}}
+                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",borderRadius:12,background:sessionDuration===opt.value?"#C8A96E15":"#0E0D0A",border:`1px solid ${sessionDuration===opt.value?"#C8A96E50":"#252015"}`,cursor:"pointer",transition:"all 0.15s"}}>
+                    <span style={{color:sessionDuration===opt.value?"#C8A96E":"#8A8580",fontSize:13,fontWeight:sessionDuration===opt.value?600:400}}>{opt.label}</span>
+                    {sessionDuration===opt.value && <div style={{width:8,height:8,borderRadius:4,background:"#C8A96E"}}/>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{marginTop:20,padding:"12px 14px",borderRadius:12,background:"#0E0D0A",border:"1px solid #252015"}}>
+              <div style={{color:"#5A5550",fontSize:11,lineHeight:1.5}}>
+                {sessionDuration==="always"
+                  ? "Vous resterez connecté jusqu'à déconnexion manuelle."
+                  : `Vous serez déconnecté automatiquement ${["1h","6h","12h","24h"].includes(sessionDuration)?`après ${sessionDuration} de connexion`:"."}.`}
+              </div>
+            </div>
+
+            <button onClick={()=>setShowSettings(false)}
+              style={{width:"100%",background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:20}}>
+              Fermer
             </button>
           </div>
         </div>
