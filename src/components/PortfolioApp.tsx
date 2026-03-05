@@ -1027,6 +1027,8 @@ export default function App() {
   const mktTouchStartY  = useRef(0);
   const mktItemHeight   = useRef(65);
   const mktListRef      = useRef(null);
+  const mktLongPressTimer = useRef(null);
+  const [mktLongPressActive, setMktLongPressActive] = useState(false);
 
   const handleDragSort = () => {
     if (dragItem.current === null || dragOverItem.current === null) return;
@@ -1049,12 +1051,29 @@ export default function App() {
   const handleMktTouchStart = (e, realIdx) => {
     if (!dragMktMode) return;
     mktTouchStartY.current = e.touches[0].clientY;
-    dragMktItem.current = realIdx;
-    setMktDraggingIdx(realIdx);
+    // Long press pour activer le drag (évite la sélection de texte)
+    mktLongPressTimer.current = setTimeout(() => {
+      dragMktItem.current = realIdx;
+      setMktDraggingIdx(realIdx);
+      setMktLongPressActive(true);
+      // Vibration feedback si disponible
+      if (navigator.vibrate) navigator.vibrate(40);
+    }, 200);
+  };
+
+  const handleMktTouchCancel = () => {
+    if (mktLongPressTimer.current) clearTimeout(mktLongPressTimer.current);
+    setMktLongPressActive(false);
   };
 
   const handleMktTouchMove = (e) => {
-    if (!dragMktMode || dragMktItem.current === null) return;
+    if (!dragMktMode) return;
+    // Annuler le long press si on bouge avant
+    if (!mktLongPressActive && mktLongPressTimer.current) {
+      clearTimeout(mktLongPressTimer.current);
+      return;
+    }
+    if (dragMktItem.current === null) return;
     e.preventDefault();
     const y = e.touches[0].clientY;
     const container = mktListRef.current;
@@ -1067,8 +1086,9 @@ export default function App() {
   };
 
   const handleMktTouchEnd = () => {
+    if (mktLongPressTimer.current) clearTimeout(mktLongPressTimer.current);
     if (!dragMktMode) return;
-    if (dragMktItem.current !== null && dragMktOverItem.current !== null && dragMktItem.current !== dragMktOverItem.current) {
+    if (mktLongPressActive && dragMktItem.current !== null && dragMktOverItem.current !== null && dragMktItem.current !== dragMktOverItem.current) {
       const arr = [...allMarket];
       const dragged = arr.splice(dragMktItem.current, 1)[0];
       arr.splice(dragMktOverItem.current, 0, dragged);
@@ -1078,6 +1098,7 @@ export default function App() {
     dragMktOverItem.current = null;
     setMktDraggingIdx(null);
     setMktDragOverIdx(null);
+    setMktLongPressActive(false);
   };
 
   const DEFAULT_MARKET = [
@@ -1802,7 +1823,7 @@ export default function App() {
 
           {/* ── MARCHÉS ── */}
           {tab===1 && (
-            <div className="fadein" style={{padding:"0 20px"}}
+            <div className="fadein" style={{padding:"0 20px", userSelect: dragMktMode?"none":"auto", WebkitUserSelect: dragMktMode?"none":"auto"}}
               ref={mktListRef}
               onTouchMove={handleMktTouchMove}
               onTouchEnd={handleMktTouchEnd}>
@@ -1821,6 +1842,7 @@ export default function App() {
                     onDragEnd={()=>{handleDragMktSort(); setMktDraggingIdx(null); setMktDragOverIdx(null);}}
                     onDragOver={e=>e.preventDefault()}
                     onTouchStart={e=>handleMktTouchStart(e, realIdx)}
+                    onTouchCancel={handleMktTouchCancel}
                     style={{
                       display:"flex", alignItems:"center", justifyContent:"space-between",
                       padding:"12px 0", borderBottom:"1px solid #191612",
@@ -1831,6 +1853,9 @@ export default function App() {
                       paddingLeft: isOver ? "8px" : "0",
                       transition: "opacity 0.15s, background 0.15s, border 0.15s",
                       transform: isDragging ? "scale(0.97)" : "scale(1)",
+                      userSelect: dragMktMode ? "none" : "auto",
+                      WebkitUserSelect: dragMktMode ? "none" : "auto",
+                      touchAction: dragMktMode ? "none" : "auto",
                     }}>
                     <div style={{display:"flex",alignItems:"center",gap:11}}>
                       {dragMktMode&&<div style={{color: isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
