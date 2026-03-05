@@ -1432,11 +1432,7 @@ export default function App() {
     try { localStorage.setItem("market_watchlist", JSON.stringify(allMarket)); } catch(e) {}
   }, [allMarket]);
 
-  useEffect(() => {
-    const handler = (e) => { if (!e.target.closest("[data-profile-menu]")) setShowProfileMenu(false); };
-    if (showProfileMenu) document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showProfileMenu]);
+
 
   useEffect(() => {
     const fetchPrices = async () => {
@@ -2040,8 +2036,8 @@ export default function App() {
               ))}
             </div>
             {/* Bouton Paramètres */}
-            <div style={{padding:"8px 12px 0",borderTop:"1px solid #252015",flexShrink:0}}>
-              <button onClick={e=>{e.stopPropagation();e.preventDefault();setShowSettings(true);setShowProfileMenu(false);}}
+            <div data-profile-menu style={{padding:"8px 12px 0",borderTop:"1px solid #252015",flexShrink:0}}>
+              <button data-profile-menu onClick={e=>{e.stopPropagation();e.preventDefault();setShowSettings(true);setShowProfileMenu(false);}}
                 style={{width:"100%",background:"#1E1B16",border:"1px solid #2A2520",borderRadius:12,padding:"14px 16px",color:"#F0EDE8",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:10,fontFamily:"'DM Sans',sans-serif"}}>
                 <span style={{fontSize:18}}>⚙️</span> Paramètres
               </button>
