@@ -1752,8 +1752,9 @@ export default function App() {
 
         {/* Scrollable content */}
         <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}
-          onTouchStart={e=>{ swipeStartX.current=e.touches[0].clientX; }}
+          onTouchStart={e=>{ if(!dragMode&&!dragMktMode) swipeStartX.current=e.touches[0].clientX; }}
           onTouchEnd={e=>{
+            if(dragMode||dragMktMode) return;
             const dx=e.changedTouches[0].clientX-swipeStartX.current;
             if(Math.abs(dx)>60){if(dx<0&&tab<2){setTab(tab+1);setDetailAsset(null);}if(dx>0&&tab>0){setTab(tab-1);setDetailAsset(null);}}
           }}>
@@ -1783,7 +1784,9 @@ export default function App() {
                       onDragEnd={()=>{handleDragSort(); setAssetDraggingIdx(null); setAssetDragOverIdx(null);}}
                       onDragOver={e=>e.preventDefault()}
                       onTouchStart={e=>handleAssetTouchStart(e, idx, a)}
-                      onTouchCancel={handleAssetTouchCancel}
+                      onTouchMove={e=>{ if(assetDragActive.current) handleAssetTouchMove(e); }}
+                      onTouchEnd={e=>{ if(assetDragActive.current) { e.stopPropagation(); handleAssetTouchEnd(); } }}
+                      onTouchCancel={handleAssetTouchEnd}
                       onClick={()=>!dragMode&&setDetailAsset(a)}
                       style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer",opacity:assetDraggingIdx===idx?0.25:1,userSelect:dragMode?"none":"auto",WebkitUserSelect:dragMode?"none":"auto",touchAction:dragMode?"none":"pan-y"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
@@ -1921,7 +1924,9 @@ export default function App() {
                     <div
                       data-mkt-item={realIdx}
                       onTouchStart={e=>handleMktTouchStart(e, realIdx)}
-                      onTouchCancel={handleMktTouchCancel}
+                      onTouchMove={e=>{ if(mktDragActive.current) handleMktTouchMove(e); }}
+                      onTouchEnd={e=>{ if(mktDragActive.current) { e.stopPropagation(); handleMktTouchEnd(); } }}
+                      onTouchCancel={handleMktTouchEnd}
                       style={{
                         display:"flex", alignItems:"center", justifyContent:"space-between",
                         padding:"12px 0", borderBottom:"1px solid #191612",
