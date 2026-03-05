@@ -1070,19 +1070,25 @@ export default function App() {
   };
 
   const handleMktTouchMove = (e) => {
-    if (!dragMktMode || dragMktItem.current === null) return;
+    if (!dragMktMode) return;
+    if (!mktLongPressActive && mktLongPressTimer.current) { clearTimeout(mktLongPressTimer.current); return; }
+    if (dragMktItem.current === null) return;
     e.preventDefault();
-    const y = e.touches[0].clientY;
+    const touch = e.touches[0];
+    const y = touch.clientY;
+    setMktGhostPos({x: touch.clientX, y});
     const container = mktListRef.current;
     if (!container) return;
+    // Trouver l'index d'insertion basé sur la mi-hauteur de chaque item
     const items = container.querySelectorAll("[data-mkt-item]");
-    let targetIdx = dragMktItem.current;
+    let insertIdx = allMarket.length - 1;
     for (let i = 0; i < items.length; i++) {
       const rect = items[i].getBoundingClientRect();
-      if (y >= rect.top && y <= rect.bottom) { targetIdx = parseInt(items[i].dataset.mktItem); break; }
+      const midY = rect.top + rect.height / 2;
+      if (y < midY) { insertIdx = parseInt(items[i].dataset.mktItem); break; }
     }
-    dragMktOverItem.current = targetIdx;
-    setMktDragOverIdx(targetIdx);
+    dragMktOverItem.current = insertIdx;
+    setMktDragOverIdx(insertIdx);
   };
 
   const handleMktTouchEnd = () => {
@@ -1834,33 +1840,45 @@ export default function App() {
                 const dbEntry=SYMBOL_DATABASE.find(s=>s.symbol===a.symbol);
                 const displayName=(a.name&&a.name!==a.symbol)?a.name:(dbEntry?.name||a.symbol);
                 const isDragging = mktDraggingIdx === realIdx;
-                const isOver = mktDragOverIdx === realIdx && mktDraggingIdx !== realIdx;
+                // La barre s'affiche AU-DESSUS de l'item mktDragOverIdx
+                const showBarBefore = dragMktMode && mktDragOverIdx === realIdx && mktDraggingIdx !== realIdx;
+                // Barre finale après le dernier item
+                const isLast = idx === mktList.length - 1;
+                const showBarAfter = dragMktMode && isLast && mktDragOverIdx !== null && mktDragOverIdx > realIdx && mktDraggingIdx !== realIdx;
                 return (
-                  <div key={a.symbol}
-                    data-mkt-item={realIdx}
-                    onTouchStart={e=>handleMktTouchStart(e, realIdx)}
-                    onTouchCancel={handleMktTouchCancel}
-                    style={{
-                      display:"flex", alignItems:"center", justifyContent:"space-between",
-                      padding:"12px 0", borderBottom: isOver ? "2px solid #C8A96E" : "1px solid #191612",
-                      cursor:dragMktMode?"grab":"default",
-                      opacity: isDragging ? 0.3 : 1,
-                      background: isDragging ? "#C8A96E08" : isOver ? "#C8A96E15" : "transparent",
-                      transition: "opacity 0.1s, background 0.1s",
-                      transform: isDragging ? "scale(0.96)" : "scale(1)",
-                      userSelect: "none",
-                      WebkitUserSelect: "none",
-                      touchAction: dragMktMode ? "none" : "pan-y",
-                    }}>
-                    <div style={{display:"flex",alignItems:"center",gap:11}}>
-                      {dragMktMode&&<div style={{color: isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
-                      <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
-                      <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
+                  <div key={a.symbol}>
+                    {/* Barre d'insertion AVANT cet item */}
+                    {showBarBefore && (
+                      <div style={{height:2, background:"#C8A96E", borderRadius:2, margin:"0 0", boxShadow:"0 0 6px #C8A96E80"}}/>
+                    )}
+                    <div
+                      data-mkt-item={realIdx}
+                      onTouchStart={e=>handleMktTouchStart(e, realIdx)}
+                      onTouchCancel={handleMktTouchCancel}
+                      style={{
+                        display:"flex", alignItems:"center", justifyContent:"space-between",
+                        padding:"12px 0", borderBottom:"1px solid #191612",
+                        cursor:dragMktMode?"grab":"default",
+                        opacity: isDragging ? 0.25 : 1,
+                        transition: "opacity 0.1s",
+                        userSelect: "none",
+                        WebkitUserSelect: "none",
+                        touchAction: dragMktMode ? "none" : "pan-y",
+                      }}>
+                      <div style={{display:"flex",alignItems:"center",gap:11}}>
+                        {dragMktMode&&<div style={{color: isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
+                        <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
+                        <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
+                      </div>
+                      {!dragMktMode&&<div style={{textAlign:"right"}}>
+                        <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:14}}>{fmt(a.price,2)}</div>
+                        <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
+                      </div>}
                     </div>
-                    {!dragMktMode&&<div style={{textAlign:"right"}}>
-                      <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:14}}>{fmt(a.price,2)}</div>
-                      <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
-                    </div>}
+                    {/* Barre d'insertion APRÈS le dernier item si on drop tout en bas */}
+                    {showBarAfter && (
+                      <div style={{height:2, background:"#C8A96E", borderRadius:2, margin:"0 0", boxShadow:"0 0 6px #C8A96E80"}}/>
+                    )}
                   </div>
                 );
               })}
