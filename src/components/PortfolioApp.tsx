@@ -8,10 +8,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const EUR_RATE = 0.92;
 
-// Infos statiques enrichies — complétées dynamiquement depuis SYMBOL_DATABASE
 const ASSET_INFO_STATIC = {
   BTC:   { sector:"Crypto",            yield:"0%",   beta:"—",   description:"Bitcoin est la première cryptomonnaie décentralisée, créée en 2009. Protocole blockchain de preuve de travail.", exchange:"Crypto",  country:"—"  },
   ETH:   { sector:"Crypto",            yield:"0%",   beta:"—",   description:"Ethereum est la plateforme de référence pour les contrats intelligents et applications décentralisées.", exchange:"Crypto",  country:"—"  },
@@ -36,29 +34,27 @@ const ASSET_INFO_STATIC = {
   KO:    { sector:"Boissons",          yield:"3.1%", beta:"0.6", description:"Coca-Cola est le leader mondial des boissons non alcoolisées, présent dans plus de 200 pays.", exchange:"NYSE",   country:"🇺🇸" },
   XOM:   { sector:"Énergie",           yield:"3.4%", beta:"0.9", description:"ExxonMobil est l'une des plus grandes compagnies pétrolières et gazières au monde.", exchange:"NYSE",   country:"🇺🇸" },
   T:     { sector:"Télécommunications",yield:"6.5%", beta:"0.7", description:"AT&T est l'un des plus grands opérateurs télécoms américains, offrant services mobiles et internet.", exchange:"NYSE",   country:"🇺🇸" },
-  // Europe
-  "TTE":   { sector:"Énergie",         yield:"4.8%", beta:"0.7", description:"TotalEnergies est une major énergétique française présente dans l'exploration pétrolière, le GNL et les énergies renouvelables.", exchange:"Euronext", country:"🇫🇷" },
-  "TTE.PA":{ sector:"Énergie",         yield:"4.8%", beta:"0.7", description:"TotalEnergies est une major énergétique française présente dans l'exploration pétrolière, le GNL et les énergies renouvelables.", exchange:"Euronext", country:"🇫🇷" },
-  "MC.PA": { sector:"Luxe",            yield:"1.8%", beta:"1.1", description:"LVMH est le premier groupe mondial de produits de luxe, propriétaire de Louis Vuitton, Dior, Moët & Chandon.", exchange:"Euronext", country:"🇫🇷" },
-  "OR.PA": { sector:"Cosmétiques",     yield:"2.0%", beta:"0.9", description:"L'Oréal est le leader mondial des cosmétiques et produits de beauté.", exchange:"Euronext", country:"🇫🇷" },
-  "AIR.PA":{ sector:"Aéronautique",    yield:"1.4%", beta:"1.3", description:"Airbus est le leader européen de l'aéronautique et l'un des deux grands constructeurs mondiaux d'avions civils.", exchange:"Euronext", country:"🇫🇷" },
-  "BNP.PA":{ sector:"Finance",         yield:"7.2%", beta:"1.3", description:"BNP Paribas est la première banque française et l'une des plus grandes banques européennes.", exchange:"Euronext", country:"🇫🇷" },
-  "SAN.PA":{ sector:"Pharmacie",       yield:"4.1%", beta:"0.5", description:"Sanofi est un groupe pharmaceutique français parmi les 10 premiers mondiaux.", exchange:"Euronext", country:"🇫🇷" },
-  "SU.PA": { sector:"Industrie",       yield:"1.9%", beta:"1.0", description:"Schneider Electric est un leader mondial de la gestion de l'énergie et de l'automatisation industrielle.", exchange:"Euronext", country:"🇫🇷" },
-  "AI.PA": { sector:"Chimie / Gaz",    yield:"2.1%", beta:"0.8", description:"Air Liquide est le leader mondial des gaz industriels et médicaux.", exchange:"Euronext", country:"🇫🇷" },
-  "SAF.PA":{ sector:"Aéronautique",    yield:"1.2%", beta:"1.1", description:"Safran est un groupe industriel français spécialisé dans la propulsion aéronautique et l'équipement de cabines.", exchange:"Euronext", country:"🇫🇷" },
-  "KER.PA":{ sector:"Luxe",            yield:"2.5%", beta:"1.2", description:"Kering est un groupe de luxe français propriétaire de Gucci, Saint Laurent, Bottega Veneta.", exchange:"Euronext", country:"🇫🇷" },
-  AZN:   { sector:"Pharmacie",         yield:"2.2%", beta:"0.5", description:"AstraZeneca est un groupe biopharmaceutique britannique parmi les 10 premiers mondiaux.", exchange:"NASDAQ", country:"🇬🇧" },
-  BP:    { sector:"Énergie",           yield:"5.2%", beta:"0.8", description:"BP est une major pétrolière britannique présente dans l'exploration, la production et le raffinage.", exchange:"NYSE",   country:"🇬🇧" },
+  "TTE":   { sector:"Énergie",         yield:"4.8%", beta:"0.7", description:"TotalEnergies est une major énergétique française.", exchange:"Euronext", country:"🇫🇷" },
+  "TTE.PA":{ sector:"Énergie",         yield:"4.8%", beta:"0.7", description:"TotalEnergies est une major énergétique française.", exchange:"Euronext", country:"🇫🇷" },
+  "MC.PA": { sector:"Luxe",            yield:"1.8%", beta:"1.1", description:"LVMH est le premier groupe mondial de produits de luxe.", exchange:"Euronext", country:"🇫🇷" },
+  "OR.PA": { sector:"Cosmétiques",     yield:"2.0%", beta:"0.9", description:"L'Oréal est le leader mondial des cosmétiques.", exchange:"Euronext", country:"🇫🇷" },
+  "AIR.PA":{ sector:"Aéronautique",    yield:"1.4%", beta:"1.3", description:"Airbus est le leader européen de l'aéronautique.", exchange:"Euronext", country:"🇫🇷" },
+  "BNP.PA":{ sector:"Finance",         yield:"7.2%", beta:"1.3", description:"BNP Paribas est la première banque française.", exchange:"Euronext", country:"🇫🇷" },
+  "SAN.PA":{ sector:"Pharmacie",       yield:"4.1%", beta:"0.5", description:"Sanofi est un groupe pharmaceutique français.", exchange:"Euronext", country:"🇫🇷" },
+  "SU.PA": { sector:"Industrie",       yield:"1.9%", beta:"1.0", description:"Schneider Electric est un leader mondial de la gestion de l'énergie.", exchange:"Euronext", country:"🇫🇷" },
+  "AI.PA": { sector:"Chimie / Gaz",    yield:"2.1%", beta:"0.8", description:"Air Liquide est le leader mondial des gaz industriels.", exchange:"Euronext", country:"🇫🇷" },
+  "SAF.PA":{ sector:"Aéronautique",    yield:"1.2%", beta:"1.1", description:"Safran est un groupe industriel français.", exchange:"Euronext", country:"🇫🇷" },
+  "KER.PA":{ sector:"Luxe",            yield:"2.5%", beta:"1.2", description:"Kering est un groupe de luxe français.", exchange:"Euronext", country:"🇫🇷" },
+  AZN:   { sector:"Pharmacie",         yield:"2.2%", beta:"0.5", description:"AstraZeneca est un groupe biopharmaceutique britannique.", exchange:"NASDAQ", country:"🇬🇧" },
+  BP:    { sector:"Énergie",           yield:"5.2%", beta:"0.8", description:"BP est une major pétrolière britannique.", exchange:"NYSE",   country:"🇬🇧" },
   SHEL:  { sector:"Énergie",           yield:"3.9%", beta:"0.8", description:"Shell est l'une des plus grandes compagnies énergétiques mondiales.", exchange:"NYSE",   country:"🇬🇧" },
-  SAP:   { sector:"Technologie",       yield:"1.4%", beta:"0.9", description:"SAP est le leader européen des logiciels d'entreprise (ERP).", exchange:"NYSE",   country:"🇩🇪" },
-  NVO:   { sector:"Pharmacie",         yield:"1.5%", beta:"0.6", description:"Novo Nordisk est un groupe danois leader mondial dans le diabète et l'obésité (Ozempic, Wegovy).", exchange:"NYSE",   country:"🇩🇰" },
-  ASML:  { sector:"Semi-conducteurs",  yield:"0.8%", beta:"1.3", description:"ASML est le seul fabricant mondial de machines lithographiques EUV, indispensables à la fabrication de puces avancées.", exchange:"NASDAQ", country:"🇳🇱" },
+  SAP:   { sector:"Technologie",       yield:"1.4%", beta:"0.9", description:"SAP est le leader européen des logiciels d'entreprise.", exchange:"NYSE",   country:"🇩🇪" },
+  NVO:   { sector:"Pharmacie",         yield:"1.5%", beta:"0.6", description:"Novo Nordisk est un groupe danois leader dans le diabète.", exchange:"NYSE",   country:"🇩🇰" },
+  ASML:  { sector:"Semi-conducteurs",  yield:"0.8%", beta:"1.3", description:"ASML est le seul fabricant mondial de machines lithographiques EUV.", exchange:"NASDAQ", country:"🇳🇱" },
 };
 
-function getAssetInfo(symbol: string) {
+function getAssetInfo(symbol) {
   if (ASSET_INFO_STATIC[symbol]) return ASSET_INFO_STATIC[symbol];
-  // Génère une info depuis SYMBOL_DATABASE
   const db = SYMBOL_DATABASE.find(s => s.symbol === symbol);
   if (db) {
     const isCrypto = db.type === "crypto";
@@ -94,7 +90,7 @@ const TIME_SCALES = [
   { label:"MAX", periods:730, vol:0.025 },
 ];
 
-const buildHistories = (basePrice: number) => {
+const buildHistories = (basePrice) => {
   const out = {};
   TIME_SCALES.forEach(ts => { out[ts.label] = generateHistory(basePrice, ts.periods, ts.vol); });
   return out;
@@ -103,23 +99,19 @@ const buildHistories = (basePrice: number) => {
 const INITIAL_ASSETS = [
   { id:1, symbol:"BTC",  name:"Bitcoin",      type:"crypto", qty:0.42, price:68420,  change: 2.34,  color:"#F7931A", dividends:[] },
   { id:2, symbol:"ETH",  name:"Ethereum",     type:"crypto", qty:3.5,  price:3812,   change:-1.12,  color:"#627EEA", dividends:[] },
-  { id:3, symbol:"AAPL", name:"Apple Inc.",   type:"stock",  qty:12,   price:189.3,  change: 0.87,  color:"#A3B8C2", dividends:[{id:1,date:"2024-02-15",amount:0.24,perShare:0.24},{id:2,date:"2023-11-15",amount:0.24,perShare:0.24},{id:3,date:"2023-08-10",amount:0.24,perShare:0.24}] },
-  { id:4, symbol:"NVDA", name:"NVIDIA Corp.", type:"stock",  qty:8,    price:875.4,  change: 4.21,  color:"#76B900", dividends:[{id:1,date:"2024-03-27",amount:0.04,perShare:0.01},{id:2,date:"2023-12-27",amount:0.04,perShare:0.01}] },
+  { id:3, symbol:"AAPL", name:"Apple Inc.",   type:"stock",  qty:12,   price:189.3,  change: 0.87,  color:"#A3B8C2", dividends:[] },
+  { id:4, symbol:"NVDA", name:"NVIDIA Corp.", type:"stock",  qty:8,    price:875.4,  change: 4.21,  color:"#76B900", dividends:[] },
   { id:5, symbol:"SOL",  name:"Solana",       type:"crypto", qty:25,   price:178.6,  change:-3.5,   color:"#9945FF", dividends:[] },
   { id:6, symbol:"TSLA", name:"Tesla Inc.",   type:"stock",  qty:5,    price:246.8,  change:-0.43,  color:"#CC0000", dividends:[] },
 ];
-
 INITIAL_ASSETS.forEach(a => { a.histories = buildHistories(a.price); });
 
 const ASSET_COLORS = ["#F7931A","#627EEA","#A3B8C2","#76B900","#9945FF","#CC0000","#00A4EF","#E91E8C","#FFD700","#00BCD4"];
 const MOCK_BANKS = [];
-const TINK_CONFIG = { clientId:"YOUR_TINK_CLIENT_ID", redirectUri:"https://yourapp.com/callback", market:"FR", locale:"fr_FR", scopes:"accounts:read,balances:read" };
 const ACCOUNT_TYPE_LABEL = { checking:"Compte courant", savings:"Livret / Épargne", credit:"Carte de crédit" };
-
 const CRYPTO_SYMBOLS = ["BTC","ETH","SOL","BNB","XRP","ADA","DOGE","AVAX","DOT","MATIC","LINK","UNI","ATOM","LTC","BCH","ALGO","XLM","VET","SAND","MANA","APT","OP","ARB","INJ","SUI","TIA","SEI","PEPE","WIF","BONK","JUP","PYTH"];
 
 const SYMBOL_DATABASE = [
-  // ── Crypto ──
   { symbol:"BTC",   name:"Bitcoin",                  type:"crypto" },
   { symbol:"ETH",   name:"Ethereum",                 type:"crypto" },
   { symbol:"SOL",   name:"Solana",                   type:"crypto" },
@@ -170,8 +162,6 @@ const SYMBOL_DATABASE = [
   { symbol:"FLOKI", name:"Floki",                    type:"crypto" },
   { symbol:"TON",   name:"Toncoin",                  type:"crypto" },
   { symbol:"PYTH",  name:"Pyth Network",             type:"crypto" },
-
-  // ── Actions US — Tech ──
   { symbol:"AAPL",  name:"Apple Inc.",               type:"stock" },
   { symbol:"MSFT",  name:"Microsoft",                type:"stock" },
   { symbol:"NVDA",  name:"NVIDIA",                   type:"stock" },
@@ -212,8 +202,6 @@ const SYMBOL_DATABASE = [
   { symbol:"BABA",  name:"Alibaba",                  type:"stock" },
   { symbol:"TSM",   name:"Taiwan Semiconductor",     type:"stock" },
   { symbol:"ASML",  name:"ASML Holding",             type:"stock" },
-
-  // ── Actions US — Finance ──
   { symbol:"V",     name:"Visa",                     type:"stock" },
   { symbol:"MA",    name:"Mastercard",               type:"stock" },
   { symbol:"JPM",   name:"JPMorgan Chase",           type:"stock" },
@@ -230,8 +218,6 @@ const SYMBOL_DATABASE = [
   { symbol:"ICE",   name:"Intercontinental Exchange",type:"stock" },
   { symbol:"PYPL",  name:"PayPal",                   type:"stock" },
   { symbol:"SQ",    name:"Block (Square)",           type:"stock" },
-
-  // ── Actions US — Santé ──
   { symbol:"JNJ",   name:"Johnson & Johnson",        type:"stock" },
   { symbol:"PFE",   name:"Pfizer",                   type:"stock" },
   { symbol:"MRNA",  name:"Moderna",                  type:"stock" },
@@ -246,8 +232,6 @@ const SYMBOL_DATABASE = [
   { symbol:"UNH",   name:"UnitedHealth Group",       type:"stock" },
   { symbol:"CVS",   name:"CVS Health",               type:"stock" },
   { symbol:"CI",    name:"Cigna",                    type:"stock" },
-
-  // ── Actions US — Énergie ──
   { symbol:"XOM",   name:"ExxonMobil",               type:"stock" },
   { symbol:"CVX",   name:"Chevron",                  type:"stock" },
   { symbol:"COP",   name:"ConocoPhillips",           type:"stock" },
@@ -259,8 +243,6 @@ const SYMBOL_DATABASE = [
   { symbol:"ENPH",  name:"Enphase Energy",           type:"stock" },
   { symbol:"FSLR",  name:"First Solar",              type:"stock" },
   { symbol:"NEE",   name:"NextEra Energy",           type:"stock" },
-
-  // ── Actions US — Conso / Retail ──
   { symbol:"KO",    name:"Coca-Cola",                type:"stock" },
   { symbol:"PEP",   name:"PepsiCo",                  type:"stock" },
   { symbol:"MCD",   name:"McDonald's",               type:"stock" },
@@ -277,14 +259,11 @@ const SYMBOL_DATABASE = [
   { symbol:"PG",    name:"Procter & Gamble",         type:"stock" },
   { symbol:"CL",    name:"Colgate-Palmolive",        type:"stock" },
   { symbol:"KHC",   name:"Kraft Heinz",              type:"stock" },
-
-  // ── Actions US — Services financiers / Telecom / Autre ──
   { symbol:"WU",    name:"Western Union",            type:"stock" },
   { symbol:"T",     name:"AT&T",                     type:"stock" },
   { symbol:"VZ",    name:"Verizon",                  type:"stock" },
   { symbol:"TMUS",  name:"T-Mobile US",              type:"stock" },
   { symbol:"CMCSA", name:"Comcast",                  type:"stock" },
-  { symbol:"NFLX",  name:"Netflix",                  type:"stock" },
   { symbol:"PARA",  name:"Paramount Global",         type:"stock" },
   { symbol:"WBD",   name:"Warner Bros. Discovery",   type:"stock" },
   { symbol:"BA",    name:"Boeing",                   type:"stock" },
@@ -299,8 +278,6 @@ const SYMBOL_DATABASE = [
   { symbol:"NOC",   name:"Northrop Grumman",         type:"stock" },
   { symbol:"UPS",   name:"UPS",                      type:"stock" },
   { symbol:"FDX",   name:"FedEx",                    type:"stock" },
-
-  // ── Actions Europe — France (cotées sur NYSE/NASDAQ en ADR ou Paris) ──
   { symbol:"TTE",   name:"TotalEnergies",            type:"stock" },
   { symbol:"LVMH",  name:"LVMH Moët Hennessy",       type:"stock" },
   { symbol:"MC.PA", name:"LVMH (Euronext Paris)",    type:"stock" },
@@ -329,8 +306,6 @@ const SYMBOL_DATABASE = [
   { symbol:"SU.PA", name:"Schneider Electric (Paris)",type:"stock"},
   { symbol:"AI.PA", name:"Air Liquide (Paris)",      type:"stock" },
   { symbol:"SAF.PA",name:"Safran (Paris)",           type:"stock" },
-
-  // ── Actions Europe — Autres pays ──
   { symbol:"SAP",   name:"SAP SE",                   type:"stock" },
   { symbol:"SIEGY", name:"Siemens",                  type:"stock" },
   { symbol:"BAYN.DE",name:"Bayer (Frankfurt)",       type:"stock" },
@@ -353,8 +328,6 @@ const SYMBOL_DATABASE = [
   { symbol:"NTES",  name:"NetEase",                  type:"stock" },
   { symbol:"TCEHY", name:"Tencent",                  type:"stock" },
   { symbol:"PDD",   name:"PDD Holdings (Temu)",      type:"stock" },
-
-  // ── ETF ──
   { symbol:"SPY",   name:"SPDR S&P 500 ETF",         type:"etf" },
   { symbol:"QQQ",   name:"Invesco Nasdaq 100 ETF",   type:"etf" },
   { symbol:"VTI",   name:"Vanguard Total Market ETF",type:"etf" },
@@ -377,8 +350,7 @@ const SYMBOL_DATABASE = [
   { symbol:"ESE.PA",name:"BNP Paribas S&P 500 (Paris)",type:"etf"},
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function useFmt(currency: string) {
+function useFmt(currency) {
   const rate = currency === "EUR" ? EUR_RATE : 1;
   const sym  = currency === "EUR" ? "€" : "$";
   return (v, dec=0) => {
@@ -387,8 +359,7 @@ function useFmt(currency: string) {
   };
 }
 
-// ─── MiniChart ────────────────────────────────────────────────────────────────
-function MiniChart({ data, color, w=72, h=30, strokeWidth=1.5, showDots=false, showGrid=false }: { data: number[], color: string, w?: number, h?: number, strokeWidth?: number, showDots?: boolean, showGrid?: boolean }) {
+function MiniChart({ data, color, w=72, h=30, strokeWidth=1.5, showDots=false, showGrid=false }) {
   if(!data||!data.length) return null;
   const min=Math.min(...data),max=Math.max(...data);
   const range=max-min||1;
@@ -417,8 +388,7 @@ function MiniChart({ data, color, w=72, h=30, strokeWidth=1.5, showDots=false, s
   );
 }
 
-// ─── SymbolSearch — champ avec autocomplétion + prix en temps réel ──────────────
-function SymbolSearch({ value, onChange, onSelect, placeholder, error }: { value: string, onChange: (v: string) => void, onSelect: (s: any) => void, placeholder: string, error?: string }) {
+function SymbolSearch({ value, onChange, onSelect, placeholder, error }) {
   const [open, setOpen]     = useState(false);
   const [prices, setPrices] = useState({});
   const [loading, setLoading] = useState(false);
@@ -432,7 +402,6 @@ function SymbolSearch({ value, onChange, onSelect, placeholder, error }: { value
       ).slice(0, 6)
     : [];
 
-  // Fetch prices for visible suggestions (debounced 400ms)
   useEffect(() => {
     if (!suggestions.length) return;
     clearTimeout(fetchRef.current);
@@ -454,7 +423,7 @@ function SymbolSearch({ value, onChange, onSelect, placeholder, error }: { value
   }, [suggestions.map(s=>s.symbol).join(",")]);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
@@ -462,7 +431,7 @@ function SymbolSearch({ value, onChange, onSelect, placeholder, error }: { value
   const typeColor = { crypto:"#F7931A", stock:"#A3B8C2", etf:"#00A4EF" };
   const typeLabel = { crypto:"Crypto", stock:"Action", etf:"ETF" };
 
-  const fmtPrice = (p: number | null) => {
+  const fmtPrice = (p) => {
     if (!p) return null;
     if (p >= 1000) return p.toLocaleString("fr-FR", {maximumFractionDigits:0});
     if (p >= 1)    return p.toLocaleString("fr-FR", {maximumFractionDigits:2});
@@ -476,12 +445,7 @@ function SymbolSearch({ value, onChange, onSelect, placeholder, error }: { value
         onChange={e => { onChange(e.target.value.toUpperCase()); setOpen(true); }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
-        style={{
-          width:"100%", background:"#0E0D0A",
-          border:`1px solid ${error?"#F87171":"#252015"}`,
-          borderRadius:12, padding:"11px 13px",
-          color:"#F0EDE8", fontSize:13, fontFamily:"'DM Mono',monospace", outline:"none",
-        }}
+        style={{width:"100%",background:"#0E0D0A",border:`1px solid ${error?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}
       />
       {error && <div style={{color:"#F87171",fontSize:10,marginTop:3}}>{error}</div>}
       {open && suggestions.length > 0 && (
@@ -490,35 +454,35 @@ function SymbolSearch({ value, onChange, onSelect, placeholder, error }: { value
             const p = prices[s.symbol];
             const pos = p ? p.change24h >= 0 : null;
             return (
-            <div key={s.symbol} onClick={() => { onSelect(s); setOpen(false); }}
-              style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 13px",cursor:"pointer",borderBottom:"1px solid #1E1B16",transition:"background 0.1s"}}
-              onMouseEnter={e=>e.currentTarget.style.background="#252015"}
-              onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-            >
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:32,height:32,borderRadius:9,background:`${typeColor[s.type]}15`,border:`1px solid ${typeColor[s.type]}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:typeColor[s.type],fontFamily:"'DM Mono',monospace"}}>
-                  {s.symbol.slice(0,2)}
+              <div key={s.symbol} onClick={() => { onSelect(s); setOpen(false); }}
+                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 13px",cursor:"pointer",borderBottom:"1px solid #1E1B16",transition:"background 0.1s"}}
+                onMouseEnter={e=>e.currentTarget.style.background="#252015"}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+              >
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{width:32,height:32,borderRadius:9,background:`${typeColor[s.type]}15`,border:`1px solid ${typeColor[s.type]}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,color:typeColor[s.type],fontFamily:"'DM Mono',monospace"}}>
+                    {s.symbol.slice(0,2)}
+                  </div>
+                  <div>
+                    <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{s.name}</div>
+                    <div style={{color:"#5A5550",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{s.symbol}</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{s.name}</div>
-                  <div style={{color:"#5A5550",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{s.symbol}</div>
-                </div>
-              </div>
-              <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-                {p ? (
-                  <>
-                    <span style={{color:"#F0EDE8",fontSize:13,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{fmtPrice(p.price)}</span>
-                    <span style={{color:pos?"#4ADE80":"#F87171",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
-                      {pos?"▲":"▼"} {Math.abs(p.change24h??0).toFixed(2)}%
+                <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
+                  {p ? (
+                    <>
+                      <span style={{color:"#F0EDE8",fontSize:13,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{fmtPrice(p.price)}</span>
+                      <span style={{color:pos?"#4ADE80":"#F87171",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
+                        {pos?"▲":"▼"} {Math.abs(p.change24h??0).toFixed(2)}%
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{background:`${typeColor[s.type]}20`,color:typeColor[s.type],fontSize:9,fontWeight:700,borderRadius:6,padding:"2px 7px",fontFamily:"'DM Mono',monospace"}}>
+                      {loading ? "…" : typeLabel[s.type]}
                     </span>
-                  </>
-                ) : (
-                  <span style={{background:`${typeColor[s.type]}20`,color:typeColor[s.type],fontSize:9,fontWeight:700,borderRadius:6,padding:"2px 7px",fontFamily:"'DM Mono',monospace"}}>
-                    {loading ? "…" : typeLabel[s.type]}
-                  </span>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
             );
           })}
         </div>
@@ -527,147 +491,83 @@ function SymbolSearch({ value, onChange, onSelect, placeholder, error }: { value
   );
 }
 
-// ─── InputField (outside modal to avoid re-render focus loss) ────────────────
-function InputField({ form, errors, onChange, fkey, label, placeholder, type }: { form: any, errors: any, onChange: (k: string, v: string) => void, fkey: string, label: string, placeholder: string, type: string }) {
+function InputField({ form, errors, onChange, fkey, label, placeholder, type }) {
   return (
     <div>
       <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{label}</div>
       <input
-        type={type}
-        value={form[fkey]}
-        onChange={e => onChange(fkey, e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width:"100%", background:"#0E0D0A",
-          border:`1px solid ${errors[fkey]?"#F87171":"#252015"}`,
-          borderRadius:12, padding:"11px 13px",
-          color:"#F0EDE8", fontSize:13, fontFamily:"'DM Mono',monospace", outline:"none",
-        }}
+        type={type} value={form[fkey]} onChange={e => onChange(fkey, e.target.value)} placeholder={placeholder}
+        style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors[fkey]?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}
       />
       {errors[fkey] && <div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors[fkey]}</div>}
     </div>
   );
 }
 
-// ─── Add Asset Modal ──────────────────────────────────────────────────────────
-function AddAssetModal({ onClose, onAdd }: { onClose: () => void, onAdd: (a: any) => void }) {
+function AddAssetModal({ onClose, onAdd }) {
   const [step, setStep]           = useState(0);
   const [assetType, setAssetType] = useState(null);
   const today = new Date().toISOString().slice(0,10);
   const nowTime = new Date().toTimeString().slice(0,5);
-  const [form, setForm] = useState({
-    symbol:"", name:"", color:ASSET_COLORS[0],
-    buyDate: today, buyTime: nowTime,
-    buyPrice:"", buyQty:"",
-    buyCurrency:"USD",  // devise du prix d'achat
-    priceMode:"unit",   // "unit" = par unité, "total" = montant total
-  });
+  const [form, setForm] = useState({ symbol:"", name:"", color:ASSET_COLORS[0], buyDate:today, buyTime:nowTime, buyPrice:"", buyQty:"", buyCurrency:"USD", priceMode:"unit" });
   const [errors, setErrors] = useState({});
-
   const typeOptions = [
     { value:"stock",  label:"Action",  emoji:"📈", desc:"AAPL, MSFT, LVMH…" },
     { value:"etf",    label:"ETF",     emoji:"🗂",  desc:"SP500, MSCI World…" },
     { value:"crypto", label:"Crypto",  emoji:"₿",  desc:"BTC, ETH, SOL…" },
   ];
-
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
-
   const validate = () => {
     const e = {};
-    if (!form.symbol.trim())                                    e.symbol   = "Requis";
-    if (!form.name.trim())                                      e.name     = "Requis";
-    if (!form.buyDate)                                          e.buyDate  = "Requis";
-    if (!form.buyTime)                                          e.buyTime  = "Requis";
+    if (!form.symbol.trim()) e.symbol = "Requis";
+    if (!form.name.trim()) e.name = "Requis";
+    if (!form.buyDate) e.buyDate = "Requis";
+    if (!form.buyTime) e.buyTime = "Requis";
     if (!form.buyPrice || isNaN(+form.buyPrice) || +form.buyPrice <= 0) e.buyPrice = "Prix positif requis";
-    if (!form.buyQty   || isNaN(+form.buyQty)  || +form.buyQty  <= 0) e.buyQty   = "Quantité positive requise";
+    if (!form.buyQty   || isNaN(+form.buyQty)  || +form.buyQty  <= 0) e.buyQty = "Quantité positive requise";
     setErrors(e);
     return !Object.keys(e).length;
   };
-
   const submit = () => {
     if (!validate()) return;
-    // Convertir en USD si nécessaire
     const fxRate = form.buyCurrency === "EUR" ? (1/EUR_RATE) : form.buyCurrency === "GBP" ? 1.27 : 1;
-    const rawPrice = +form.buyPrice;
     const qty = +form.buyQty;
-    // Si mode total : prix unitaire = total / qty
-    const unitPriceInCurrency = form.priceMode === "total" ? rawPrice / qty : rawPrice;
+    const unitPriceInCurrency = form.priceMode === "total" ? +form.buyPrice / qty : +form.buyPrice;
     const unitPriceUSD = unitPriceInCurrency * fxRate;
     const newAsset = {
-      id: crypto.randomUUID(),
-      symbol: form.symbol.toUpperCase().trim(),
-      name: form.name.trim(),
-      type: assetType,
-      qty: qty,
-      price: Math.round(unitPriceUSD * 100) / 100,
-      change: 0,
-      color: form.color,
-      dividends: [],
-      histories: buildHistories(unitPriceUSD),
-      purchase: {
-        date: form.buyDate, time: form.buyTime,
-        priceUSD: unitPriceUSD,           // prix en USD (pour affichage)
-        priceOriginal: unitPriceInCurrency, // prix dans la devise d'origine
-        currency: form.buyCurrency,
-        priceMode: form.priceMode,
-        qty,
-      },
+      id: crypto.randomUUID(), symbol: form.symbol.toUpperCase().trim(), name: form.name.trim(),
+      type: assetType, qty, price: Math.round(unitPriceUSD * 100) / 100, change: 0,
+      color: form.color, dividends: [], histories: buildHistories(unitPriceUSD),
+      purchase: { date:form.buyDate, time:form.buyTime, priceUSD:unitPriceUSD, priceOriginal:unitPriceInCurrency, currency:form.buyCurrency, priceMode:form.priceMode, qty },
     };
-    onAdd(newAsset);
-    onClose();
+    onAdd(newAsset); onClose();
   };
-
-  const infoFields = [
-    ["symbol",   "Symbole / Ticker",   "ex : AAPL",       "text"],
-    ["name",     "Nom complet",        "ex : Apple Inc.", "text"],
-  ];
-  const transactionFields = [
-    ["buyDate",  "Date d'achat",  "", "date"],
-    ["buyTime",  "Heure d'achat", "", "time"],
-  ];
-
-
-
+  const transactionFields = [["buyDate","Date d'achat","","date"],["buyTime","Heure d'achat","","time"]];
   return (
     <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",background:"#000000AA",backdropFilter:"blur(6px)"}}>
       <div className="fadein" style={{width:390,background:"#1A1714",borderRadius:"28px 28px 0 0",padding:"22px 22px 40px",border:"1px solid #2A2520",borderBottom:"none",maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{width:36,height:4,borderRadius:2,background:"#3A3530",margin:"0 auto 18px"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
           <div>
-            <div style={{color:"#F0EDE8",fontSize:17,fontWeight:700}}>
-              {step===0 ? "Ajouter un actif" : `Nouvel actif · ${typeOptions.find(t=>t.value===assetType)?.label}`}
-            </div>
-            {step===1 && assetType && (
-              <div style={{color:"#5A5550",fontSize:11,marginTop:2}}>
-                {typeOptions.find(t=>t.value===assetType)?.desc}
-              </div>
-            )}
+            <div style={{color:"#F0EDE8",fontSize:17,fontWeight:700}}>{step===0?"Ajouter un actif":`Nouvel actif · ${typeOptions.find(t=>t.value===assetType)?.label}`}</div>
+            {step===1&&assetType&&<div style={{color:"#5A5550",fontSize:11,marginTop:2}}>{typeOptions.find(t=>t.value===assetType)?.desc}</div>}
           </div>
           <button onClick={onClose} style={{background:"#252015",border:"none",width:32,height:32,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
-
         {step===0 && (
           <div style={{display:"flex",flexDirection:"column",gap:9}}>
             {typeOptions.map(t=>(
-              <button key={t.value} onClick={()=>{setAssetType(t.value);setStep(1);}} style={{
-                background:"#111009", border:"1px solid #252015",
-                borderRadius:16, padding:"15px 16px", cursor:"pointer",
-                display:"flex", alignItems:"center", gap:13, textAlign:"left", transition:"all 0.15s",
-              }}
+              <button key={t.value} onClick={()=>{setAssetType(t.value);setStep(1);}}
+                style={{background:"#111009",border:"1px solid #252015",borderRadius:16,padding:"15px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:13,textAlign:"left",transition:"all 0.15s"}}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor="#C8A96E60";}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor="#252015";}}
-              >
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="#252015";}}>
                 <div style={{width:42,height:42,borderRadius:13,background:"#1A1714",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{t.emoji}</div>
-                <div>
-                  <div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{t.label}</div>
-                  <div style={{color:"#5A5550",fontSize:11,marginTop:2}}>{t.desc}</div>
-                </div>
+                <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{t.label}</div><div style={{color:"#5A5550",fontSize:11,marginTop:2}}>{t.desc}</div></div>
                 <div style={{marginLeft:"auto",color:"#3A3530",fontSize:18}}>›</div>
               </button>
             ))}
           </div>
         )}
-
         {step===1 && (
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             <div style={{background:"#111009",borderRadius:14,padding:"14px",border:"1px solid #1E1B16"}}>
@@ -675,69 +575,48 @@ function AddAssetModal({ onClose, onAdd }: { onClose: () => void, onAdd: (a: any
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 <div>
                   <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Symbole / Ticker</div>
-                  <SymbolSearch
-                    value={form.symbol}
-                    onChange={v => set("symbol", v)}
-                    onSelect={s => { set("symbol", s.symbol); set("name", s.name); setAssetType(s.type); }}
-                    placeholder="ex : AAPL, BTC…"
-                    error={errors.symbol}
-                  />
+                  <SymbolSearch value={form.symbol} onChange={v=>set("symbol",v)} onSelect={s=>{set("symbol",s.symbol);set("name",s.name);setAssetType(s.type);}} placeholder="ex : AAPL, BTC…" error={errors.symbol}/>
                 </div>
                 <InputField key="name" form={form} errors={errors} onChange={set} fkey="name" label="Nom complet" placeholder="ex : Apple Inc." type="text"/>
               </div>
             </div>
             <div style={{background:"#111009",borderRadius:14,padding:"14px",border:"1px solid #1E1B16"}}>
               <div style={{color:"#5A5550",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>Transaction d'achat</div>
-              {/* Date + heure */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
                 {transactionFields.map(([k,l,p,t])=><InputField key={k} form={form} errors={errors} onChange={set} fkey={k} label={l} placeholder={p} type={t}/>)}
               </div>
-              {/* Devise */}
               <div style={{marginBottom:10}}>
                 <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Devise du prix d'achat</div>
                 <div style={{display:"flex",gap:6}}>
                   {[["USD","$"],["EUR","€"],["GBP","£"]].map(([cur,sym])=>(
-                    <button key={cur} onClick={()=>set("buyCurrency",cur)} style={{flex:1,padding:"9px 0",border:`1px solid ${form.buyCurrency===cur?"#C8A96E60":"#252015"}`,borderRadius:10,background:form.buyCurrency===cur?"#C8A96E15":"#0E0D0A",color:form.buyCurrency===cur?"#C8A96E":"#5A5550",fontSize:12,fontWeight:form.buyCurrency===cur?700:500,cursor:"pointer",fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>
-                      {sym} {cur}
-                    </button>
+                    <button key={cur} onClick={()=>set("buyCurrency",cur)} style={{flex:1,padding:"9px 0",border:`1px solid ${form.buyCurrency===cur?"#C8A96E60":"#252015"}`,borderRadius:10,background:form.buyCurrency===cur?"#C8A96E15":"#0E0D0A",color:form.buyCurrency===cur?"#C8A96E":"#5A5550",fontSize:12,fontWeight:form.buyCurrency===cur?700:500,cursor:"pointer",fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{sym} {cur}</button>
                   ))}
                 </div>
               </div>
-              {/* Mode prix : par unité ou total */}
               <div style={{marginBottom:10}}>
                 <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Type de prix saisi</div>
                 <div style={{display:"flex",gap:6}}>
                   {[["unit","Par unité"],["total","Montant total"]].map(([mode,label])=>(
-                    <button key={mode} onClick={()=>set("priceMode",mode)} style={{flex:1,padding:"9px 0",border:`1px solid ${form.priceMode===mode?"#C8A96E60":"#252015"}`,borderRadius:10,background:form.priceMode===mode?"#C8A96E15":"#0E0D0A",color:form.priceMode===mode?"#C8A96E":"#5A5550",fontSize:12,fontWeight:form.priceMode===mode?700:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>
-                      {label}
-                    </button>
+                    <button key={mode} onClick={()=>set("priceMode",mode)} style={{flex:1,padding:"9px 0",border:`1px solid ${form.priceMode===mode?"#C8A96E60":"#252015"}`,borderRadius:10,background:form.priceMode===mode?"#C8A96E15":"#0E0D0A",color:form.priceMode===mode?"#C8A96E":"#5A5550",fontSize:12,fontWeight:form.priceMode===mode?700:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{label}</button>
                   ))}
                 </div>
               </div>
-              {/* Prix + Quantité */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div>
-                  <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>
-                    {form.priceMode==="unit" ? `Prix unitaire (${form.buyCurrency})` : `Montant total (${form.buyCurrency})`}
-                  </div>
-                  <input type="number" value={form.buyPrice} onChange={e=>set("buyPrice",e.target.value)}
-                    placeholder={form.priceMode==="unit"?"ex : 189.30":"ex : 1893.00"}
-                    style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.buyPrice?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+                  <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{form.priceMode==="unit"?`Prix unitaire (${form.buyCurrency})`:`Montant total (${form.buyCurrency})`}</div>
+                  <input type="number" value={form.buyPrice} onChange={e=>set("buyPrice",e.target.value)} placeholder={form.priceMode==="unit"?"ex : 189.30":"ex : 1893.00"} style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.buyPrice?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
                   {errors.buyPrice && <div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.buyPrice}</div>}
                 </div>
                 <div>
                   <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Quantité</div>
-                  <input type="number" value={form.buyQty} onChange={e=>set("buyQty",e.target.value)}
-                    placeholder="ex : 10"
-                    style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.buyQty?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+                  <input type="number" value={form.buyQty} onChange={e=>set("buyQty",e.target.value)} placeholder="ex : 10" style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.buyQty?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
                   {errors.buyQty && <div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.buyQty}</div>}
                 </div>
               </div>
-              {/* Récapitulatif */}
               {form.buyPrice && form.buyQty && +form.buyPrice>0 && +form.buyQty>0 && (() => {
-                const fxRate = form.buyCurrency==="EUR" ? (1/EUR_RATE) : form.buyCurrency==="GBP" ? 1.27 : 1;
-                const totalInCur = form.priceMode==="unit" ? +form.buyPrice * +form.buyQty : +form.buyPrice;
-                const unitInCur  = form.priceMode==="unit" ? +form.buyPrice : +form.buyPrice / +form.buyQty;
+                const fxRate = form.buyCurrency==="EUR"?(1/EUR_RATE):form.buyCurrency==="GBP"?1.27:1;
+                const totalInCur = form.priceMode==="unit"?+form.buyPrice * +form.buyQty:+form.buyPrice;
+                const unitInCur  = form.priceMode==="unit"?+form.buyPrice:+form.buyPrice / +form.buyQty;
                 const totalUSD   = totalInCur * fxRate;
                 const unitUSD    = unitInCur  * fxRate;
                 const sym = form.buyCurrency==="EUR"?"€":form.buyCurrency==="GBP"?"£":"$";
@@ -759,20 +638,13 @@ function AddAssetModal({ onClose, onAdd }: { onClose: () => void, onAdd: (a: any
               <div style={{color:"#5A5550",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>Couleur</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {ASSET_COLORS.map(c=>(
-                  <button key={c} onClick={()=>set("color",c)} style={{
-                    width:28,height:28,borderRadius:8,background:c,border:"none",cursor:"pointer",
-                    outline:form.color===c?`3px solid ${c}`:"3px solid transparent",outlineOffset:2,transition:"outline 0.15s",
-                  }}/>
+                  <button key={c} onClick={()=>set("color",c)} style={{width:28,height:28,borderRadius:8,background:c,border:"none",cursor:"pointer",outline:form.color===c?`3px solid ${c}`:"3px solid transparent",outlineOffset:2,transition:"outline 0.15s"}}/>
                 ))}
               </div>
             </div>
             <div style={{display:"flex",gap:10,marginTop:2}}>
-              <button onClick={()=>setStep(0)} style={{flex:1,background:"#111009",border:"1px solid #252015",borderRadius:14,padding:"13px",color:"#8B8580",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                ← Retour
-              </button>
-              <button onClick={submit} style={{flex:2,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-                Ajouter l'actif
-              </button>
+              <button onClick={()=>setStep(0)} style={{flex:1,background:"#111009",border:"1px solid #252015",borderRadius:14,padding:"13px",color:"#8B8580",fontSize:13,fontWeight:600,cursor:"pointer"}}>← Retour</button>
+              <button onClick={submit} style={{flex:2,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>Ajouter l'actif</button>
             </div>
           </div>
         )}
@@ -781,25 +653,16 @@ function AddAssetModal({ onClose, onAdd }: { onClose: () => void, onAdd: (a: any
   );
 }
 
-// ─── Add Dividend Modal ───────────────────────────────────────────────────────
 function AddDividendModal({ asset, onClose, onAdd }) {
   const [form, setForm] = useState({ date:"", amount:"", perShare:"" });
   const [errors, setErrors] = useState({});
-
   const validate = () => {
     const e = {};
     if(!form.date) e.date="Requis";
     if(!form.amount||isNaN(+form.amount)||+form.amount<=0) e.amount="Montant positif requis";
-    setErrors(e);
-    return Object.keys(e).length===0;
+    setErrors(e); return Object.keys(e).length===0;
   };
-
-  const submit = () => {
-    if(!validate()) return;
-    onAdd({ id:Date.now(), date:form.date, amount:+form.amount, perShare:+form.perShare||0 });
-    onClose();
-  };
-
+  const submit = () => { if(!validate()) return; onAdd({ id:Date.now(), date:form.date, amount:+form.amount, perShare:+form.perShare||0 }); onClose(); };
   return (
     <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",background:"#000000AA",backdropFilter:"blur(6px)"}}>
       <div className="fadein" style={{width:390,background:"#1A1714",borderRadius:"28px 28px 0 0",padding:"24px 24px 40px",border:"1px solid #2A2520",borderBottom:"none"}}>
@@ -815,28 +678,23 @@ function AddDividendModal({ asset, onClose, onAdd }) {
           {[["date","Date de réception","date"],["amount","Montant total reçu (USD)","number"],["perShare","Par action / unité (USD)","number"]].map(([key,label,type])=>(
             <div key={key}>
               <div style={{color:"#8B8580",fontSize:11,marginBottom:6,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{label}</div>
-              <input type={type} value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))}
-                style={{width:"100%",background:"#111009",border:`1px solid ${errors[key]?"#F87171":"#252015"}`,borderRadius:12,padding:"12px 14px",color:"#F0EDE8",fontSize:14,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+              <input type={type} value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} style={{width:"100%",background:"#111009",border:`1px solid ${errors[key]?"#F87171":"#252015"}`,borderRadius:12,padding:"12px 14px",color:"#F0EDE8",fontSize:14,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
               {errors[key]&&<div style={{color:"#F87171",fontSize:11,marginTop:4}}>{errors[key]}</div>}
             </div>
           ))}
-          <button onClick={submit} style={{background:"#4ADE80",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:4}}>
-            Enregistrer le dividende
-          </button>
+          <button onClick={submit} style={{background:"#4ADE80",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:4}}>Enregistrer le dividende</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Asset Detail Sheet ───────────────────────────────────────────────────────
-function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }: { asset: any, fmt: any, onClose: () => void, onAddDividend: (id: any, d: any) => void, onDelete: () => void }) {
-  const [divModal, setDivModal]   = useState(false);
-  const [scale, setScale]         = useState("1M");
+function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }) {
+  const [divModal, setDivModal] = useState(false);
+  const [scale, setScale] = useState("1M");
   const isCrypto = asset.type === "crypto";
   const info = getAssetInfo(asset.symbol);
   const totalDivs = asset.dividends.reduce((s,d) => s+d.amount, 0);
-
   const chartData  = asset.histories?.[scale] || [asset.price];
   const chartFirst = chartData[0];
   const chartLast  = chartData[chartData.length - 1];
@@ -851,7 +709,6 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }: { as
     return `${x},${y}`;
   }).join(" ");
   const uid = (asset.color + scale).replace(/[#.\s]/g, "x");
-
   return (
     <>
       <div style={{position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center",background:"#000000BB",backdropFilter:"blur(6px)"}}>
@@ -871,14 +728,10 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }: { as
             <div style={{fontFamily:"'DM Mono',monospace",fontSize:30,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmt(asset.price,2)}</div>
             <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
               <div style={{background:chartPos?"#4ADE8018":"#F8717118",border:`1px solid ${chartPos?"#4ADE8035":"#F8717135"}`,borderRadius:10,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
-                <span style={{color:chartPos?"#4ADE80":"#F87171",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
-                  {chartPos?"▲":"▼"} {chartPos?"+":"-"}{fmt(Math.abs(chartAmtRaw),2)}
-                </span>
+                <span style={{color:chartPos?"#4ADE80":"#F87171",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{chartPos?"▲":"▼"} {chartPos?"+":"-"}{fmt(Math.abs(chartAmtRaw),2)}</span>
               </div>
               <div style={{background:"#1A1714",border:"1px solid #252015",borderRadius:10,padding:"4px 10px"}}>
-                <span style={{color:chartPos?"#4ADE80":"#F87171",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
-                  {chartPos?"+":""}{chartPct.toFixed(2)}%
-                </span>
+                <span style={{color:chartPos?"#4ADE80":"#F87171",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{chartPos?"+":""}{chartPct.toFixed(2)}%</span>
               </div>
               <span style={{color:"#3A3530",fontSize:10,fontFamily:"'DM Mono',monospace"}}>sur {scale}</span>
             </div>
@@ -886,14 +739,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }: { as
           <div style={{margin:"14px 20px 0"}}>
             <div style={{display:"flex",gap:4,marginBottom:10,background:"#1A1714",borderRadius:14,padding:4}}>
               {TIME_SCALES.map(ts=>(
-                <button key={ts.label} onClick={()=>setScale(ts.label)} style={{
-                  flex:1,padding:"6px 0",border:"none",cursor:"pointer",
-                  background:scale===ts.label?`${asset.color}20`:"transparent",
-                  color:scale===ts.label?asset.color:"#4A4540",
-                  borderRadius:10,fontSize:10,fontWeight:scale===ts.label?700:500,
-                  fontFamily:"'DM Mono',monospace",transition:"all 0.2s",
-                  border:scale===ts.label?`1px solid ${asset.color}35`:"1px solid transparent",
-                }}>{ts.label}</button>
+                <button key={ts.label} onClick={()=>setScale(ts.label)} style={{flex:1,padding:"6px 0",border:scale===ts.label?`1px solid ${asset.color}35`:"1px solid transparent",cursor:"pointer",background:scale===ts.label?`${asset.color}20`:"transparent",color:scale===ts.label?asset.color:"#4A4540",borderRadius:10,fontSize:10,fontWeight:scale===ts.label?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>
               ))}
             </div>
             <div style={{background:"#111009",borderRadius:16,padding:"12px 6px 8px",border:`1px solid ${asset.color}18`}}>
@@ -907,18 +753,10 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }: { as
                 {[0.25,0.5,0.75].map(p=><line key={p} x1={0} y1={h*p} x2={w} y2={h*p} stroke="#ffffff05" strokeWidth="1"/>)}
                 <polygon points={`${pts} ${w},${h} 0,${h}`} fill={`url(#ds${uid})`}/>
                 <polyline points={pts} fill="none" stroke={asset.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                {(()=>{
-                  const lastX = w;
-                  const lastY = h - ((chartLast-min)/range)*(h-10) - 5;
-                  return <>
-                    <circle cx={lastX} cy={lastY} r="4" fill={asset.color}/>
-                    <circle cx={lastX} cy={lastY} r="7" fill={asset.color} opacity="0.2"/>
-                  </>;
-                })()}
+                {(()=>{ const lastX=w, lastY=h-((chartLast-min)/range)*(h-10)-5; return <><circle cx={lastX} cy={lastY} r="4" fill={asset.color}/><circle cx={lastX} cy={lastY} r="7" fill={asset.color} opacity="0.2"/></>; })()}
               </svg>
               <div style={{display:"flex",justifyContent:"space-between",padding:"3px 8px 0",fontFamily:"'DM Mono',monospace",color:"#3A3530",fontSize:9}}>
-                <span>{fmt(min,0)}</span>
-                <span>{fmt(max,0)}</span>
+                <span>{fmt(min,0)}</span><span>{fmt(max,0)}</span>
               </div>
             </div>
           </div>
@@ -966,9 +804,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }: { as
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                 <div>
                   <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Dividendes reçus</div>
-                  <div style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>
-                    Total : {fmt(totalDivs,2)}
-                  </div>
+                  <div style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>Total : {fmt(totalDivs,2)}</div>
                 </div>
                 <button onClick={()=>setDivModal(true)} style={{background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#4ADE80",fontSize:12,fontWeight:600}}>
                   <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
@@ -1006,19 +842,14 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }: { as
           </div>
         </div>
       </div>
-      {divModal && (
-        <AddDividendModal asset={asset} onClose={()=>setDivModal(false)} onAdd={(div)=>{onAddDividend(asset.id,div);setDivModal(false);}}/>
-      )}
+      {divModal && <AddDividendModal asset={asset} onClose={()=>setDivModal(false)} onAdd={(div)=>{onAddDividend(asset.id,div);setDivModal(false);}}/>}
     </>
   );
 }
 
-// ─── Account type icons ───────────────────────────────────────────────────────
 function AccIcon({ type, color }) {
-  if (type === "savings")
-    return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2a5 5 0 00-5 5v1H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V10a2 2 0 00-2-2h-2V7a5 5 0 00-5-5z" stroke={color} strokeWidth="1.7"/><circle cx="12" cy="15" r="2" fill={color} opacity="0.7"/></svg>;
-  if (type === "credit")
-    return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke={color} strokeWidth="1.7"/><path d="M2 9h20" stroke={color} strokeWidth="1.7"/><circle cx="7" cy="14" r="1.5" fill={color} opacity="0.7"/></svg>;
+  if (type === "savings") return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2a5 5 0 00-5 5v1H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V10a2 2 0 00-2-2h-2V7a5 5 0 00-5-5z" stroke={color} strokeWidth="1.7"/><circle cx="12" cy="15" r="2" fill={color} opacity="0.7"/></svg>;
+  if (type === "credit") return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke={color} strokeWidth="1.7"/><path d="M2 9h20" stroke={color} strokeWidth="1.7"/><circle cx="7" cy="14" r="1.5" fill={color} opacity="0.7"/></svg>;
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.7"/><path d="M2 10h20" stroke={color} strokeWidth="1.7"/><path d="M6 15h4" stroke={color} strokeWidth="1.7" strokeLinecap="round"/></svg>;
 }
 
@@ -1026,90 +857,83 @@ function BankCard({ bank, onRemove, expandedAccount, setExpandedAccount }) {
   const [isOpen, setIsOpen] = useState(true);
   const fmtEur = (v, dec=2) => v.toLocaleString("fr-FR", { minimumFractionDigits:dec, maximumFractionDigits:dec }) + " €";
   const bankTotal = bank.accounts.reduce((s,a) => s + a.balance, 0);
-
   return (
-    <div style={{ margin:"0 20px 12px", borderRadius:20, border:`1px solid ${bank.color}25`, overflow:"hidden", background:"#111009" }}>
-      <div className="asset-row" onClick={() => setIsOpen(o => !o)} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px", background: isOpen ? `${bank.color}0A` : "transparent", borderBottom: isOpen ? `1px solid ${bank.color}18` : "none", cursor:"pointer" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <div style={{ width:40, height:40, borderRadius:13, background:`${bank.color}18`, border:`1px solid ${bank.color}30`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, color:bank.color, fontFamily:"'DM Mono',monospace", flexShrink:0 }}>{bank.logo}</div>
+    <div style={{margin:"0 20px 12px",borderRadius:20,border:`1px solid ${bank.color}25`,overflow:"hidden",background:"#111009"}}>
+      <div className="asset-row" onClick={()=>setIsOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",background:isOpen?`${bank.color}0A`:"transparent",borderBottom:isOpen?`1px solid ${bank.color}18`:"none",cursor:"pointer"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:40,height:40,borderRadius:13,background:`${bank.color}18`,border:`1px solid ${bank.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:bank.color,fontFamily:"'DM Mono',monospace",flexShrink:0}}>{bank.logo}</div>
           <div>
-            <div style={{ color:"#F0EDE8", fontWeight:700, fontSize:15 }}>{bank.name}</div>
-            <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:2 }}>
-              <div style={{ width:5, height:5, borderRadius:3, background:"#4ADE80" }}/>
-              <span style={{ color:"#3A5A40", fontSize:10, fontFamily:"'DM Mono',monospace" }}>Connecté via Tink</span>
-              <span style={{ color:"#2A3530", fontSize:10, fontFamily:"'DM Mono',monospace" }}>· {bank.accounts.length} compte{bank.accounts.length>1?"s":""}</span>
+            <div style={{color:"#F0EDE8",fontWeight:700,fontSize:15}}>{bank.name}</div>
+            <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
+              <div style={{width:5,height:5,borderRadius:3,background:"#4ADE80"}}/>
+              <span style={{color:"#3A5A40",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Connecté via Tink</span>
+              <span style={{color:"#2A3530",fontSize:10,fontFamily:"'DM Mono',monospace"}}>· {bank.accounts.length} compte{bank.accounts.length>1?"s":""}</span>
             </div>
           </div>
         </div>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ textAlign:"right" }}>
-            <div style={{ fontFamily:"'DM Mono',monospace", color:"#F0EDE8", fontWeight:700, fontSize:15 }}>{fmtEur(bankTotal,0)}</div>
-          </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ transform:isOpen?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.3s", flexShrink:0 }}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:700,fontSize:15}}>{fmtEur(bankTotal,0)}</div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.3s",flexShrink:0}}>
             <path d="M6 9l6 6 6-6" stroke={bank.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
       </div>
       {isOpen && (
         <div>
-          <div style={{ display:"flex", borderBottom:"1px solid #1A1714", overflowX:"auto", padding:"0 16px", gap:2 }}>
+          <div style={{display:"flex",borderBottom:"1px solid #1A1714",overflowX:"auto",padding:"0 16px",gap:2}}>
             {bank.accounts.map(acc => {
               const isActiveTab = expandedAccount === acc.id;
-              return (
-                <button key={acc.id} onClick={e => { e.stopPropagation(); setExpandedAccount(isActiveTab ? null : acc.id); }} style={{ padding:"10px 14px", border:"none", background:"transparent", cursor:"pointer", color: isActiveTab ? bank.color : "#4A4540", fontSize:12, fontWeight: isActiveTab ? 700 : 500, fontFamily:"'DM Sans',sans-serif", borderBottom: isActiveTab ? `2px solid ${bank.color}` : "2px solid transparent", marginBottom:"-1px", whiteSpace:"nowrap", transition:"all 0.2s", flexShrink:0 }}>{acc.label}</button>
-              );
+              return <button key={acc.id} onClick={e=>{e.stopPropagation();setExpandedAccount(isActiveTab?null:acc.id);}} style={{padding:"10px 14px",border:"none",background:"transparent",cursor:"pointer",color:isActiveTab?bank.color:"#4A4540",fontSize:12,fontWeight:isActiveTab?700:500,fontFamily:"'DM Sans',sans-serif",borderBottom:isActiveTab?`2px solid ${bank.color}`:"2px solid transparent",marginBottom:"-1px",whiteSpace:"nowrap",transition:"all 0.2s",flexShrink:0}}>{acc.label}</button>;
             })}
           </div>
           {bank.accounts.map(acc => {
             if (expandedAccount !== acc.id) return null;
             const trend = acc.history[acc.history.length-1] - acc.history[0];
             return (
-              <div key={acc.id} style={{ padding:"14px 16px 16px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:12 }}>
+              <div key={acc.id} style={{padding:"14px 16px 16px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:12}}>
                   <div>
-                    <div style={{ color:"#3A5A40", fontSize:9, letterSpacing:1.5, textTransform:"uppercase", fontFamily:"'DM Mono',monospace", marginBottom:4 }}>Solde actuel</div>
-                    <div style={{ fontFamily:"'DM Mono',monospace", fontSize:26, fontWeight:700, color:"#F0EDE8", letterSpacing:-0.5 }}>{fmtEur(acc.balance)}</div>
+                    <div style={{color:"#3A5A40",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Solde actuel</div>
+                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:26,fontWeight:700,color:"#F0EDE8",letterSpacing:-0.5}}>{fmtEur(acc.balance)}</div>
                   </div>
-                  <div style={{ background: trend>=0?"#4ADE8015":"#F8717115", border:`1px solid ${trend>=0?"#4ADE8030":"#F8717130"}`, color:trend>=0?"#4ADE80":"#F87171", borderRadius:10, padding:"5px 11px", fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:700 }}>
+                  <div style={{background:trend>=0?"#4ADE8015":"#F8717115",border:`1px solid ${trend>=0?"#4ADE8030":"#F8717130"}`,color:trend>=0?"#4ADE80":"#F87171",borderRadius:10,padding:"5px 11px",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
                     {trend>=0?"▲":"▼"} {fmtEur(Math.abs(trend),0)} / mois
                   </div>
                 </div>
-                <div style={{ background:"#0A1209", borderRadius:14, padding:"12px 8px 8px", border:`1px solid ${bank.color}18`, marginBottom:10 }}>
+                <div style={{background:"#0A1209",borderRadius:14,padding:"12px 8px 8px",border:`1px solid ${bank.color}18`,marginBottom:10}}>
                   <MiniChart data={acc.history} color={bank.color} w={318} h={72} strokeWidth={2.5} showDots/>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:10 }}>
-                  {[["Type", ACCOUNT_TYPE_LABEL[acc.type]],["Banque", bank.name]].map(([k,v]) => (
-                    <div key={k} style={{ background:"#0E0E0A", borderRadius:10, padding:"9px 12px", border:"1px solid #1A1714" }}>
-                      <div style={{ color:"#3A3530", fontSize:9, marginBottom:3, fontFamily:"'DM Mono',monospace", letterSpacing:0.8, textTransform:"uppercase" }}>{k}</div>
-                      <div style={{ fontFamily:"'DM Mono',monospace", color:"#F0EDE8", fontSize:12, fontWeight:600 }}>{v}</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                  {[["Type",ACCOUNT_TYPE_LABEL[acc.type]],["Banque",bank.name]].map(([k,v])=>(
+                    <div key={k} style={{background:"#0E0E0A",borderRadius:10,padding:"9px 12px",border:"1px solid #1A1714"}}>
+                      <div style={{color:"#3A3530",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{k}</div>
+                      <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontSize:12,fontWeight:600}}>{v}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{ background:"#0E0E0A", borderRadius:10, padding:"9px 13px", border:"1px solid #1A1714" }}>
-                  <div style={{ color:"#3A3530", fontSize:9, marginBottom:3, fontFamily:"'DM Mono',monospace", letterSpacing:0.8, textTransform:"uppercase" }}>IBAN</div>
-                  <div style={{ fontFamily:"'DM Mono',monospace", color:"#6A6560", fontSize:11, letterSpacing:0.8 }}>{acc.iban}</div>
+                <div style={{background:"#0E0E0A",borderRadius:10,padding:"9px 13px",border:"1px solid #1A1714"}}>
+                  <div style={{color:"#3A3530",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>IBAN</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",color:"#6A6560",fontSize:11,letterSpacing:0.8}}>{acc.iban}</div>
                 </div>
               </div>
             );
           })}
-          {!bank.accounts.some(a => a.id === expandedAccount) && (
+          {!bank.accounts.some(a=>a.id===expandedAccount) && (
             <div>
-              {bank.accounts.map(acc => {
+              {bank.accounts.map(acc=>{
                 const trend = acc.history[acc.history.length-1] - acc.history[0];
                 return (
-                  <div key={acc.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 16px", borderTop:"1px solid #191612" }}>
-                    <div style={{ width:34, height:34, borderRadius:10, background:`${bank.color}12`, border:`1px solid ${bank.color}20`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <div key={acc.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",borderTop:"1px solid #191612"}}>
+                    <div style={{width:34,height:34,borderRadius:10,background:`${bank.color}12`,border:`1px solid ${bank.color}20`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                       <AccIcon type={acc.type} color={bank.color}/>
                     </div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ color:"#F0EDE8", fontWeight:600, fontSize:13 }}>{acc.label}</div>
-                      <div style={{ color:"#4A4540", fontSize:10, marginTop:1, fontFamily:"'DM Mono',monospace" }}>{ACCOUNT_TYPE_LABEL[acc.type]}</div>
+                    <div style={{flex:1}}>
+                      <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>{acc.label}</div>
+                      <div style={{color:"#4A4540",fontSize:10,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{ACCOUNT_TYPE_LABEL[acc.type]}</div>
                     </div>
-                    <div style={{ textAlign:"right" }}>
-                      <div style={{ fontFamily:"'DM Mono',monospace", color:"#F0EDE8", fontWeight:700, fontSize:13 }}>{fmtEur(acc.balance)}</div>
-                      <div style={{ color:trend>=0?"#4ADE80":"#F87171", fontSize:10, fontFamily:"'DM Mono',monospace", marginTop:1 }}>
-                        {trend>=0?"▲":"▼"} {fmtEur(Math.abs(trend),0)}
-                      </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:700,fontSize:13}}>{fmtEur(acc.balance)}</div>
+                      <div style={{color:trend>=0?"#4ADE80":"#F87171",fontSize:10,fontFamily:"'DM Mono',monospace",marginTop:1}}>{trend>=0?"▲":"▼"} {fmtEur(Math.abs(trend),0)}</div>
                     </div>
                     <MiniChart data={acc.history} color={bank.color} w={54} h={22}/>
                   </div>
@@ -1120,8 +944,8 @@ function BankCard({ bank, onRemove, expandedAccount, setExpandedAccount }) {
         </div>
       )}
       {isOpen && (
-        <div style={{ padding:"10px 16px", borderTop:`1px solid ${bank.color}12` }}>
-          <button onClick={e => { e.stopPropagation(); onRemove(bank.id); }} style={{ background:"transparent", border:`1px solid #2A2520`, borderRadius:10, padding:"6px 14px", color:"#5A5550", fontSize:10, cursor:"pointer", width:"100%", fontFamily:"'DM Sans',sans-serif" }}>
+        <div style={{padding:"10px 16px",borderTop:`1px solid ${bank.color}12`}}>
+          <button onClick={e=>{e.stopPropagation();onRemove(bank.id);}} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:10,padding:"6px 14px",color:"#5A5550",fontSize:10,cursor:"pointer",width:"100%",fontFamily:"'DM Sans',sans-serif"}}>
             Déconnecter {bank.name}
           </button>
         </div>
@@ -1130,11 +954,9 @@ function BankCard({ bank, onRemove, expandedAccount, setExpandedAccount }) {
   );
 }
 
-function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }: { banks: any[], onRemove: (id: any) => void, expandedAccount: any, setExpandedAccount: (id: any) => void }) {
+function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }) {
   const fmtEur = (v,dec=2) => v.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec})+" €";
   const totalBalance = banks.flatMap(b=>b.accounts).reduce((s,a)=>s+a.balance,0);
-  const handleTinkConnect = () => alert(`🔗 Redirection vers Tink Link\n\nRemplacez YOUR_TINK_CLIENT_ID par vos credentials depuis console.tink.com`);
-
   return (
     <div className="fadein">
       <div style={{margin:"0 20px 16px",background:"linear-gradient(135deg,#0E1A14,#122018,#0C1810)",borderRadius:22,padding:"18px 20px",border:"1px solid #1E3A28",position:"relative",overflow:"hidden"}}>
@@ -1153,9 +975,7 @@ function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }: { ban
           })}
         </div>
       </div>
-      {banks.map(bank => (
-        <BankCard key={bank.id} bank={bank} onRemove={onRemove} expandedAccount={expandedAccount} setExpandedAccount={setExpandedAccount}/>
-      ))}
+      {banks.map(bank=><BankCard key={bank.id} bank={bank} onRemove={onRemove} expandedAccount={expandedAccount} setExpandedAccount={setExpandedAccount}/>)}
       <div style={{margin:"4px 20px 0",padding:"16px",textAlign:"center"}}>
         <div style={{color:"#3A3530",fontSize:11,fontFamily:"'DM Mono',monospace"}}>Connexion bancaire — bientôt disponible</div>
       </div>
@@ -1163,19 +983,17 @@ function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }: { ban
   );
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab]               = useState(0);
   const [assets, setAssets]         = useState([]);
   const [dbLoading, setDbLoading]   = useState(true);
   const [userId, setUserId]         = useState(null);
   const [user, setUser]             = useState(null);
-  const [authMode, setAuthMode]     = useState("login"); // "login" | "register"
+  const [authMode, setAuthMode]     = useState("login");
   const [authEmail, setAuthEmail]   = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError]   = useState("");
   const [authLoading, setAuthLoading] = useState(false);
-  const [selected, setSelected]     = useState(null);
   const [chartAsset, setChartAsset] = useState(null);
   const [currency, setCurrency]     = useState("EUR");
   const [viewMode, setViewMode]     = useState("grouped");
@@ -1199,10 +1017,10 @@ export default function App() {
   const [editProfileName, setEditProfileName]     = useState("");
   const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
-  const dragItem    = useRef(null);
-  const swipeStartX = useRef(0);
-  const dragOverItem = useRef(null);
-  const dragMktItem    = useRef(null);
+  const dragItem        = useRef(null);
+  const swipeStartX     = useRef(0);
+  const dragOverItem    = useRef(null);
+  const dragMktItem     = useRef(null);
   const dragMktOverItem = useRef(null);
 
   const handleDragSort = () => {
@@ -1223,7 +1041,6 @@ export default function App() {
     setAllMarket(arr);
   };
 
-  // ── Marché state ──
   const [allMarket, setAllMarket] = useState([
     { symbol:"BTC",  name:"Bitcoin",   price:68420, change: 2.34, color:"#F7931A", type:"crypto" },
     { symbol:"ETH",  name:"Ethereum",  price:3812,  change:-1.12, color:"#627EEA", type:"crypto" },
@@ -1235,7 +1052,6 @@ export default function App() {
     { symbol:"XRP",  name:"Ripple",    price:0.62,  change: 6.4,  color:"#346AA9", type:"crypto" },
   ]);
 
-  // ── Ajout dans Marchés ──
   const [showMktAdd, setShowMktAdd]       = useState(false);
   const [mktAddSymbol, setMktAddSymbol]   = useState("");
   const [mktAddLoading, setMktAddLoading] = useState(false);
@@ -1244,88 +1060,130 @@ export default function App() {
   const handleAddMarket = async () => {
     const sym = mktAddSymbol.trim().toUpperCase();
     if (!sym) return;
-    if (allMarket.find(a => a.symbol === sym)) {
-      setMktAddError("Déjà dans la liste");
-      return;
-    }
-    setMktAddLoading(true);
-    setMktAddError("");
+    if (allMarket.find(a => a.symbol === sym)) { setMktAddError("Déjà dans la liste"); return; }
+    setMktAddLoading(true); setMktAddError("");
     try {
       const isCrypto = CRYPTO_SYMBOLS.includes(sym);
-      const endpoint = isCrypto
-        ? `/api/prices/crypto?symbols=${sym}`
-        : `/api/prices/stocks?symbols=${sym}`;
+      const endpoint = isCrypto ? `/api/prices/crypto?symbols=${sym}` : `/api/prices/stocks?symbols=${sym}`;
       const res  = await fetch(endpoint);
       const data = await res.json();
       const p    = data[sym];
       if (p && p.price) {
-        setAllMarket(prev => [...prev, {
-          symbol: sym,
-          name: sym,
-          price: p.price,
-          change: p.change24h ?? 0,
-          color: ASSET_COLORS[prev.length % ASSET_COLORS.length],
-          type: isCrypto ? "crypto" : "stock",
-        }]);
-        setMktAddSymbol("");
-        setShowMktAdd(false);
-      } else {
-        setMktAddError("Symbole introuvable");
-      }
-    } catch(e) {
-      setMktAddError("Erreur de connexion");
-    }
+        setAllMarket(prev => [...prev, { symbol:sym, name:sym, price:p.price, change:p.change24h??0, color:ASSET_COLORS[prev.length%ASSET_COLORS.length], type:isCrypto?"crypto":"stock" }]);
+        setMktAddSymbol(""); setShowMktAdd(false);
+      } else { setMktAddError("Symbole introuvable"); }
+    } catch(e) { setMktAddError("Erreur de connexion"); }
     setMktAddLoading(false);
   };
 
-  // ── Supabase : charger les actifs ──
-  useEffect(() => {
-    // Load persisted profile data
-    const savedPortfolios = localStorage.getItem("portfolios");
-    const savedProfileName = localStorage.getItem("profileName");
-    const savedActivePortfolio = localStorage.getItem("activePortfolioId");
-    if (savedPortfolios) { try { setPortfolios(JSON.parse(savedPortfolios)); } catch(e){} }
-    if (savedProfileName) setProfileName(savedProfileName);
-    if (savedActivePortfolio) setActivePortfolioId(savedActivePortfolio);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Supabase : charger profil + portefeuilles (MIGRATION localStorage → Supabase)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const loadUserData = async (uid) => {
+    // 1. Profil
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles').select('display_name').eq('id', uid).single();
+      if (profileData) {
+        setProfileName(profileData.display_name || '');
+      } else {
+        await supabase.from('profiles').insert({ id: uid, display_name: '' });
+        setProfileName('');
+      }
+    } catch(e) {
+      try { await supabase.from('profiles').insert({ id: uid, display_name: '' }); } catch {}
+      setProfileName('');
+    }
+    // 2. Portefeuilles
+    try {
+      const { data: portfoliosData } = await supabase
+        .from('portfolios').select('id, name').eq('user_id', uid)
+        .order('created_at', { ascending: true });
+      if (portfoliosData && portfoliosData.length > 0) {
+        setPortfolios(portfoliosData);
+        setActivePortfolioId(portfoliosData[0].id);
+        setPortfolioName(portfoliosData[0].name);
+        return portfoliosData[0].id;
+      } else {
+        const def = { id: 'default', name: 'Mon Portefeuille' };
+        await supabase.from('portfolios').insert({ ...def, user_id: uid });
+        setPortfolios([def]);
+        setActivePortfolioId('default');
+        setPortfolioName('Mon Portefeuille');
+        return 'default';
+      }
+    } catch(e) { console.error('loadPortfolios:', e); return 'default'; }
+  };
 
-    const loadAssets = async () => {
+  const saveProfileNameToDB = async (name, uid) => {
+    try {
+      await supabase.from('profiles')
+        .upsert({ id: uid, display_name: name, updated_at: new Date().toISOString() });
+    } catch(e) { console.error('saveProfileName:', e); }
+  };
+
+  const createPortfolio = async (name, uid) => {
+    const id = Date.now().toString();
+    try {
+      await supabase.from('portfolios').insert({ id, name, user_id: uid });
+      setPortfolios(prev => [...prev, { id, name }]);
+    } catch(e) { console.error('createPortfolio:', e); }
+  };
+
+  const renamePortfolioInDB = async (portfolioId, newName, uid) => {
+    try {
+      await supabase.from('portfolios')
+        .update({ name: newName, updated_at: new Date().toISOString() })
+        .eq('id', portfolioId).eq('user_id', uid);
+      setPortfolios(prev => prev.map(p => p.id === portfolioId ? { ...p, name: newName } : p));
+      if (activePortfolioId === portfolioId) setPortfolioName(newName);
+    } catch(e) { console.error('renamePortfolio:', e); }
+  };
+
+  const deletePortfolioFromDB = async (portfolioId, uid) => {
+    try {
+      await supabase.from('assets').delete().eq('portfolio_id', portfolioId).eq('user_id', uid);
+      await supabase.from('portfolios').delete().eq('id', portfolioId).eq('user_id', uid);
+      const remaining = portfolios.filter(p => p.id !== portfolioId);
+      setPortfolios(remaining);
+      if (activePortfolioId === portfolioId) {
+        setActivePortfolioId(remaining[0].id);
+        setPortfolioName(remaining[0].name);
+        setAssets([]); setChartAsset(null);
+      }
+    } catch(e) { console.error('deletePortfolio:', e); }
+  };
+
+  // ── Chargement initial ──
+  useEffect(() => {
+    const init = async () => {
       setDbLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { setDbLoading(false); return; }
-        setUser(user);
-        setUserId(user.id);
-        const { data, error } = await supabase
-          .from("assets")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("portfolio_id", localStorage.getItem("activePortfolioId") || "default")
+        const { data: { user: u } } = await supabase.auth.getUser();
+        if (!u) { setDbLoading(false); return; }
+        setUser(u); setUserId(u.id);
+        const activeId = await loadUserData(u.id);
+        const { data, error } = await supabase.from("assets").select("*")
+          .eq("user_id", u.id).eq("portfolio_id", activeId)
           .order("created_at", { ascending: true });
         if (error) { console.error("Supabase load:", error); setDbLoading(false); return; }
         if (data && data.length > 0) {
           const loaded = data.map(row => ({
-            id:       row.id,
-            symbol:   row.symbol,
-            name:     row.name,
-            type:     row.type,
-            qty:      Number(row.qty),
-            price:    Number(row.current_price),
-            change:   Number(row.price_change_24h ?? 0),
-            color:    row.color,
-            dividends: [],
-            histories: buildHistories(Number(row.current_price)),
-            purchase: row.purchase_data ?? null,
+            id:row.id, symbol:row.symbol, name:row.name, type:row.type,
+            qty:Number(row.qty), price:Number(row.current_price),
+            change:Number(row.price_change_24h??0), color:row.color,
+            dividends:[], histories:buildHistories(Number(row.current_price)),
+            purchase:row.purchase_data??null,
           }));
-          setAssets(loaded);
-          setChartAsset(loaded[0]);
+          setAssets(loaded); setChartAsset(loaded[0]);
         }
-      } catch(e) { console.error("loadAssets:", e); }
+      } catch(e) { console.error("init:", e); }
       setDbLoading(false);
     };
-    loadAssets();
+    init();
   }, []);
 
-  // ── Auth functions ──
+  // ── Auth ──
   const handleLogin = async () => {
     setAuthLoading(true); setAuthError("");
     const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
@@ -1333,14 +1191,16 @@ export default function App() {
     const { data: { user: u } } = await supabase.auth.getUser();
     setUser(u); setUserId(u.id);
     setDbLoading(true);
-    // Reload assets after login
-    const { data } = await supabase.from("assets").select("*").eq("user_id", u.id).order("created_at", { ascending: true });
+    const activeId = await loadUserData(u.id);
+    const { data } = await supabase.from("assets").select("*")
+      .eq("user_id", u.id).eq("portfolio_id", activeId)
+      .order("created_at", { ascending: true });
     if (data && data.length > 0) {
       const loaded = data.map(row => ({
-        id: row.id, symbol: row.symbol, name: row.name, type: row.type,
-        qty: Number(row.qty), price: Number(row.current_price), change: Number(row.price_change_24h ?? 0),
-        color: row.color, dividends: [], histories: buildHistories(Number(row.current_price)),
-        purchase: row.purchase_data ?? null,
+        id:row.id, symbol:row.symbol, name:row.name, type:row.type,
+        qty:Number(row.qty), price:Number(row.current_price), change:Number(row.price_change_24h??0),
+        color:row.color, dividends:[], histories:buildHistories(Number(row.current_price)),
+        purchase:row.purchase_data??null,
       }));
       setAssets(loaded); setChartAsset(loaded[0]);
     }
@@ -1358,9 +1218,7 @@ export default function App() {
   const handleResetPassword = async () => {
     if (!authEmail) { setAuthError("Entrez votre email d'abord"); return; }
     setAuthLoading(true); setAuthError("");
-    const { error } = await supabase.auth.resetPasswordForEmail(authEmail, {
-      redirectTo: window.location.origin + "/portfolio",
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(authEmail, { redirectTo: window.location.origin + "/portfolio" });
     if (error) setAuthError(error.message);
     else setAuthError("✅ Email de réinitialisation envoyé ! Vérifiez votre boîte mail.");
     setAuthLoading(false);
@@ -1369,70 +1227,40 @@ export default function App() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null); setUserId(null); setAssets([]); setChartAsset(null);
+    setPortfolios([{id:"default", name:"Mon Portefeuille"}]);
+    setActivePortfolioId("default");
+    setPortfolioName("Mon Portefeuille");
+    setProfileName("");
   };
 
-  // ── Supabase : sauvegarder un actif ──
   const saveAssetToDB = async (asset) => {
     if (!userId) return;
-    const row = {
-      id:              asset.id,
-      user_id:         userId,
-      portfolio_id:    activePortfolioId,
-      symbol:          asset.symbol,
-      name:            asset.name,
-      type:            asset.type,
-      color:           asset.color,
-      current_price:   asset.price,
-      price_change_24h: asset.change,
-      qty:             asset.qty,
-      purchase_data:   asset.purchase ?? null,
-    };
+    const row = { id:asset.id, user_id:userId, portfolio_id:activePortfolioId, symbol:asset.symbol, name:asset.name, type:asset.type, color:asset.color, current_price:asset.price, price_change_24h:asset.change, qty:asset.qty, purchase_data:asset.purchase??null };
     const { error } = await supabase.from("assets").upsert(row, { onConflict: "id" });
     if (error) console.error("saveAsset:", error);
   };
 
-  // ── Supabase : supprimer un actif ──
   const deleteAssetFromDB = async (assetId) => {
     if (!userId) return;
     const { error } = await supabase.from("assets").delete().eq("id", assetId);
     if (error) console.error("deleteAsset:", error);
   };
 
-  // ── Fermer le menu profil si clic extérieur ──
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest("[data-profile-menu]")) setShowProfileMenu(false);
-    };
+    const handler = (e) => { if (!e.target.closest("[data-profile-menu]")) setShowProfileMenu(false); };
     if (showProfileMenu) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showProfileMenu]);
 
-  // ── Persister profil ──
-  useEffect(() => {
-    localStorage.setItem("portfolios", JSON.stringify(portfolios));
-  }, [portfolios]);
-
-  useEffect(() => {
-    localStorage.setItem("profileName", profileName);
-  }, [profileName]);
-
-  useEffect(() => {
-    localStorage.setItem("activePortfolioId", activePortfolioId);
-  }, [activePortfolioId]);
-
-  // ── Fetch prix réels ──
   useEffect(() => {
     const fetchPrices = async () => {
       try {
-        const cryptoSymbols = assets.filter(a => a.type === 'crypto').map(a => a.symbol).join(',');
-        const stockSymbols  = assets.filter(a => a.type !== 'crypto').map(a => a.symbol).join(',');
-        const mktCrypto     = allMarket.filter(a => a.type === 'crypto').map(a => a.symbol).join(',');
-        const mktStock      = allMarket.filter(a => a.type !== 'crypto').map(a => a.symbol).join(',');
-
-        const allCrypto = [...new Set([...cryptoSymbols.split(','), ...mktCrypto.split(',')].filter(Boolean))].join(',');
-        const allStock  = [...new Set([...stockSymbols.split(','), ...mktStock.split(',')].filter(Boolean))].join(',');
-
+        const cryptoSymbols = assets.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
+        const stockSymbols  = assets.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
+        const mktCrypto     = allMarket.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
+        const mktStock      = allMarket.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
+        const allCrypto = [...new Set([...cryptoSymbols.split(','),...mktCrypto.split(',')].filter(Boolean))].join(',');
+        const allStock  = [...new Set([...stockSymbols.split(','),...mktStock.split(',')].filter(Boolean))].join(',');
         const [cryptoRes, stockRes] = await Promise.all([
           allCrypto ? fetch(`/api/prices/crypto?symbols=${allCrypto}`) : Promise.resolve({ ok: false }),
           allStock  ? fetch(`/api/prices/stocks?symbols=${allStock}`)  : Promise.resolve({ ok: false }),
@@ -1440,21 +1268,15 @@ export default function App() {
         const cryptoPrices = cryptoRes.ok ? await cryptoRes.json() : {};
         const stockPrices  = stockRes.ok  ? await stockRes.json()  : {};
         const allPrices    = { ...cryptoPrices, ...stockPrices };
-
         setAssets(prev => prev.map(a => {
-          const p = allPrices[a.symbol];
-          if (!p) return a;
+          const p = allPrices[a.symbol]; if (!p) return a;
           const newPrice = p.price ?? a.price;
-          // Compare dans la devise native de l'API (EUR pour .PA, USD pour le reste)
           const purchaseRef = a.purchase?.priceOriginal ?? a.purchase?.priceUSD ?? a.purchase?.price;
-          const realChange = purchaseRef
-            ? ((newPrice - purchaseRef) / purchaseRef) * 100
-            : (p.change24h ?? a.change);
+          const realChange = purchaseRef ? ((newPrice - purchaseRef) / purchaseRef) * 100 : (p.change24h ?? a.change);
           return { ...a, price: newPrice, change: Math.round(realChange * 100) / 100 };
         }));
         setAllMarket(prev => prev.map(a => {
-          const p = allPrices[a.symbol];
-          if (!p) return a;
+          const p = allPrices[a.symbol]; if (!p) return a;
           return { ...a, price: p.price ?? a.price, change: p.change24h ?? a.change };
         }));
       } catch (e) { console.error('Erreur fetch prix:', e); }
@@ -1464,7 +1286,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const fmt = useFmt(currency);
+  const fmt         = useFmt(currency);
   const total       = assets.reduce((s,a)=>s+a.qty*a.price,0);
   const totalChange = assets.reduce((s,a)=>s+a.qty*a.price*(a.change/100),0);
   const totalPct    = (totalChange/(total-totalChange))*100;
@@ -1473,36 +1295,30 @@ export default function App() {
   const mktList     = mktFilter==="all" ? allMarket : allMarket.filter(a=>a.type===mktFilter);
 
   const handleAddAsset = async (newAsset) => {
-    // Ajoute d'abord avec le prix d'achat
     setAssets(prev => [...prev, newAsset]);
     if (!chartAsset) setChartAsset(newAsset);
-    // Sauvegarde dans Supabase
     await saveAssetToDB(newAsset);
-    // Puis fetch le prix réel immédiatement
     try {
       const isCrypto = newAsset.type === 'crypto';
-      const endpoint = isCrypto
-        ? `/api/prices/crypto?symbols=${newAsset.symbol}`
-        : `/api/prices/stocks?symbols=${newAsset.symbol}`;
+      const endpoint = isCrypto ? `/api/prices/crypto?symbols=${newAsset.symbol}` : `/api/prices/stocks?symbols=${newAsset.symbol}`;
       const res  = await fetch(endpoint);
       const data = await res.json();
       const p    = data[newAsset.symbol];
       if (p && p.price) {
         const purchaseRef = newAsset.purchase?.priceOriginal ?? newAsset.purchase?.priceUSD ?? newAsset.purchase?.price;
-        const realChange = purchaseRef
-          ? ((p.price - purchaseRef) / purchaseRef) * 100
-          : (p.change24h ?? 0);
+        const realChange = purchaseRef ? ((p.price - purchaseRef) / purchaseRef) * 100 : (p.change24h ?? 0);
         const updatedAsset = { ...newAsset, price: p.price, change: Math.round(realChange * 100) / 100, histories: buildHistories(p.price) };
         setAssets(prev => prev.map(a => a.id === newAsset.id ? updatedAsset : a));
-        // Resauvegarde avec le prix réel
         await saveAssetToDB(updatedAsset);
       }
     } catch(e) { console.error('Fetch prix nouvel actif:', e); }
   };
+
   const handleDeleteAsset = async (id) => {
     setAssets(prev => prev.filter(a => a.id !== id));
     await deleteAssetFromDB(id);
   };
+
   const handleAddDividend = (assetId, div) => {
     setAssets(prev=>prev.map(a=>a.id===assetId?{...a,dividends:[...a.dividends,div]}:a));
     if(detailAsset?.id===assetId) setDetailAsset(prev=>({...prev,dividends:[...prev.dividends,div]}));
@@ -1516,31 +1332,27 @@ export default function App() {
     { label:"Banque",  i:2, icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="8" width="20" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M2 12h20" stroke="currentColor" strokeWidth="1.8"/><path d="M6 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 5L12 2 8 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
   ];
 
-  // ── Écran de login ──
+  // ── Écran login ──
   if (!dbLoading && !user) {
     const isLogin = authMode === "login";
     return (
       <div style={{fontFamily:"'DM Sans',sans-serif",background:"#0A0906",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500;700&display=swap'); *{box-sizing:border-box;margin:0;padding:0;}`}</style>
         <div style={{width:"100%",maxWidth:380,background:"#1A1714",borderRadius:24,padding:"32px 28px",border:"1px solid #2A2520",boxShadow:"0 24px 60px #000a"}}>
-          {/* Logo */}
           <div style={{textAlign:"center",marginBottom:28}}>
             <div style={{width:56,height:56,borderRadius:16,background:"linear-gradient(135deg,#C8A96E,#A08040)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 12px"}}>₿</div>
             <div style={{color:"#F0EDE8",fontSize:20,fontWeight:700}}>Portfolio Tracker</div>
-            <div style={{color:"#5A5550",fontSize:12,marginTop:4}}>{isLogin ? "Connectez-vous à votre compte" : "Créez votre compte"}</div>
+            <div style={{color:"#5A5550",fontSize:12,marginTop:4}}>{isLogin?"Connectez-vous à votre compte":"Créez votre compte"}</div>
           </div>
-          {/* Form */}
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             <div>
               <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Email</div>
-              <input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)}
-                placeholder="votre@email.com" onKeyDown={e=>e.key==="Enter"&&(isLogin?handleLogin():handleRegister())}
+              <input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} placeholder="votre@email.com" onKeyDown={e=>e.key==="Enter"&&(isLogin?handleLogin():handleRegister())}
                 style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"12px 14px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
             </div>
             <div>
               <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Mot de passe</div>
-              <input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)}
-                placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&(isLogin?handleLogin():handleRegister())}
+              <input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&(isLogin?handleLogin():handleRegister())}
                 style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"12px 14px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
             </div>
             {authError && (
@@ -1550,18 +1362,13 @@ export default function App() {
             )}
             <button onClick={isLogin?handleLogin:handleRegister} disabled={authLoading}
               style={{background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:12,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:4,opacity:authLoading?0.7:1}}>
-              {authLoading ? "…" : isLogin ? "Se connecter" : "Créer le compte"}
+              {authLoading?"…":isLogin?"Se connecter":"Créer le compte"}
             </button>
             <button onClick={()=>{setAuthMode(isLogin?"register":"login");setAuthError("");}}
               style={{background:"transparent",border:"none",color:"#5A5550",fontSize:12,cursor:"pointer",padding:"6px"}}>
-              {isLogin ? "Pas encore de compte ? S'inscrire" : "Déjà un compte ? Se connecter"}
+              {isLogin?"Pas encore de compte ? S'inscrire":"Déjà un compte ? Se connecter"}
             </button>
-            {isLogin && (
-              <button onClick={handleResetPassword}
-                style={{background:"transparent",border:"none",color:"#3A3530",fontSize:11,cursor:"pointer",padding:"4px"}}>
-                Mot de passe oublié ?
-              </button>
-            )}
+            {isLogin && <button onClick={handleResetPassword} style={{background:"transparent",border:"none",color:"#3A3530",fontSize:11,cursor:"pointer",padding:"4px"}}>Mot de passe oublié ?</button>}
           </div>
         </div>
       </div>
@@ -1594,278 +1401,227 @@ export default function App() {
         .add-btn:hover{transform:scale(1.05);}
         .add-btn{transition:transform 0.15s,box-shadow 0.15s;}
       `}</style>
-
       <div style={{width:"100%",maxWidth:430,background:"#151210",borderRadius:0,overflow:"hidden",height:"100vh",position:"relative",display:"flex",flexDirection:"column"}}>
 
-        {/* Fixed top section */}
+        {/* Fixed top */}
         <div style={{flexShrink:0}}>
-
-
-        {/* Header */}
-        <div style={{padding:"12px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{position:"relative"}}>
-              <div data-profile-menu onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
-                {user?.email?.[0]?.toUpperCase() ?? "A"}
-              </div>
-              <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
-              {showProfileMenu && (
-                <div data-profile-menu style={{position:"absolute",top:44,left:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:16,padding:"8px",minWidth:220,boxShadow:"0 8px 24px #000a"}}>
-                  {/* Avatar + nom */}
-                  <div style={{padding:"10px 10px 12px",borderBottom:"1px solid #252015",marginBottom:4,display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:40,height:40,borderRadius:20,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#111009",flexShrink:0}}>
-                      {profileName ? profileName[0].toUpperCase() : user?.email?.[0]?.toUpperCase()}
+          {/* Header */}
+          <div style={{padding:"12px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{position:"relative"}}>
+                <div data-profile-menu onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
+                  {user?.email?.[0]?.toUpperCase()??"A"}
+                </div>
+                <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
+                {showProfileMenu && (
+                  <div data-profile-menu style={{position:"absolute",top:44,left:0,zIndex:500,background:"#1A1714",border:"1px solid #2A2520",borderRadius:16,padding:"8px",minWidth:220,boxShadow:"0 8px 24px #000a"}}>
+                    <div style={{padding:"10px 10px 12px",borderBottom:"1px solid #252015",marginBottom:4,display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:40,height:40,borderRadius:20,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:"#111009",flexShrink:0}}>
+                        {profileName?profileName[0].toUpperCase():user?.email?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600}}>{profileName||user?.email?.split("@")[0]}</div>
+                        <div style={{color:"#4A4540",fontSize:10,marginTop:1,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.email}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600}}>{profileName || user?.email?.split("@")[0]}</div>
-                      <div style={{color:"#4A4540",fontSize:10,marginTop:1,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.email}</div>
+                    {/* Portefeuilles */}
+                    <div style={{padding:"8px 10px 4px",borderBottom:"1px solid #252015",marginBottom:4}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                        <div style={{color:"#6A6560",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Portefeuilles</div>
+                        <button onClick={()=>setShowAddPortfolio(v=>!v)} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:6,padding:"2px 8px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+</button>
+                      </div>
+                      {showAddPortfolio && (
+                        <div style={{display:"flex",gap:6,marginBottom:8}}>
+                          <input value={newPortfolioName} onChange={e=>setNewPortfolioName(e.target.value)} placeholder="Nom du portefeuille" autoFocus
+                            onKeyDown={async e=>{if(e.key==="Enter"&&newPortfolioName.trim()&&userId){await createPortfolio(newPortfolioName.trim(),userId);setNewPortfolioName("");setShowAddPortfolio(false);}}}
+                            style={{flex:1,background:"#0E0D0A",border:"1px solid #252015",borderRadius:8,padding:"6px 10px",color:"#F0EDE8",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+                          <button onClick={async()=>{if(newPortfolioName.trim()&&userId){await createPortfolio(newPortfolioName.trim(),userId);setNewPortfolioName("");setShowAddPortfolio(false);}}}
+                            style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"6px 10px",color:"#111009",fontSize:11,fontWeight:700,cursor:"pointer"}}>OK</button>
+                        </div>
+                      )}
+                      {portfolios.map(p=>(
+                        <div key={p.id} style={{marginBottom:2}}>
+                          {editingPortfolioId===p.id ? (
+                            <div style={{display:"flex",gap:6,padding:"4px 0"}}>
+                              <input value={editingPortfolioName} onChange={e=>setEditingPortfolioName(e.target.value)} autoFocus
+                                onKeyDown={async e=>{if(e.key==="Enter"&&userId){await renamePortfolioInDB(p.id,editingPortfolioName,userId);setEditingPortfolioId(null);}}}
+                                style={{flex:1,background:"#0E0D0A",border:"1px solid #C8A96E40",borderRadius:8,padding:"5px 9px",color:"#F0EDE8",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+                              <button onClick={async()=>{if(userId){await renamePortfolioInDB(p.id,editingPortfolioName,userId);setEditingPortfolioId(null);}}}
+                                style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"5px 10px",color:"#111009",fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
+                              <button onClick={()=>setEditingPortfolioId(null)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"5px 10px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
+                            </div>
+                          ) : (
+                            <div onClick={async()=>{
+                                setActivePortfolioId(p.id); setPortfolioName(p.name); setDbLoading(true);
+                                const { data } = await supabase.from("assets").select("*").eq("user_id",userId).eq("portfolio_id",p.id).order("created_at",{ascending:true});
+                                if(data&&data.length>0){const loaded=data.map(row=>({id:row.id,symbol:row.symbol,name:row.name,type:row.type,qty:Number(row.qty),price:Number(row.current_price),change:Number(row.price_change_24h??0),color:row.color,dividends:[],histories:buildHistories(Number(row.current_price)),purchase:row.purchase_data??null}));setAssets(loaded);setChartAsset(loaded[0]);}else{setAssets([]);setChartAsset(null);}
+                                setDbLoading(false);
+                              }}
+                              style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 8px",borderRadius:8,cursor:"pointer",background:activePortfolioId===p.id?"#C8A96E15":"transparent",transition:"background 0.15s"}}
+                              onMouseEnter={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"#1E1B16"}
+                              onMouseLeave={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"transparent"}>
+                              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                {activePortfolioId===p.id&&<div style={{width:4,height:4,borderRadius:2,background:"#C8A96E",flexShrink:0}}/>}
+                                <span style={{color:activePortfolioId===p.id?"#C8A96E":"#8A8580",fontSize:12,fontWeight:activePortfolioId===p.id?600:400}}>{p.name}</span>
+                              </div>
+                              <div style={{display:"flex",gap:4}}>
+                                <button onClick={e=>{e.stopPropagation();setEditingPortfolioId(p.id);setEditingPortfolioName(p.name);}}
+                                  style={{background:"transparent",border:"none",color:"#3A3530",fontSize:11,cursor:"pointer",padding:"0 4px"}}
+                                  onMouseEnter={e=>e.currentTarget.style.color="#C8A96E"} onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✏️</button>
+                                {portfolios.length>1&&(
+                                  <button onClick={async e=>{e.stopPropagation();if(userId)await deletePortfolioFromDB(p.id,userId);}}
+                                    style={{background:"transparent",border:"none",color:"#3A3530",fontSize:12,cursor:"pointer",padding:"0 4px"}}
+                                    onMouseEnter={e=>e.currentTarget.style.color="#F87171"} onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✕</button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
+                    <button onClick={()=>{setEditProfileName(profileName);setEditPortfolioName(portfolioName);setShowProfileMenu(false);setTimeout(()=>setShowProfileEdit(true),50);}}
+                      style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#C8A96E",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#C8A96E10"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      ✏️ Modifier le profil
+                    </button>
+                    <button onClick={handleLogout}
+                      style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#F87171",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#F8717115"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      ⏻ Se déconnecter
+                    </button>
                   </div>
-                  {/* Portefeuilles */}
-                  <div style={{padding:"8px 10px 4px",borderBottom:"1px solid #252015",marginBottom:4}}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-                      <div style={{color:"#6A6560",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Portefeuilles</div>
-                      <button onClick={()=>setShowAddPortfolio(v=>!v)} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:6,padding:"2px 8px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+</button>
-                    </div>
-                    {showAddPortfolio && (
-                      <div style={{display:"flex",gap:6,marginBottom:8}}>
-                        <input value={newPortfolioName} onChange={e=>setNewPortfolioName(e.target.value)}
-                          placeholder="Nom du portefeuille" autoFocus
-                          onKeyDown={e=>{
-                            if(e.key==="Enter" && newPortfolioName.trim()) {
-                              const id = Date.now().toString();
-                              setPortfolios(p=>[...p,{id,name:newPortfolioName.trim()}]);
-                              setNewPortfolioName(""); setShowAddPortfolio(false);
-                            }
-                          }}
-                          style={{flex:1,background:"#0E0D0A",border:"1px solid #252015",borderRadius:8,padding:"6px 10px",color:"#F0EDE8",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-                        <button onClick={()=>{
-                          if(newPortfolioName.trim()){
-                            const id = Date.now().toString();
-                            setPortfolios(p=>[...p,{id,name:newPortfolioName.trim()}]);
-                            setNewPortfolioName(""); setShowAddPortfolio(false);
-                          }
-                        }} style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"6px 10px",color:"#111009",fontSize:11,fontWeight:700,cursor:"pointer"}}>OK</button>
-                      </div>
-                    )}
-                    {portfolios.map(p=>(
-                      <div key={p.id} style={{marginBottom:2}}>
-                        {editingPortfolioId===p.id ? (
-                          <div style={{display:"flex",gap:6,padding:"4px 0"}}>
-                            <input value={editingPortfolioName} onChange={e=>setEditingPortfolioName(e.target.value)} autoFocus
-                              onKeyDown={e=>{if(e.key==="Enter"){setPortfolios(prev=>prev.map(x=>x.id===p.id?{...x,name:editingPortfolioName}:x));if(activePortfolioId===p.id)setPortfolioName(editingPortfolioName);setEditingPortfolioId(null);}}}
-                              style={{flex:1,background:"#0E0D0A",border:"1px solid #C8A96E40",borderRadius:8,padding:"5px 9px",color:"#F0EDE8",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-                            <button onClick={()=>{setPortfolios(prev=>prev.map(x=>x.id===p.id?{...x,name:editingPortfolioName}:x));if(activePortfolioId===p.id)setPortfolioName(editingPortfolioName);setEditingPortfolioId(null);}}
-                              style={{background:"#C8A96E",border:"none",borderRadius:8,padding:"5px 10px",color:"#111009",fontSize:11,fontWeight:700,cursor:"pointer"}}>✓</button>
-                            <button onClick={()=>setEditingPortfolioId(null)}
-                              style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"5px 10px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
-                          </div>
-                        ) : (
-                          <div onClick={async ()=>{
-                              setActivePortfolioId(p.id);
-                              setPortfolioName(p.name);
-                              setDbLoading(true);
-                              const { data } = await supabase.from("assets").select("*")
-                                .eq("user_id", userId)
-                                .eq("portfolio_id", p.id)
-                                .order("created_at", { ascending: true });
-                              if (data && data.length > 0) {
-                                const loaded = data.map(row => ({
-                                  id: row.id, symbol: row.symbol, name: row.name, type: row.type,
-                                  qty: Number(row.qty), price: Number(row.current_price),
-                                  change: Number(row.price_change_24h ?? 0), color: row.color,
-                                  dividends: [], histories: buildHistories(Number(row.current_price)),
-                                  purchase: row.purchase_data ?? null,
-                                }));
-                                setAssets(loaded); setChartAsset(loaded[0]);
-                              } else { setAssets([]); setChartAsset(null); }
-                              setDbLoading(false);
-                            }}
-                            style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 8px",borderRadius:8,cursor:"pointer",background:activePortfolioId===p.id?"#C8A96E15":"transparent",transition:"background 0.15s"}}
-                            onMouseEnter={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"#1E1B16"}
-                            onMouseLeave={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"transparent"}>
-                            <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              {activePortfolioId===p.id && <div style={{width:4,height:4,borderRadius:2,background:"#C8A96E",flexShrink:0}}/>}
-                              <span style={{color:activePortfolioId===p.id?"#C8A96E":"#8A8580",fontSize:12,fontWeight:activePortfolioId===p.id?600:400}}>{p.name}</span>
-                            </div>
-                            <div style={{display:"flex",gap:4}}>
-                              <button onClick={e=>{e.stopPropagation();setEditingPortfolioId(p.id);setEditingPortfolioName(p.name);}}
-                                style={{background:"transparent",border:"none",color:"#3A3530",fontSize:11,cursor:"pointer",padding:"0 4px"}}
-                                onMouseEnter={e=>e.currentTarget.style.color="#C8A96E"}
-                                onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✏️</button>
-                              {portfolios.length > 1 && (
-                                <button onClick={e=>{e.stopPropagation();const remaining=portfolios.filter(x=>x.id!==p.id);setPortfolios(remaining);if(activePortfolioId===p.id){setActivePortfolioId(remaining[0].id);setPortfolioName(remaining[0].name);setAssets([]);setChartAsset(null);}}}
-                                  style={{background:"transparent",border:"none",color:"#3A3530",fontSize:12,cursor:"pointer",padding:"0 4px"}}
-                                  onMouseEnter={e=>e.currentTarget.style.color="#F87171"}
-                                  onMouseLeave={e=>e.currentTarget.style.color="#3A3530"}>✕</button>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                )}
+              </div>
+              <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
+            </div>
+            <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
+              {["USD","EUR"].map(c=>(
+                <button key={c} onClick={()=>setCurrency(c)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:currency===c?"#C8A96E":"transparent",color:currency===c?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{c}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Total card */}
+          {tab!==2 && (
+            <div className="fadein" style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
+                <div>
+                  <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
+                </div>
+                <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
+                  {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
+                </div>
+              </div>
+              <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
+                {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
+              </div>
+              <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
+                {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
+              </div>
+              <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
+                {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
+                  const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
+                  return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {(val/total*100).toFixed(0)}%</span></div>;
+                })}
+                <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
+                  <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
+                  <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Toolbar Marchés */}
+          {tab===1 && (
+            <div style={{padding:"8px 20px 10px",background:"#151210"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
+                  <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                    {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
+                      <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
                     ))}
                   </div>
-                  {/* Options */}
-                  <button onClick={()=>{setEditProfileName(profileName);setEditPortfolioName(portfolioName);setShowProfileMenu(false);setTimeout(()=>setShowProfileEdit(true),50);}}
-                    style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#C8A96E",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
-                    onMouseEnter={e=>e.currentTarget.style.background="#C8A96E10"}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    ✏️ Modifier le profil
+                  <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
+                  <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Toolbar Actifs */}
+          {tab===0 && (
+            <div style={{padding:"8px 20px 6px",background:"#151210"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
+                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                    {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
+                      <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>setDragMode(d=>!d)} style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
                   </button>
-                  <button onClick={handleLogout}
-                    style={{width:"100%",background:"transparent",border:"none",padding:"9px 10px",color:"#F87171",fontSize:12,fontWeight:600,cursor:"pointer",textAlign:"left",borderRadius:8,display:"flex",alignItems:"center",gap:8,fontFamily:"'DM Sans',sans-serif"}}
-                    onMouseEnter={e=>e.currentTarget.style.background="#F8717115"}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    ⏻ Se déconnecter
+                  <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
                   </button>
                 </div>
-              )}
+              </div>
+              <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
+                {TIME_SCALES.map(ts=>{
+                  const active=listScale===ts.label;
+                  return <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:active?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>;
+                })}
+              </div>
             </div>
-            <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-          </div>
-          <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
-            {["USD","EUR"].map(c=>(
-              <button key={c} onClick={()=>setCurrency(c)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:currency===c?"#C8A96E":"transparent",color:currency===c?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{c}</button>
-            ))}
-          </div>
+          )}
         </div>
-
-        {/* Total card */}
-        {tab!==2 && (
-          <div className="fadein" style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
-              <div>
-                <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
-                <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
-              </div>
-              <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
-                {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
-              </div>
-            </div>
-            <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
-              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
-            </div>
-            <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
-              {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
-            </div>
-            <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
-              {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
-                const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
-                return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {(val/total*100).toFixed(0)}%</span></div>;
-              })}
-              <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
-                <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
-                <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Fixed toolbar for Marchés */}
-        {tab===1 && (
-          <div style={{padding:"8px 20px 10px",background:"#151210"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
-                <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                  {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
-                    <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                  ))}
-                </div>
-                <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
-                <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Fixed toolbar for Actifs */}
-        {tab===0 && (
-          <div style={{padding:"8px 20px 6px",background:"#151210"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
-                <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                  {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
-                    <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                  ))}
-                </div>
-              </div>
-              <div style={{display:"flex",gap:6}}>
-                <button onClick={()=>setDragMode(d=>!d)} title="Réorganiser" style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
-                </button>
-                <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
-                </button>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
-              {TIME_SCALES.map(ts => {
-                const active = listScale === ts.label;
-                return (
-                  <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:"none",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s",border:active?"1px solid #C8A96E35":"1px solid transparent"}}>{ts.label}</button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        </div>{/* end fixed top */}
 
         {/* Scrollable content */}
         <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}
-          onTouchStart={e=>{ swipeStartX.current = e.touches[0].clientX; }}
+          onTouchStart={e=>{ swipeStartX.current=e.touches[0].clientX; }}
           onTouchEnd={e=>{
-            const dx = e.changedTouches[0].clientX - swipeStartX.current;
-            if (Math.abs(dx) > 60) {
-              if (dx < 0 && tab < 2) { setTab(tab+1); setDetailAsset(null); }
-              if (dx > 0 && tab > 0) { setTab(tab-1); setDetailAsset(null); }
-            }
+            const dx=e.changedTouches[0].clientX-swipeStartX.current;
+            if(Math.abs(dx)>60){if(dx<0&&tab<2){setTab(tab+1);setDetailAsset(null);}if(dx>0&&tab>0){setTab(tab-1);setDetailAsset(null);}}
           }}>
 
           {/* ── ACTIFS ── */}
           {tab===0 && (
             <div className="fadein">
-              {viewMode === "grouped" ? (
-                assets.map((a, idx) => {
-                  const scaleData  = a.histories?.[listScale] || [a.price];
-                  // P&L: si prix d'achat connu → vrai P&L, sinon variation historique
-                  const buyPrice   = a.purchase?.price;
-                  const scalePct   = buyPrice
-                    ? ((a.price - buyPrice) / buyPrice * 100)
-                    : ((scaleData[scaleData.length-1] - scaleData[0]) / scaleData[0] * 100);
-                  const scaleAmt   = buyPrice
-                    ? (a.price - buyPrice) * a.qty
-                    : (scaleData[scaleData.length-1] - scaleData[0]) * a.qty;
-                  const pos        = scalePct >= 0;
-                  const iconSize=44, chartW=68, chartH=28, fontSize=15;
+              {viewMode==="grouped" ? (
+                assets.map((a,idx)=>{
+                  const scaleData=a.histories?.[listScale]||[a.price];
+                  const buyPrice=a.purchase?.price;
+                  const scalePct=buyPrice?((a.price-buyPrice)/buyPrice*100):((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
+                  const scaleAmt=buyPrice?(a.price-buyPrice)*a.qty:(scaleData[scaleData.length-1]-scaleData[0])*a.qty;
+                  const pos=scalePct>=0; const iconSize=44,chartW=68,chartH=28,fontSize=15;
                   return (
                     <div key={a.id} className="asset-row"
-                      draggable={dragMode}
-                      onDragStart={()=>{ dragItem.current=idx; }}
-                      onDragEnter={()=>{ dragOverItem.current=idx; }}
-                      onDragEnd={handleDragSort}
-                      onDragOver={e=>e.preventDefault()}
+                      draggable={dragMode} onDragStart={()=>{dragItem.current=idx;}} onDragEnter={()=>{dragOverItem.current=idx;}} onDragEnd={handleDragSort} onDragOver={e=>e.preventDefault()}
                       onClick={()=>!dragMode&&setDetailAsset(a)}
-                      style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer",opacity:1,transition:"opacity 0.15s"}}>
+                      style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
-                        {dragMode && <div style={{color:"#3A3530",marginRight:4,fontSize:16,cursor:"grab",flexShrink:0}}>⠿</div>}
+                        {dragMode&&<div style={{color:"#3A3530",marginRight:4,fontSize:16,cursor:"grab",flexShrink:0}}>⠿</div>}
                         <div style={{width:iconSize,height:iconSize,borderRadius:14,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(iconSize*0.3),fontWeight:800,color:a.color,border:`1px solid ${a.color}28`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                             <div>
                               <div style={{display:"flex",alignItems:"center",gap:5}}>
                                 <span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</span>
-                                {a.type==="etf" && <span style={{background:"#00A4EF20",color:"#00A4EF",fontSize:8,fontWeight:700,borderRadius:4,padding:"1px 5px",fontFamily:"'DM Mono',monospace"}}>ETF</span>}
-                                {a.type!=="crypto" && a.dividends.length>0 && <span style={{fontSize:10}}>💰</span>}
+                                {a.type==="etf"&&<span style={{background:"#00A4EF20",color:"#00A4EF",fontSize:8,fontWeight:700,borderRadius:4,padding:"1px 5px",fontFamily:"'DM Mono',monospace"}}>ETF</span>}
+                                {a.type!=="crypto"&&a.dividends.length>0&&<span style={{fontSize:10}}>💰</span>}
                               </div>
                               <div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div>
                             </div>
-                            {!dragMode && <div style={{textAlign:"right",marginRight:8}}>
+                            {!dragMode&&<div style={{textAlign:"right",marginRight:8}}>
                               <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*a.price,0)}</div>
                               <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}}>
                                 <span style={{color:pos?"#4ADE80":"#F87171",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{pos?"+":"-"}{fmt(Math.abs(scaleAmt),2)}</span>
@@ -1874,7 +1630,7 @@ export default function App() {
                             </div>}
                           </div>
                         </div>
-                        {!dragMode && <MiniChart data={scaleData} color={a.color} w={chartW} h={chartH}/>}
+                        {!dragMode&&<MiniChart data={scaleData} color={a.color} w={chartW} h={chartH}/>}
                       </div>
                     </div>
                   );
@@ -1883,30 +1639,22 @@ export default function App() {
                 <>
                   <div style={{margin:"0 20px 4px",background:"#1A1714",borderRadius:14,padding:"11px 14px",border:"1px solid #F7931A20"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <div style={{width:7,height:7,borderRadius:4,background:"#F7931A"}}/>
-                        <span style={{color:"#8B8580",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Crypto</span>
-                        <span style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>· {cryptoAssets.length}</span>
-                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:7,height:7,borderRadius:4,background:"#F7931A"}}/><span style={{color:"#8B8580",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Crypto</span><span style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>· {cryptoAssets.length}</span></div>
                       <span style={{color:"#F0EDE8",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>{fmt(cryptoAssets.reduce((s,a)=>s+a.qty*a.price,0),0)}</span>
                     </div>
                   </div>
-                  {cryptoAssets.map(a => {
-                    const scaleData  = a.histories?.[listScale] || [a.price];
-                    const buyPrice   = a.purchase?.price;
-                    const scalePct = buyPrice ? ((a.price-buyPrice)/buyPrice*100) : ((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
-                    const scaleAmt = buyPrice ? (a.price-buyPrice)*a.qty : (scaleData[scaleData.length-1]-scaleData[0])*a.qty;
-                    const pos = scalePct >= 0; const iconSize=40, chartW=60, chartH=24, fontSize=14;
+                  {cryptoAssets.map(a=>{
+                    const scaleData=a.histories?.[listScale]||[a.price]; const buyPrice=a.purchase?.price;
+                    const scalePct=buyPrice?((a.price-buyPrice)/buyPrice*100):((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
+                    const scaleAmt=buyPrice?(a.price-buyPrice)*a.qty:(scaleData[scaleData.length-1]-scaleData[0])*a.qty;
+                    const pos=scalePct>=0; const iconSize=40,chartW=60,chartH=24,fontSize=14;
                     return (
                       <div key={a.id} className="asset-row" onClick={()=>setDetailAsset(a)} style={{padding:"12px 20px",borderBottom:"1px solid #191612"}}>
                         <div style={{display:"flex",alignItems:"center",gap:11}}>
                           <div style={{width:iconSize,height:iconSize,borderRadius:14,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(iconSize*0.3),fontWeight:800,color:a.color,border:`1px solid ${a.color}28`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                              <div>
-                                <span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</span>
-                                <div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div>
-                              </div>
+                              <div><span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</span><div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div></div>
                               <div style={{textAlign:"right",marginRight:8}}>
                                 <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*a.price,0)}</div>
                                 <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}}>
@@ -1924,20 +1672,15 @@ export default function App() {
                   <div style={{height:8}}/>
                   <div style={{margin:"0 20px 4px",background:"#1A1714",borderRadius:14,padding:"11px 14px",border:"1px solid #A3B8C220"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <div style={{width:7,height:7,borderRadius:4,background:"#A3B8C2"}}/>
-                        <span style={{color:"#8B8580",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Actions & ETF</span>
-                        <span style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>· {stockAssets.length}</span>
-                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:7,height:7,borderRadius:4,background:"#A3B8C2"}}/><span style={{color:"#8B8580",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Actions & ETF</span><span style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>· {stockAssets.length}</span></div>
                       <span style={{color:"#F0EDE8",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>{fmt(stockAssets.reduce((s,a)=>s+a.qty*a.price,0),0)}</span>
                     </div>
                   </div>
-                  {stockAssets.map(a => {
-                    const scaleData  = a.histories?.[listScale] || [a.price];
-                    const buyPrice   = a.purchase?.price;
-                    const scalePct = buyPrice ? ((a.price-buyPrice)/buyPrice*100) : ((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
-                    const scaleAmt = buyPrice ? (a.price-buyPrice)*a.qty : (scaleData[scaleData.length-1]-scaleData[0])*a.qty;
-                    const pos = scalePct >= 0; const iconSize=40, chartW=60, chartH=24, fontSize=14;
+                  {stockAssets.map(a=>{
+                    const scaleData=a.histories?.[listScale]||[a.price]; const buyPrice=a.purchase?.price;
+                    const scalePct=buyPrice?((a.price-buyPrice)/buyPrice*100):((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
+                    const scaleAmt=buyPrice?(a.price-buyPrice)*a.qty:(scaleData[scaleData.length-1]-scaleData[0])*a.qty;
+                    const pos=scalePct>=0; const iconSize=40,chartW=60,chartH=24,fontSize=14;
                     return (
                       <div key={a.id} className="asset-row" onClick={()=>setDetailAsset(a)} style={{padding:"12px 20px",borderBottom:"1px solid #191612"}}>
                         <div style={{display:"flex",alignItems:"center",gap:11}}>
@@ -1947,8 +1690,8 @@ export default function App() {
                               <div>
                                 <div style={{display:"flex",alignItems:"center",gap:5}}>
                                   <span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</span>
-                                  {a.type==="etf" && <span style={{background:"#00A4EF20",color:"#00A4EF",fontSize:8,fontWeight:700,borderRadius:4,padding:"1px 5px",fontFamily:"'DM Mono',monospace"}}>ETF</span>}
-                                  {a.dividends.length>0 && <span style={{fontSize:10}}>💰</span>}
+                                  {a.type==="etf"&&<span style={{background:"#00A4EF20",color:"#00A4EF",fontSize:8,fontWeight:700,borderRadius:4,padding:"1px 5px",fontFamily:"'DM Mono',monospace"}}>ETF</span>}
+                                  {a.dividends.length>0&&<span style={{fontSize:10}}>💰</span>}
                                 </div>
                                 <div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div>
                               </div>
@@ -1974,62 +1717,44 @@ export default function App() {
           {/* ── MARCHÉS ── */}
           {tab===1 && (
             <div className="fadein" style={{padding:"0 20px"}}>
-
-              {/* Barre d'ajout */}
               {showMktAdd && (
                 <div style={{marginBottom:12,background:"#111009",borderRadius:14,padding:"12px",border:"1px solid #252015"}}>
                   <div style={{color:"#6A6560",fontSize:10,marginBottom:8,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Ajouter un symbole</div>
                   <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
                     <div style={{flex:1}}>
-                      <SymbolSearch
-                        value={mktAddSymbol}
-                        onChange={v=>{ setMktAddSymbol(v); setMktAddError(""); }}
-                        onSelect={s=>{ setMktAddSymbol(s.symbol); setMktAddError(""); }}
-                        placeholder="ex: DOGE, MSFT, AMZN…"
-                        error={mktAddError}
-                      />
+                      <SymbolSearch value={mktAddSymbol} onChange={v=>{setMktAddSymbol(v);setMktAddError("");}} onSelect={s=>{setMktAddSymbol(s.symbol);setMktAddError("");}} placeholder="ex: DOGE, MSFT, AMZN…" error={mktAddError}/>
                     </div>
                     <button onClick={handleAddMarket} disabled={mktAddLoading} style={{background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:10,padding:"11px 16px",color:"#111009",fontWeight:700,fontSize:13,cursor:"pointer",minWidth:50,flexShrink:0}}>
-                      {mktAddLoading ? "…" : "OK"}
+                      {mktAddLoading?"…":"OK"}
                     </button>
                   </div>
                 </div>
               )}
-
-              {mktList.map((a, idx)=>{
-                const realIdx = allMarket.indexOf(a);
-                const dbEntry = SYMBOL_DATABASE.find(s=>s.symbol===a.symbol);
-                const displayName = (a.name && a.name !== a.symbol) ? a.name : (dbEntry?.name || a.symbol);
+              {mktList.map((a,idx)=>{
+                const realIdx=allMarket.indexOf(a);
+                const dbEntry=SYMBOL_DATABASE.find(s=>s.symbol===a.symbol);
+                const displayName=(a.name&&a.name!==a.symbol)?a.name:(dbEntry?.name||a.symbol);
                 return (
-                <div key={a.symbol}
-                  draggable={dragMktMode}
-                  onDragStart={()=>{ dragMktItem.current=realIdx; }}
-                  onDragEnter={()=>{ dragMktOverItem.current=realIdx; }}
-                  onDragEnd={handleDragMktSort}
-                  onDragOver={e=>e.preventDefault()}
-                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"default"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:11}}>
-                    {dragMktMode && <div style={{color:"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
-                    <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
-                    <div>
-                      <div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div>
-                      <div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div>
+                  <div key={a.symbol}
+                    draggable={dragMktMode} onDragStart={()=>{dragMktItem.current=realIdx;}} onDragEnter={()=>{dragMktOverItem.current=realIdx;}} onDragEnd={handleDragMktSort} onDragOver={e=>e.preventDefault()}
+                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"default"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:11}}>
+                      {dragMktMode&&<div style={{color:"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
+                      <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
+                      <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
                     </div>
+                    {!dragMktMode&&<div style={{textAlign:"right"}}>
+                      <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:14}}>{fmt(a.price,2)}</div>
+                      <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
+                    </div>}
                   </div>
-                  {!dragMktMode && <div style={{textAlign:"right"}}>
-                    <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:14}}>{fmt(a.price,2)}</div>
-                    <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
-                  </div>}
-                </div>
                 );
               })}
             </div>
           )}
 
           {/* ── BANQUE ── */}
-          {tab===2 && (
-            <BankTab banks={banks} onRemove={id=>setBanks(prev=>prev.filter(b=>b.id!==id))} expandedAccount={expandedAcc} setExpandedAccount={setExpandedAcc}/>
-          )}
+          {tab===2 && <BankTab banks={banks} onRemove={id=>setBanks(prev=>prev.filter(b=>b.id!==id))} expandedAccount={expandedAcc} setExpandedAccount={setExpandedAcc}/>}
         </div>
 
         {/* Bottom Nav */}
@@ -2050,15 +1775,13 @@ export default function App() {
           <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"24px 20px 40px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
             <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"0 auto 20px"}}/>
             <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:20}}>Modifier le profil</div>
-            {/* Nom d'affichage */}
             <div style={{marginBottom:14}}>
               <div style={{color:"#6A6560",fontSize:10,marginBottom:6,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Nom d'affichage</div>
-              <input value={editProfileName} onChange={e=>setEditProfileName(e.target.value)}
-                placeholder={user?.email?.split("@")[0]}
+              <input value={editProfileName} onChange={e=>setEditProfileName(e.target.value)} placeholder={user?.email?.split("@")[0]}
                 style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
             </div>
-            <button onClick={()=>{
-              if(editProfileName) setProfileName(editProfileName);
+            <button onClick={async()=>{
+              if(editProfileName&&userId){setProfileName(editProfileName);await saveProfileNameToDB(editProfileName,userId);}
               setShowProfileEdit(false);
             }} style={{width:"100%",background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:6}}>
               Enregistrer
@@ -2067,10 +1790,8 @@ export default function App() {
         </div>
       )}
 
-      {showAddModal && <AddAssetModal onClose={()=>setShowAddModal(false)} onAdd={handleAddAsset}/>}
-      {syncedDetailAsset && (
-        <AssetDetailSheet asset={syncedDetailAsset} fmt={fmt} onClose={()=>setDetailAsset(null)} onAddDividend={handleAddDividend} onDelete={handleDeleteAsset}/>
-      )}
+      {showAddModal&&<AddAssetModal onClose={()=>setShowAddModal(false)} onAdd={handleAddAsset}/>}
+      {syncedDetailAsset&&<AssetDetailSheet asset={syncedDetailAsset} fmt={fmt} onClose={()=>setDetailAsset(null)} onAddDividend={handleAddDividend} onDelete={handleDeleteAsset}/>}
     </div>
   );
 }
