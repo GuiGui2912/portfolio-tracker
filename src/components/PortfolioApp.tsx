@@ -1154,6 +1154,34 @@ export default function App() {
     } catch(e) { console.error('deletePortfolio:', e); }
   };
 
+  // ── Switch portefeuille ──
+  const switchPortfolio = async (portfolioId, portfolioName) => {
+    if (activePortfolioId === portfolioId) return;
+    setActivePortfolioId(portfolioId);
+    setPortfolioName(portfolioName);
+    setAssets([]);
+    setChartAsset(null);
+    try {
+      const { data, error } = await supabase
+        .from("assets").select("*")
+        .eq("user_id", userId)
+        .eq("portfolio_id", portfolioId)
+        .order("created_at", { ascending: true });
+      if (error) { console.error("switchPortfolio error:", error); return; }
+      if (data && data.length > 0) {
+        const loaded = data.map(row => ({
+          id: row.id, symbol: row.symbol, name: row.name, type: row.type,
+          qty: Number(row.qty), price: Number(row.current_price),
+          change: Number(row.price_change_24h ?? 0), color: row.color,
+          dividends: [], histories: buildHistories(Number(row.current_price)),
+          purchase: row.purchase_data ?? null,
+        }));
+        setAssets(loaded);
+        setChartAsset(loaded[0]);
+      }
+    } catch(e) { console.error("switchPortfolio:", e); }
+  };
+
   // ── Chargement initial ──
   useEffect(() => {
     const init = async () => {
@@ -1451,11 +1479,10 @@ export default function App() {
                               <button onClick={()=>setEditingPortfolioId(null)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"5px 10px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
                             </div>
                           ) : (
-                            <div onClick={async()=>{
-                                if(activePortfolioId===p.id){setShowProfileMenu(false);return;}
-                                setActivePortfolioId(p.id); setPortfolioName(p.name); setShowProfileMenu(false);
-                                const { data } = await supabase.from("assets").select("*").eq("user_id",userId).eq("portfolio_id",p.id).order("created_at",{ascending:true});
-                                if(data&&data.length>0){const loaded=data.map(row=>({id:row.id,symbol:row.symbol,name:row.name,type:row.type,qty:Number(row.qty),price:Number(row.current_price),change:Number(row.price_change_24h??0),color:row.color,dividends:[],histories:buildHistories(Number(row.current_price)),purchase:row.purchase_data??null}));setAssets(loaded);setChartAsset(loaded[0]);}else{setAssets([]);setChartAsset(null);}
+                            <div onClick={(e)=>{
+                                e.stopPropagation();
+                                setShowProfileMenu(false);
+                                switchPortfolio(p.id, p.name);
                               }}
                               style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 8px",borderRadius:8,cursor:"pointer",background:activePortfolioId===p.id?"#C8A96E15":"transparent",transition:"background 0.15s"}}
                               onMouseEnter={e=>e.currentTarget.style.background=activePortfolioId===p.id?"#C8A96E15":"#1E1B16"}
