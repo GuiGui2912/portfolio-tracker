@@ -1029,6 +1029,8 @@ export default function App() {
   const mktListRef      = useRef(null);
   const mktLongPressTimer = useRef(null);
   const [mktLongPressActive, setMktLongPressActive] = useState(false);
+  const [mktGhostPos, setMktGhostPos] = useState({x:0, y:0});
+  const [mktGhostItem, setMktGhostItem] = useState(null);
 
   const handleDragSort = () => {
     if (dragItem.current === null || dragOverItem.current === null) return;
@@ -1050,39 +1052,37 @@ export default function App() {
 
   const handleMktTouchStart = (e, realIdx) => {
     if (!dragMktMode) return;
+    e.preventDefault(); // bloque scroll ET sélection texte
     mktTouchStartY.current = e.touches[0].clientY;
-    // Long press pour activer le drag (évite la sélection de texte)
-    mktLongPressTimer.current = setTimeout(() => {
-      dragMktItem.current = realIdx;
-      setMktDraggingIdx(realIdx);
-      setMktLongPressActive(true);
-      // Vibration feedback si disponible
-      if (navigator.vibrate) navigator.vibrate(40);
-    }, 200);
+    dragMktItem.current = realIdx;
+    setMktDraggingIdx(realIdx);
+    setMktLongPressActive(true);
+    if (navigator.vibrate) navigator.vibrate(30);
   };
 
   const handleMktTouchCancel = () => {
     if (mktLongPressTimer.current) clearTimeout(mktLongPressTimer.current);
+    dragMktItem.current = null;
+    dragMktOverItem.current = null;
+    setMktDraggingIdx(null);
+    setMktDragOverIdx(null);
     setMktLongPressActive(false);
   };
 
   const handleMktTouchMove = (e) => {
-    if (!dragMktMode) return;
-    // Annuler le long press si on bouge avant
-    if (!mktLongPressActive && mktLongPressTimer.current) {
-      clearTimeout(mktLongPressTimer.current);
-      return;
-    }
-    if (dragMktItem.current === null) return;
+    if (!dragMktMode || dragMktItem.current === null) return;
     e.preventDefault();
     const y = e.touches[0].clientY;
     const container = mktListRef.current;
     if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const relY = y - rect.top;
-    const idx = Math.max(0, Math.min(allMarket.length - 1, Math.floor(relY / mktItemHeight.current)));
-    dragMktOverItem.current = idx;
-    setMktDragOverIdx(idx);
+    const items = container.querySelectorAll("[data-mkt-item]");
+    let targetIdx = dragMktItem.current;
+    for (let i = 0; i < items.length; i++) {
+      const rect = items[i].getBoundingClientRect();
+      if (y >= rect.top && y <= rect.bottom) { targetIdx = parseInt(items[i].dataset.mktItem); break; }
+    }
+    dragMktOverItem.current = targetIdx;
+    setMktDragOverIdx(targetIdx);
   };
 
   const handleMktTouchEnd = () => {
@@ -1099,6 +1099,7 @@ export default function App() {
     setMktDraggingIdx(null);
     setMktDragOverIdx(null);
     setMktLongPressActive(false);
+    setMktGhostItem(null);
   };
 
   const DEFAULT_MARKET = [
@@ -1823,7 +1824,7 @@ export default function App() {
 
           {/* ── MARCHÉS ── */}
           {tab===1 && (
-            <div className="fadein" style={{padding:"0 20px", userSelect: dragMktMode?"none":"auto", WebkitUserSelect: dragMktMode?"none":"auto"}}
+            <div className="fadein" style={{padding:"0 20px", userSelect:"none", WebkitUserSelect:"none"}}
               ref={mktListRef}
               onTouchMove={handleMktTouchMove}
               onTouchEnd={handleMktTouchEnd}>
@@ -1836,26 +1837,20 @@ export default function App() {
                 const isOver = mktDragOverIdx === realIdx && mktDraggingIdx !== realIdx;
                 return (
                   <div key={a.symbol}
-                    draggable={dragMktMode}
-                    onDragStart={()=>{dragMktItem.current=realIdx; setMktDraggingIdx(realIdx);}}
-                    onDragEnter={()=>{dragMktOverItem.current=realIdx; setMktDragOverIdx(realIdx);}}
-                    onDragEnd={()=>{handleDragMktSort(); setMktDraggingIdx(null); setMktDragOverIdx(null);}}
-                    onDragOver={e=>e.preventDefault()}
+                    data-mkt-item={realIdx}
                     onTouchStart={e=>handleMktTouchStart(e, realIdx)}
                     onTouchCancel={handleMktTouchCancel}
                     style={{
                       display:"flex", alignItems:"center", justifyContent:"space-between",
-                      padding:"12px 0", borderBottom:"1px solid #191612",
+                      padding:"12px 0", borderBottom: isOver ? "2px solid #C8A96E" : "1px solid #191612",
                       cursor:dragMktMode?"grab":"default",
-                      opacity: isDragging ? 0.35 : 1,
-                      background: isOver ? "#C8A96E12" : "transparent",
-                      borderLeft: isOver ? "2px solid #C8A96E" : "2px solid transparent",
-                      paddingLeft: isOver ? "8px" : "0",
-                      transition: "opacity 0.15s, background 0.15s, border 0.15s",
-                      transform: isDragging ? "scale(0.97)" : "scale(1)",
-                      userSelect: dragMktMode ? "none" : "auto",
-                      WebkitUserSelect: dragMktMode ? "none" : "auto",
-                      touchAction: dragMktMode ? "none" : "auto",
+                      opacity: isDragging ? 0.3 : 1,
+                      background: isDragging ? "#C8A96E08" : isOver ? "#C8A96E15" : "transparent",
+                      transition: "opacity 0.1s, background 0.1s",
+                      transform: isDragging ? "scale(0.96)" : "scale(1)",
+                      userSelect: "none",
+                      WebkitUserSelect: "none",
+                      touchAction: dragMktMode ? "none" : "pan-y",
                     }}>
                     <div style={{display:"flex",alignItems:"center",gap:11}}>
                       {dragMktMode&&<div style={{color: isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
@@ -1875,6 +1870,35 @@ export default function App() {
           {/* ── BANQUE ── */}
           {tab===2 && <BankTab banks={banks} onRemove={id=>setBanks(prev=>prev.filter(b=>b.id!==id))} expandedAccount={expandedAcc} setExpandedAccount={setExpandedAcc}/>}
         </div>
+
+        {/* Ghost drag element - suit le doigt */}
+        {mktGhostItem && (
+          <div style={{
+            position:"fixed",
+            left: mktGhostPos.x - 175,
+            top: mktGhostPos.y - 30,
+            width: 350,
+            pointerEvents:"none",
+            zIndex:9999,
+            background:"#1E1B16",
+            border:"1px solid #C8A96E60",
+            borderRadius:12,
+            padding:"10px 14px",
+            display:"flex",
+            alignItems:"center",
+            gap:11,
+            boxShadow:"0 8px 32px #000c",
+            opacity:0.95,
+            transform:"scale(1.04)",
+          }}>
+            <div style={{color:"#C8A96E",fontSize:16,flexShrink:0}}>⠿</div>
+            <div style={{width:36,height:36,borderRadius:10,background:`${mktGhostItem.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:mktGhostItem.color,border:`1px solid ${mktGhostItem.color}30`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{mktGhostItem.symbol.slice(0,2)}</div>
+            <div>
+              <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>{mktGhostItem.name||mktGhostItem.symbol}</div>
+              <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{mktGhostItem.symbol}</div>
+            </div>
+          </div>
+        )}
 
         {/* Panneau ajout marché fixe */}
         {showMktAdd && tab===1 && (
