@@ -1017,6 +1017,13 @@ export default function App() {
   const [editProfileName, setEditProfileName]     = useState("");
   const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
+  const [assetDraggingIdx, setAssetDraggingIdx] = useState(null);
+  const [assetDragOverIdx, setAssetDragOverIdx] = useState(null);
+  const [assetLongPressActive, setAssetLongPressActive] = useState(false);
+  const assetLongPressTimer = useRef(null);
+  const [assetGhostPos, setAssetGhostPos] = useState({x:0,y:0});
+  const [assetGhostItem, setAssetGhostItem] = useState(null);
+  const assetsListRef = useRef(null);
   const dragItem        = useRef(null);
   const swipeStartX     = useRef(0);
   const dragOverItem    = useRef(null);
@@ -1039,6 +1046,60 @@ export default function App() {
     arr.splice(dragOverItem.current, 0, dragged);
     dragItem.current = null; dragOverItem.current = null;
     setAssets(arr);
+  };
+
+  // ── Touch drag pour ACTIFS ──
+  const handleAssetTouchStart = (e, idx, asset) => {
+    if (!dragMode) return;
+    assetLongPressTimer.current = setTimeout(() => {
+      dragItem.current = idx;
+      setAssetDraggingIdx(idx);
+      setAssetLongPressActive(true);
+      setAssetGhostItem(asset);
+      setAssetGhostPos({x: e.touches[0].clientX, y: e.touches[0].clientY});
+      if (navigator.vibrate) navigator.vibrate(40);
+    }, 200);
+  };
+
+  const handleAssetTouchCancel = () => {
+    if (assetLongPressTimer.current) clearTimeout(assetLongPressTimer.current);
+    setAssetLongPressActive(false);
+  };
+
+  const handleAssetTouchMove = (e) => {
+    if (!dragMode) return;
+    if (!assetLongPressActive && assetLongPressTimer.current) { clearTimeout(assetLongPressTimer.current); return; }
+    if (dragItem.current === null) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    setAssetGhostPos({x: touch.clientX, y: touch.clientY});
+    const container = assetsListRef.current;
+    if (!container) return;
+    const items = container.querySelectorAll("[data-asset-item]");
+    let insertIdx = assets.length - 1;
+    for (let i = 0; i < items.length; i++) {
+      const rect = items[i].getBoundingClientRect();
+      if (touch.clientY < rect.top + rect.height / 2) { insertIdx = parseInt(items[i].dataset.assetItem); break; }
+    }
+    dragOverItem.current = insertIdx;
+    setAssetDragOverIdx(insertIdx);
+  };
+
+  const handleAssetTouchEnd = () => {
+    if (assetLongPressTimer.current) clearTimeout(assetLongPressTimer.current);
+    if (!dragMode) return;
+    if (assetLongPressActive && dragItem.current !== null && dragOverItem.current !== null && dragItem.current !== dragOverItem.current) {
+      const arr = [...assets];
+      const dragged = arr.splice(dragItem.current, 1)[0];
+      arr.splice(dragOverItem.current, 0, dragged);
+      setAssets(arr);
+    }
+    dragItem.current = null;
+    dragOverItem.current = null;
+    setAssetDraggingIdx(null);
+    setAssetDragOverIdx(null);
+    setAssetLongPressActive(false);
+    setAssetGhostItem(null);
   };
 
   const handleDragMktSort = () => {
@@ -1711,17 +1772,30 @@ export default function App() {
           {tab===0 && (
             <div className="fadein">
               {viewMode==="grouped" ? (
-                assets.map((a,idx)=>{
+                <div ref={assetsListRef} onTouchMove={handleAssetTouchMove} onTouchEnd={handleAssetTouchEnd}>
+                {assets.map((a,idx)=>{
                   const scaleData=a.histories?.[listScale]||[a.price];
                   const buyPrice=a.purchase?.price;
                   const scalePct=buyPrice?((a.price-buyPrice)/buyPrice*100):((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
                   const scaleAmt=buyPrice?(a.price-buyPrice)*a.qty:(scaleData[scaleData.length-1]-scaleData[0])*a.qty;
                   const pos=scalePct>=0; const iconSize=44,chartW=68,chartH=28,fontSize=15;
                   return (
-                    <div key={a.id} className="asset-row"
-                      draggable={dragMode} onDragStart={()=>{dragItem.current=idx;}} onDragEnter={()=>{dragOverItem.current=idx;}} onDragEnd={handleDragSort} onDragOver={e=>e.preventDefault()}
+                    <div key={a.id}>
+                      {/* Barre d'insertion avant cet item */}
+                      {dragMode && assetDragOverIdx === idx && assetDraggingIdx !== idx && (
+                        <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 20px",boxShadow:"0 0 6px #C8A96E80"}}/>
+                      )}
+                    <div className="asset-row"
+                      data-asset-item={idx}
+                      draggable={dragMode}
+                      onDragStart={()=>{dragItem.current=idx; setAssetDraggingIdx(idx);}}
+                      onDragEnter={()=>{dragOverItem.current=idx; setAssetDragOverIdx(idx);}}
+                      onDragEnd={()=>{handleDragSort(); setAssetDraggingIdx(null); setAssetDragOverIdx(null);}}
+                      onDragOver={e=>e.preventDefault()}
+                      onTouchStart={e=>handleAssetTouchStart(e, idx, a)}
+                      onTouchCancel={handleAssetTouchCancel}
                       onClick={()=>!dragMode&&setDetailAsset(a)}
-                      style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer"}}>
+                      style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer",opacity:assetDraggingIdx===idx?0.25:1,userSelect:dragMode?"none":"auto",WebkitUserSelect:dragMode?"none":"auto",touchAction:dragMode?"none":"pan-y"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
                         {dragMode&&<div style={{color:"#3A3530",marginRight:4,fontSize:16,cursor:"grab",flexShrink:0}}>⠿</div>}
                         <div style={{width:iconSize,height:iconSize,borderRadius:14,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(iconSize*0.3),fontWeight:800,color:a.color,border:`1px solid ${a.color}28`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
@@ -1747,8 +1821,11 @@ export default function App() {
                         {!dragMode&&<MiniChart data={scaleData} color={a.color} w={chartW} h={chartH}/>}
                       </div>
                     </div>
+                    </div>
                   );
                 })
+                </div>
+                </div>
               ) : (
                 <>
                   <div style={{margin:"0 20px 4px",background:"#1A1714",borderRadius:14,padding:"11px 14px",border:"1px solid #F7931A20"}}>
@@ -1888,6 +1965,18 @@ export default function App() {
           {/* ── BANQUE ── */}
           {tab===2 && <BankTab banks={banks} onRemove={id=>setBanks(prev=>prev.filter(b=>b.id!==id))} expandedAccount={expandedAcc} setExpandedAccount={setExpandedAcc}/>}
         </div>
+
+        {/* Ghost drag ACTIFS */}
+        {assetGhostItem && (
+          <div style={{position:"fixed",left:assetGhostPos.x-175,top:assetGhostPos.y-30,width:350,pointerEvents:"none",zIndex:9999,background:"#1E1B16",border:"1px solid #C8A96E60",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:11,boxShadow:"0 8px 32px #000c",opacity:0.95,transform:"scale(1.04)"}}>
+            <div style={{color:"#C8A96E",fontSize:16,flexShrink:0}}>⠿</div>
+            <div style={{width:36,height:36,borderRadius:10,background:`${assetGhostItem.color}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:assetGhostItem.color,border:`1px solid ${assetGhostItem.color}30`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{assetGhostItem.symbol.slice(0,2)}</div>
+            <div>
+              <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>{assetGhostItem.symbol}</div>
+              <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{assetGhostItem.qty} {assetGhostItem.symbol}</div>
+            </div>
+          </div>
+        )}
 
         {/* Ghost drag element - suit le doigt */}
         {mktGhostItem && (
