@@ -1049,11 +1049,23 @@ export default function App() {
     const container = containerRef.current;
     if (!container) return listLength - 1;
     const items = container.querySelectorAll(`[${dataAttr}]`);
+    // Trouver l'item le plus proche du doigt
+    let closestIdx = listLength - 1;
+    let closestDist = Infinity;
     for (let i = 0; i < items.length; i++) {
       const rect = items[i].getBoundingClientRect();
-      if (clientY < rect.top + rect.height / 2) return parseInt(items[i].getAttribute(dataAttr));
+      const mid = rect.top + rect.height / 2;
+      const dist = Math.abs(clientY - mid);
+      if (dist < closestDist) {
+        closestDist = dist;
+        // Si le doigt est dans la moitié haute → insérer avant (idx i)
+        // Si le doigt est dans la moitié basse → insérer après (idx i+1)
+        closestIdx = clientY < mid
+          ? parseInt(items[i].getAttribute(dataAttr))
+          : (i < items.length - 1 ? parseInt(items[i+1].getAttribute(dataAttr)) : listLength - 1);
+      }
     }
-    return listLength - 1;
+    return closestIdx;
   };
 
   // ── Drag ACTIFS ──
@@ -1788,7 +1800,7 @@ export default function App() {
                       onTouchEnd={e=>{ if(assetDragActive.current) { e.stopPropagation(); handleAssetTouchEnd(); } }}
                       onTouchCancel={handleAssetTouchEnd}
                       onClick={()=>!dragMode&&setDetailAsset(a)}
-                      style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer",opacity:assetDraggingIdx===idx?0.25:1,userSelect:dragMode?"none":"auto",WebkitUserSelect:dragMode?"none":"auto",touchAction:dragMode?"none":"pan-y"}}>
+                      style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer",opacity:assetDraggingIdx===idx?0.25:1,userSelect:dragMode?"none":"auto",WebkitUserSelect:dragMode?"none":"auto",touchAction:dragMode?"none":"auto"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
                         {dragMode&&<div style={{color:"#3A3530",marginRight:4,fontSize:16,cursor:"grab",flexShrink:0}}>⠿</div>}
                         <div style={{width:iconSize,height:iconSize,borderRadius:14,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(iconSize*0.3),fontWeight:800,color:a.color,border:`1px solid ${a.color}28`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
@@ -1935,7 +1947,7 @@ export default function App() {
                         transition: "opacity 0.1s",
                         userSelect: "none",
                         WebkitUserSelect: "none",
-                        touchAction: dragMktMode ? "none" : "pan-y",
+                        touchAction: dragMktMode ? "none" : "auto",
                       }}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
                         {dragMktMode&&<div style={{color: isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
