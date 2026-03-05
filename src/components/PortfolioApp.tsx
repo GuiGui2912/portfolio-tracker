@@ -1022,6 +1022,11 @@ export default function App() {
   const dragOverItem    = useRef(null);
   const dragMktItem     = useRef(null);
   const dragMktOverItem = useRef(null);
+  const [mktDraggingIdx, setMktDraggingIdx] = useState(null);
+  const [mktDragOverIdx, setMktDragOverIdx] = useState(null);
+  const mktTouchStartY  = useRef(0);
+  const mktItemHeight   = useRef(65);
+  const mktListRef      = useRef(null);
 
   const handleDragSort = () => {
     if (dragItem.current === null || dragOverItem.current === null) return;
@@ -1039,6 +1044,40 @@ export default function App() {
     arr.splice(dragMktOverItem.current, 0, dragged);
     dragMktItem.current = null; dragMktOverItem.current = null;
     setAllMarket(arr);
+  };
+
+  const handleMktTouchStart = (e, realIdx) => {
+    if (!dragMktMode) return;
+    mktTouchStartY.current = e.touches[0].clientY;
+    dragMktItem.current = realIdx;
+    setMktDraggingIdx(realIdx);
+  };
+
+  const handleMktTouchMove = (e) => {
+    if (!dragMktMode || dragMktItem.current === null) return;
+    e.preventDefault();
+    const y = e.touches[0].clientY;
+    const container = mktListRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const relY = y - rect.top;
+    const idx = Math.max(0, Math.min(allMarket.length - 1, Math.floor(relY / mktItemHeight.current)));
+    dragMktOverItem.current = idx;
+    setMktDragOverIdx(idx);
+  };
+
+  const handleMktTouchEnd = () => {
+    if (!dragMktMode) return;
+    if (dragMktItem.current !== null && dragMktOverItem.current !== null && dragMktItem.current !== dragMktOverItem.current) {
+      const arr = [...allMarket];
+      const dragged = arr.splice(dragMktItem.current, 1)[0];
+      arr.splice(dragMktOverItem.current, 0, dragged);
+      setAllMarket(arr);
+    }
+    dragMktItem.current = null;
+    dragMktOverItem.current = null;
+    setMktDraggingIdx(null);
+    setMktDragOverIdx(null);
   };
 
   const DEFAULT_MARKET = [
@@ -1763,18 +1802,38 @@ export default function App() {
 
           {/* ── MARCHÉS ── */}
           {tab===1 && (
-            <div className="fadein" style={{padding:"0 20px"}}>
+            <div className="fadein" style={{padding:"0 20px"}}
+              ref={mktListRef}
+              onTouchMove={handleMktTouchMove}
+              onTouchEnd={handleMktTouchEnd}>
 
               {mktList.map((a,idx)=>{
                 const realIdx=allMarket.indexOf(a);
                 const dbEntry=SYMBOL_DATABASE.find(s=>s.symbol===a.symbol);
                 const displayName=(a.name&&a.name!==a.symbol)?a.name:(dbEntry?.name||a.symbol);
+                const isDragging = mktDraggingIdx === realIdx;
+                const isOver = mktDragOverIdx === realIdx && mktDraggingIdx !== realIdx;
                 return (
                   <div key={a.symbol}
-                    draggable={dragMktMode} onDragStart={()=>{dragMktItem.current=realIdx;}} onDragEnter={()=>{dragMktOverItem.current=realIdx;}} onDragEnd={handleDragMktSort} onDragOver={e=>e.preventDefault()}
-                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"default"}}>
+                    draggable={dragMktMode}
+                    onDragStart={()=>{dragMktItem.current=realIdx; setMktDraggingIdx(realIdx);}}
+                    onDragEnter={()=>{dragMktOverItem.current=realIdx; setMktDragOverIdx(realIdx);}}
+                    onDragEnd={()=>{handleDragMktSort(); setMktDraggingIdx(null); setMktDragOverIdx(null);}}
+                    onDragOver={e=>e.preventDefault()}
+                    onTouchStart={e=>handleMktTouchStart(e, realIdx)}
+                    style={{
+                      display:"flex", alignItems:"center", justifyContent:"space-between",
+                      padding:"12px 0", borderBottom:"1px solid #191612",
+                      cursor:dragMktMode?"grab":"default",
+                      opacity: isDragging ? 0.35 : 1,
+                      background: isOver ? "#C8A96E12" : "transparent",
+                      borderLeft: isOver ? "2px solid #C8A96E" : "2px solid transparent",
+                      paddingLeft: isOver ? "8px" : "0",
+                      transition: "opacity 0.15s, background 0.15s, border 0.15s",
+                      transform: isDragging ? "scale(0.97)" : "scale(1)",
+                    }}>
                     <div style={{display:"flex",alignItems:"center",gap:11}}>
-                      {dragMktMode&&<div style={{color:"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
+                      {dragMktMode&&<div style={{color: isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
                       <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
                       <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
                     </div>
