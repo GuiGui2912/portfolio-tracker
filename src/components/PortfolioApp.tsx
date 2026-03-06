@@ -1183,6 +1183,7 @@ export default function App() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showSettings, setShowSettings]       = useState(false);
   const [sessionDuration, setSessionDuration] = useState(() => { try { return localStorage.getItem("sessionDuration")||"always"; } catch { return "always"; } });
+  const [rememberMe, setRememberMe] = useState(() => { try { return localStorage.getItem("rememberMe")!=="false"; } catch { return true; } });
   const [portfolios, setPortfolios]           = useState([{id:"default", name:"Mon Portefeuille"}]);
   const [activePortfolioId, setActivePortfolioId] = useState("default");
   const [showAddPortfolio, setShowAddPortfolio]   = useState(false);
@@ -1556,6 +1557,10 @@ export default function App() {
     setAuthLoading(true); setAuthError("");
     const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
     if (error) { setAuthError(error.message); setAuthLoading(false); return; }
+    // Forcer la persistance de session
+    if (rememberMe) {
+      try { localStorage.setItem("supabase-session-persisted", "true"); } catch {}
+    }
     const { data: { user: u } } = await supabase.auth.getUser();
     setUser(u); setUserId(u.id);
     setDbLoading(true);
@@ -1574,9 +1579,9 @@ export default function App() {
     }
     setDbLoading(false); setAuthLoading(false);
     // Appliquer la durée de session si "rester connecté" n'est pas "toujours"
-    if (sessionDuration !== "always") {
+    if (!rememberMe || sessionDuration !== "always") {
       const durations = {"1h":3600,"6h":21600,"12h":43200,"24h":86400};
-      const secs = durations[sessionDuration];
+      const secs = rememberMe ? durations[sessionDuration] : durations["1h"];
       if (secs) setTimeout(() => supabase.auth.signOut(), secs * 1000);
     }
   };
@@ -1751,6 +1756,15 @@ export default function App() {
             {authError && (
               <div style={{color:authError.startsWith("✅")?"#4ADE80":"#F87171",fontSize:12,padding:"10px 12px",background:authError.startsWith("✅")?"#4ADE8015":"#F8717115",borderRadius:10,border:`1px solid ${authError.startsWith("✅")?"#4ADE8030":"#F8717130"}`}}>
                 {authError}
+              </div>
+            )}
+            {isLogin && (
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"4px 2px"}}>
+                <div onClick={()=>{const v=!rememberMe;setRememberMe(v);try{localStorage.setItem("rememberMe",String(v));}catch{}}}
+                  style={{width:20,height:20,borderRadius:6,border:`2px solid ${rememberMe?"#C8A96E":"#3A3530"}`,background:rememberMe?"#C8A96E":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
+                  {rememberMe&&<div style={{color:"#111009",fontSize:12,fontWeight:900,lineHeight:1}}>✓</div>}
+                </div>
+                <span style={{color:"#8A8580",fontSize:12,cursor:"pointer"}} onClick={()=>{const v=!rememberMe;setRememberMe(v);try{localStorage.setItem("rememberMe",String(v));}catch{}}}>Rester connecté</span>
               </div>
             )}
             <button onClick={isLogin?handleLogin:handleRegister} disabled={authLoading}
