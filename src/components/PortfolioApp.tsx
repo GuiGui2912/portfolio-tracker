@@ -691,7 +691,8 @@ function AddDividendModal({ asset, onClose, onAdd }) {
 
 function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
   const today = new Date().toISOString().slice(0,10);
-  const [form, setForm] = useState({ type:"buy", date:today, qty:"", price:"", currency:"USD" });
+  const nowTime = new Date().toTimeString().slice(0,5);
+  const [form, setForm] = useState({ type:"buy", date:today, time:nowTime, qty:"", price:"", currency:"USD" });
   const [errors, setErrors] = useState({});
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const validate = () => {
@@ -705,16 +706,16 @@ function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
     if (!validate()) return;
     const fxRate = form.currency==="EUR"?(1/EUR_RATE):form.currency==="GBP"?1.27:1;
     const priceUSD = +form.price * fxRate;
-    onAdd({ id: Date.now(), type: form.type, date: form.date, qty: +form.qty, priceOriginal: +form.price, currency: form.currency, priceUSD });
+    onAdd({ id: Date.now(), type: form.type, date: form.date, time: form.time, qty: +form.qty, priceOriginal: +form.price, currency: form.currency, priceUSD });
     onClose();
   };
   const sym = form.currency==="EUR"?"€":form.currency==="GBP"?"£":"$";
   const total = +form.qty > 0 && +form.price > 0 ? (+form.qty * +form.price).toFixed(2) : null;
   return (
     <div style={{position:"fixed",inset:0,zIndex:3000,background:"#000b",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
-      <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"0 0 calc(32px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",boxShadow:"0 -8px 32px #000d"}} onClick={e=>e.stopPropagation()}>
+      <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"0 0 calc(32px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",boxShadow:"0 -8px 32px #000d",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
         <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"12px auto 16px"}}/>
-        <div style={{padding:"0 20px"}}>
+        <div style={{padding:"0 20px 4px"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
             <div style={{color:"#F0EDE8",fontSize:17,fontWeight:700}}>Ajouter une transaction</div>
             <button onClick={onClose} style={{background:"#252015",border:"none",width:32,height:32,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
@@ -727,11 +728,17 @@ function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
               </button>
             ))}
           </div>
-          {/* Date */}
-          <div style={{marginBottom:12}}>
-            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Date</div>
-            <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.date?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-            {errors.date&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.date}</div>}
+          {/* Date + Heure */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            <div>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Date</div>
+              <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.date?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+              {errors.date&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.date}</div>}
+            </div>
+            <div>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Heure</div>
+              <input type="time" value={form.time} onChange={e=>set("time",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            </div>
           </div>
           {/* Devise */}
           <div style={{marginBottom:12}}>
@@ -916,7 +923,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                           </div>
                           <div>
                             <div style={{color:isBuy?"#4ADE80":"#F87171",fontSize:12,fontWeight:700}}>{isBuy?"Achat":"Vente"}</div>
-                            <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{tx.date}</div>
+                            <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{tx.date}{tx.time?` · ${tx.time}`:""}</div>
                           </div>
                         </div>
                         <button onClick={()=>onDeleteTransaction(asset.id, tx.id)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
