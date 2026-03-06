@@ -689,8 +689,91 @@ function AddDividendModal({ asset, onClose, onAdd }) {
   );
 }
 
-function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }) {
+function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
+  const today = new Date().toISOString().slice(0,10);
+  const [form, setForm] = useState({ type:"buy", date:today, qty:"", price:"", currency:"USD" });
+  const [errors, setErrors] = useState({});
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const validate = () => {
+    const e = {};
+    if (!form.date) e.date = "Requis";
+    if (!form.qty || isNaN(+form.qty) || +form.qty <= 0) e.qty = "Quantité positive requise";
+    if (!form.price || isNaN(+form.price) || +form.price <= 0) e.price = "Prix positif requis";
+    setErrors(e); return !Object.keys(e).length;
+  };
+  const submit = () => {
+    if (!validate()) return;
+    const fxRate = form.currency==="EUR"?(1/EUR_RATE):form.currency==="GBP"?1.27:1;
+    const priceUSD = +form.price * fxRate;
+    onAdd({ id: Date.now(), type: form.type, date: form.date, qty: +form.qty, priceOriginal: +form.price, currency: form.currency, priceUSD });
+    onClose();
+  };
+  const sym = form.currency==="EUR"?"€":form.currency==="GBP"?"£":"$";
+  const total = +form.qty > 0 && +form.price > 0 ? (+form.qty * +form.price).toFixed(2) : null;
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:3000,background:"#000b",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
+      <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"0 0 calc(32px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",boxShadow:"0 -8px 32px #000d"}} onClick={e=>e.stopPropagation()}>
+        <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"12px auto 16px"}}/>
+        <div style={{padding:"0 20px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div style={{color:"#F0EDE8",fontSize:17,fontWeight:700}}>Ajouter une transaction</div>
+            <button onClick={onClose} style={{background:"#252015",border:"none",width:32,height:32,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          </div>
+          {/* Type achat/vente */}
+          <div style={{display:"flex",gap:8,marginBottom:16}}>
+            {[["buy","Achat","#4ADE80"],["sell","Vente","#F87171"]].map(([v,l,c])=>(
+              <button key={v} onClick={()=>set("type",v)} style={{flex:1,padding:"11px",border:`1px solid ${form.type===v?c+"60":"#252015"}`,borderRadius:12,background:form.type===v?c+"15":"#0E0D0A",color:form.type===v?c:"#5A5550",fontSize:14,fontWeight:form.type===v?700:500,cursor:"pointer",transition:"all 0.2s"}}>
+                {form.type===v?(v==="buy"?"▲ ":"▼ "):""}{l}
+              </button>
+            ))}
+          </div>
+          {/* Date */}
+          <div style={{marginBottom:12}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Date</div>
+            <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.date?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            {errors.date&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.date}</div>}
+          </div>
+          {/* Devise */}
+          <div style={{marginBottom:12}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Devise</div>
+            <div style={{display:"flex",gap:6}}>
+              {[["USD","$"],["EUR","€"],["GBP","£"]].map(([cur,s])=>(
+                <button key={cur} onClick={()=>set("currency",cur)} style={{flex:1,padding:"9px 0",border:`1px solid ${form.currency===cur?"#C8A96E60":"#252015"}`,borderRadius:10,background:form.currency===cur?"#C8A96E15":"#0E0D0A",color:form.currency===cur?"#C8A96E":"#5A5550",fontSize:12,fontWeight:form.currency===cur?700:500,cursor:"pointer",fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{s} {cur}</button>
+              ))}
+            </div>
+          </div>
+          {/* Quantité + Prix */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            <div>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Quantité</div>
+              <input type="number" value={form.qty} onChange={e=>set("qty",e.target.value)} placeholder="ex: 0.5" style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.qty?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+              {errors.qty&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.qty}</div>}
+            </div>
+            <div>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Prix unitaire ({form.currency})</div>
+              <input type="number" value={form.price} onChange={e=>set("price",e.target.value)} placeholder="ex: 189.30" style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.price?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+              {errors.price&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.price}</div>}
+            </div>
+          </div>
+          {/* Récap total */}
+          {total && (
+            <div style={{background:"#111009",borderRadius:10,padding:"10px 13px",border:"1px solid #252015",marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace"}}>Montant total</span>
+              <span style={{color:"#C8A96E",fontSize:14,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{total}{sym}</span>
+            </div>
+          )}
+          <button onClick={submit} style={{width:"100%",background:form.type==="buy"?"linear-gradient(135deg,#4ADE80,#22C55E)":"linear-gradient(135deg,#F87171,#EF4444)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            {form.type==="buy"?"▲ Enregistrer l'achat":"▼ Enregistrer la vente"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddTransaction, onDeleteTransaction }) {
   const [divModal, setDivModal] = useState(false);
+  const [txModal, setTxModal] = useState(false);
   const [scale, setScale] = useState("1M");
   const isCrypto = asset.type === "crypto";
   const info = getAssetInfo(asset.symbol);
@@ -799,6 +882,65 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }) {
               ))}
             </div>
           </div>
+          {/* ── Transactions ── */}
+          <div style={{margin:"12px 20px 0"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+              <div>
+                <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Transactions</div>
+                <div style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>{(asset.transactions||[]).length} opération{(asset.transactions||[]).length!==1?"s":""}</div>
+              </div>
+              <button onClick={()=>setTxModal(true)} style={{background:"#1A1A2A",border:"1px solid #2A2A4A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#A3B8C2",fontSize:12,fontWeight:600}}>
+                <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
+              </button>
+            </div>
+            {(!asset.transactions||asset.transactions.length===0) ? (
+              <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
+                <div style={{fontSize:22,marginBottom:5}}>📋</div>
+                <div style={{color:"#4A4540",fontSize:12}}>Aucune transaction enregistrée</div>
+              </div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {[...(asset.transactions||[])].reverse().map(tx=>{
+                  const isBuy = tx.type==="buy";
+                  const currentVal = tx.qty * asset.price;
+                  const costVal = tx.qty * tx.priceUSD;
+                  const pnl = isBuy ? currentVal - costVal : null;
+                  const pnlPct = isBuy && costVal>0 ? ((currentVal-costVal)/costVal*100) : null;
+                  const sym = tx.currency==="EUR"?"€":tx.currency==="GBP"?"£":"$";
+                  return (
+                    <div key={tx.id} style={{background:"#111009",borderRadius:14,padding:"12px 14px",border:`1px solid ${isBuy?"#4ADE8018":"#F8717118"}`}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{width:28,height:28,borderRadius:8,background:isBuy?"#4ADE8020":"#F8717120",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>
+                            {isBuy?"▲":"▼"}
+                          </div>
+                          <div>
+                            <div style={{color:isBuy?"#4ADE80":"#F87171",fontSize:12,fontWeight:700}}>{isBuy?"Achat":"Vente"}</div>
+                            <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{tx.date}</div>
+                          </div>
+                        </div>
+                        <button onClick={()=>onDeleteTransaction(asset.id, tx.id)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                        {[
+                          ["Quantité", `${tx.qty} ${asset.symbol}`],
+                          ["Prix d'achat", `${tx.priceOriginal?.toFixed(2)}${sym}`],
+                          ["Valeur actuelle", fmt(currentVal, 2)],
+                          isBuy ? ["P&L", <span style={{color:pnl>=0?"#4ADE80":"#F87171"}}>{pnl>=0?"▲ ":"▼ "}{fmt(Math.abs(pnl),2)} ({pnlPct>=0?"+":""}{pnlPct?.toFixed(2)}%)</span>] : ["Montant", fmt(costVal,2)],
+                        ].map(([k,v],i)=>(
+                          <div key={i} style={{background:"#0E0D0A",borderRadius:8,padding:"7px 10px",border:"1px solid #1E1B16"}}>
+                            <div style={{color:"#4A4540",fontSize:9,marginBottom:2,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                            <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {!isCrypto && (
             <div style={{margin:"12px 20px 0"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
@@ -843,6 +985,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete }) {
         </div>
       </div>
       {divModal && <AddDividendModal asset={asset} onClose={()=>setDivModal(false)} onAdd={(div)=>{onAddDividend(asset.id,div);setDivModal(false);}}/>}
+      {txModal && <AddTransactionModal asset={asset} fmt={fmt} onClose={()=>setTxModal(false)} onAdd={(tx)=>{onAddTransaction(asset.id,tx);setTxModal(false);}}/>}
     </>
   );
 }
@@ -1506,6 +1649,24 @@ export default function App() {
     if(detailAsset?.id===assetId) setDetailAsset(prev=>({...prev,dividends:[...prev.dividends,div]}));
   };
 
+  const handleAddTransaction = (assetId, tx) => {
+    setAssets(prev=>prev.map(a=>{
+      if(a.id!==assetId) return a;
+      const txs = [...(a.transactions||[]), tx];
+      const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
+      return {...a, transactions: txs, qty: Math.max(0, Math.round(totalQty*1e8)/1e8)};
+    }));
+  };
+
+  const handleDeleteTransaction = (assetId, txId) => {
+    setAssets(prev=>prev.map(a=>{
+      if(a.id!==assetId) return a;
+      const txs = (a.transactions||[]).filter(t=>t.id!==txId);
+      const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
+      return {...a, transactions: txs, qty: Math.max(0, Math.round(totalQty*1e8)/1e8)};
+    }));
+  };
+
   const syncedDetailAsset = detailAsset ? assets.find(a=>a.id===detailAsset.id)||detailAsset : null;
 
   const navItems = [
@@ -2125,7 +2286,7 @@ export default function App() {
       )}
 
       {showAddModal&&<AddAssetModal onClose={()=>setShowAddModal(false)} onAdd={handleAddAsset}/>}
-      {syncedDetailAsset&&<AssetDetailSheet asset={syncedDetailAsset} fmt={fmt} onClose={()=>setDetailAsset(null)} onAddDividend={handleAddDividend} onDelete={handleDeleteAsset}/>}
+      {syncedDetailAsset&&<AssetDetailSheet asset={syncedDetailAsset} fmt={fmt} onClose={()=>setDetailAsset(null)} onAddDividend={handleAddDividend} onDelete={handleDeleteAsset} onAddTransaction={handleAddTransaction} onDeleteTransaction={handleDeleteTransaction}/>}
     </div>
   );
 }
