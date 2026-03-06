@@ -5,7 +5,15 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      storageKey: 'portfolio-tracker-auth',
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    }
+  }
 );
 
 const EUR_RATE = 0.92;
@@ -1499,12 +1507,9 @@ export default function App() {
 
   // ── Chargement initial ──
   useEffect(() => {
-    const init = async () => {
+    const loadForUser = async (u) => {
       setDbLoading(true);
       try {
-        const { data: { user: u } } = await supabase.auth.getUser();
-        if (!u) { setDbLoading(false); return; }
-        setUser(u); setUserId(u.id);
         const activeId = await loadUserData(u.id);
         const { data, error } = await supabase.from("assets").select("*")
           .eq("user_id", u.id).eq("portfolio_id", activeId)
@@ -1523,7 +1528,28 @@ export default function App() {
       } catch(e) { console.error("init:", e); }
       setDbLoading(false);
     };
-    init();
+
+    // Écoute les changements d auth (restauration session, login, logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user); setUserId(session.user.id);
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+          await loadForUser(session.user);
+        }
+      } else if (event === "SIGNED_OUT") {
+        setUser(null); setUserId(null); setAssets([]); setChartAsset(null);
+        setPortfolios([{id:"default", name:"Mon Portefeuille"}]);
+        setActivePortfolioId("default"); setPortfolioName("Mon Portefeuille"); setProfileName("");
+        setDbLoading(false);
+      }
+    });
+
+    // Vérification initiale
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { setDbLoading(false); }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // ── Auth ──
