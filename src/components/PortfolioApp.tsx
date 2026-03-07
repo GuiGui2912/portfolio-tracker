@@ -1029,320 +1029,262 @@ function AccIcon({ type, color }) {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.7"/><path d="M2 10h20" stroke={color} strokeWidth="1.7"/><path d="M6 15h4" stroke={color} strokeWidth="1.7" strokeLinecap="round"/></svg>;
 }
 
-function BankCard({ bank, onRemove, expandedAccount, setExpandedAccount }) {
-  const [isOpen, setIsOpen] = useState(true);
-  const fmtEur = (v, dec=2) => v.toLocaleString("fr-FR", { minimumFractionDigits:dec, maximumFractionDigits:dec }) + " €";
-  const bankTotal = bank.accounts.reduce((s,a) => s + a.balance, 0);
-  return (
-    <div style={{margin:"0 20px 12px",borderRadius:20,border:`1px solid ${bank.color}25`,overflow:"hidden",background:"#111009"}}>
-      <div className="asset-row" onClick={()=>setIsOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",background:isOpen?`${bank.color}0A`:"transparent",borderBottom:isOpen?`1px solid ${bank.color}18`:"none",cursor:"pointer"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:40,height:40,borderRadius:13,background:`${bank.color}18`,border:`1px solid ${bank.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:bank.color,fontFamily:"'DM Mono',monospace",flexShrink:0}}>{bank.logo}</div>
-          <div>
-            <div style={{color:"#F0EDE8",fontWeight:700,fontSize:15}}>{bank.name}</div>
-            <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2}}>
-              <div style={{width:5,height:5,borderRadius:3,background:"#4ADE80"}}/>
-              <span style={{color:"#3A5A40",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Connecté via Tink</span>
-              <span style={{color:"#2A3530",fontSize:10,fontFamily:"'DM Mono',monospace"}}>· {bank.accounts.length} compte{bank.accounts.length>1?"s":""}</span>
-            </div>
-          </div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:700,fontSize:15}}>{fmtEur(bankTotal,0)}</div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.3s",flexShrink:0}}>
-            <path d="M6 9l6 6 6-6" stroke={bank.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-      </div>
-      {isOpen && (
-        <div>
-          <div style={{display:"flex",borderBottom:"1px solid #1A1714",overflowX:"auto",padding:"0 16px",gap:2}}>
-            {bank.accounts.map(acc => {
-              const isActiveTab = expandedAccount === acc.id;
-              return <button key={acc.id} onClick={e=>{e.stopPropagation();setExpandedAccount(isActiveTab?null:acc.id);}} style={{padding:"10px 14px",border:"none",background:"transparent",cursor:"pointer",color:isActiveTab?bank.color:"#4A4540",fontSize:12,fontWeight:isActiveTab?700:500,fontFamily:"'DM Sans',sans-serif",borderBottom:isActiveTab?`2px solid ${bank.color}`:"2px solid transparent",marginBottom:"-1px",whiteSpace:"nowrap",transition:"all 0.2s",flexShrink:0}}>{acc.label}</button>;
-            })}
-          </div>
-          {bank.accounts.map(acc => {
-            if (expandedAccount !== acc.id) return null;
-            const trend = acc.history[acc.history.length-1] - acc.history[0];
-            return (
-              <div key={acc.id} style={{padding:"14px 16px 16px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:12}}>
-                  <div>
-                    <div style={{color:"#3A5A40",fontSize:9,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Solde actuel</div>
-                    <div style={{fontFamily:"'DM Mono',monospace",fontSize:26,fontWeight:700,color:"#F0EDE8",letterSpacing:-0.5}}>{fmtEur(acc.balance)}</div>
-                  </div>
-                  <div style={{background:trend>=0?"#4ADE8015":"#F8717115",border:`1px solid ${trend>=0?"#4ADE8030":"#F8717130"}`,color:trend>=0?"#4ADE80":"#F87171",borderRadius:10,padding:"5px 11px",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>
-                    {trend>=0?"▲":"▼"} {fmtEur(Math.abs(trend),0)} / mois
-                  </div>
-                </div>
-                <div style={{background:"#0A1209",borderRadius:14,padding:"12px 8px 8px",border:`1px solid ${bank.color}18`,marginBottom:10}}>
-                  <MiniChart data={acc.history} color={bank.color} w={318} h={72} strokeWidth={2.5} showDots/>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-                  {[["Type",ACCOUNT_TYPE_LABEL[acc.type]],["Banque",bank.name]].map(([k,v])=>(
-                    <div key={k} style={{background:"#0E0E0A",borderRadius:10,padding:"9px 12px",border:"1px solid #1A1714"}}>
-                      <div style={{color:"#3A3530",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{k}</div>
-                      <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontSize:12,fontWeight:600}}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{background:"#0E0E0A",borderRadius:10,padding:"9px 13px",border:"1px solid #1A1714"}}>
-                  <div style={{color:"#3A3530",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>IBAN</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",color:"#6A6560",fontSize:11,letterSpacing:0.8}}>{acc.iban}</div>
-                </div>
-              </div>
-            );
-          })}
-          {!bank.accounts.some(a=>a.id===expandedAccount) && (
-            <div>
-              {bank.accounts.map(acc=>{
-                const trend = acc.history[acc.history.length-1] - acc.history[0];
-                return (
-                  <div key={acc.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",borderTop:"1px solid #191612"}}>
-                    <div style={{width:34,height:34,borderRadius:10,background:`${bank.color}12`,border:`1px solid ${bank.color}20`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                      <AccIcon type={acc.type} color={bank.color}/>
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>{acc.label}</div>
-                      <div style={{color:"#4A4540",fontSize:10,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{ACCOUNT_TYPE_LABEL[acc.type]}</div>
-                    </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:700,fontSize:13}}>{fmtEur(acc.balance)}</div>
-                      <div style={{color:trend>=0?"#4ADE80":"#F87171",fontSize:10,fontFamily:"'DM Mono',monospace",marginTop:1}}>{trend>=0?"▲":"▼"} {fmtEur(Math.abs(trend),0)}</div>
-                    </div>
-                    <MiniChart data={acc.history} color={bank.color} w={54} h={22}/>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-      {isOpen && (
-        <div style={{padding:"10px 16px",borderTop:`1px solid ${bank.color}12`}}>
-          <button onClick={e=>{e.stopPropagation();onRemove(bank.id);}} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:10,padding:"6px 14px",color:"#5A5550",fontSize:10,cursor:"pointer",width:"100%",fontFamily:"'DM Sans',sans-serif"}}>
-            Déconnecter {bank.name}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function BankTab({ userId }) {
-  const fmtEur = (v,dec=2) => Number(v).toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec})+" €";
-  const fmtDate = (d) => new Date(d).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"});
+  const fmtEur = (v, dec=2) => Number(v||0).toLocaleString("fr-FR", {minimumFractionDigits:dec, maximumFractionDigits:dec}) + " €";
+  const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("fr-FR", {day:"2-digit", month:"short"}); } catch { return d||""; } };
 
-  const [ebAccounts, setEbAccounts] = React.useState([]);
-  const [ebTransactions, setEbTransactions] = React.useState({});
-  const [ebBalances, setEbBalances] = React.useState({});
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
-  const [selectedAccount, setSelectedAccount] = React.useState(null);
-  const [showConnect, setShowConnect] = React.useState(false);
-  const [aspsps, setAspsps] = React.useState([]);
-  const [aspspSearch, setAspspSearch] = React.useState("");
-  const [connecting, setConnecting] = React.useState(false);
+  const [accounts, setAccounts]       = useState([]);
+  const [balances, setBalances]       = useState({});
+  const [transactions, setTransactions] = useState({});
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
+  const [selectedAcc, setSelectedAcc] = useState(null);
+  const [showConnect, setShowConnect] = useState(false);
+  const [aspsps, setAspsps]           = useState([]);
+  const [aspspSearch, setAspspSearch] = useState("");
+  const [connecting, setConnecting]   = useState(false);
 
-  // Charger les sessions stockées dans Supabase puis les comptes/soldes/transactions
-  const loadBankData = React.useCallback(async () => {
-    if (!userId) { setLoading(false); return; }
-    setLoading(true); setError(null);
+  // Charger les données bancaires depuis l'API (sessions stockées en localStorage)
+  const loadBankData = useCallback(async () => {
+    setLoading(true); setError("");
     try {
-      const { data: sessionsData } = await supabase
-        .from("banking_sessions")
-        .select("session_id, bank_name")
-        .eq("user_id", userId);
-
-      if (!sessionsData || sessionsData.length === 0) { setLoading(false); return; }
+      let sessions = [];
+      try { sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]"); } catch {}
+      if (sessions.length === 0) { setLoading(false); return; }
 
       const allAccounts = [];
-      for (const s of sessionsData) {
-        const r = await fetch(`/api/banking?action=session&session_id=${s.session_id}`);
-        const d = await r.json();
-        if (d.error) continue;
-        const accounts = d.accounts || [];
-        for (const acc of accounts) {
-          allAccounts.push({ ...acc, session_id: s.session_id, bank_name: s.bank_name || d.aspsp?.name || "Banque" });
-        }
+      for (const s of sessions) {
+        try {
+          const r = await fetch(`/api/banking?action=session&session_id=${s.session_id}`);
+          const d = await r.json();
+          if (d.error || !d.accounts) continue;
+          for (const acc of d.accounts) {
+            allAccounts.push({ ...acc, session_id: s.session_id, bank_name: s.bank_name || "Banque" });
+          }
+        } catch {}
       }
 
-      setEbAccounts(allAccounts);
+      setAccounts(allAccounts);
       if (allAccounts.length === 0) { setLoading(false); return; }
 
       // Charger soldes et transactions en parallèle
       const [bals, txs] = await Promise.all([
         Promise.all(allAccounts.map(async acc => {
-          const r = await fetch(`/api/banking?action=balances&account_id=${acc.uid}`);
-          return { uid: acc.uid, data: await r.json() };
+          try {
+            const r = await fetch(`/api/banking?action=balances&account_id=${acc.uid}`);
+            return { uid: acc.uid, data: await r.json() };
+          } catch { return { uid: acc.uid, data: {} }; }
         })),
         Promise.all(allAccounts.map(async acc => {
-          const r = await fetch(`/api/banking?action=transactions&account_id=${acc.uid}`);
-          return { uid: acc.uid, data: await r.json() };
+          try {
+            const r = await fetch(`/api/banking?action=transactions&account_id=${acc.uid}`);
+            return { uid: acc.uid, data: await r.json() };
+          } catch { return { uid: acc.uid, data: {} }; }
         }))
       ]);
       const balMap = {}; bals.forEach(b => { balMap[b.uid] = b.data; });
-      const txMap = {}; txs.forEach(t => { txMap[t.uid] = t.data; });
-      setEbBalances(balMap);
-      setEbTransactions(txMap);
-      setSelectedAccount(allAccounts[0].uid);
+      const txMap  = {}; txs.forEach(t => { txMap[t.uid]  = t.data; });
+      setBalances(balMap);
+      setTransactions(txMap);
+      setSelectedAcc(allAccounts[0]?.uid || null);
     } catch(e) { setError(e.message); }
     setLoading(false);
-  }, [userId]);
+  }, []);
 
-  // Vérifier si on revient d'une auth Enable Banking (code dans l'URL)
-  React.useEffect(() => {
+  // Au mount : vérifier si retour d'auth (code dans URL) ou charger sessions existantes
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
-    const aspspName = params.get("state");
-    if (code && userId) {
+    const bankName = params.get("state") || sessionStorage.getItem("eb_bank_name") || "Banque";
+    if (code) {
+      // Créer la session Enable Banking
       fetch(`/api/banking?action=create_session&code=${encodeURIComponent(code)}`)
         .then(r => r.json())
-        .then(async d => {
+        .then(d => {
           if (d.session_id) {
-            await supabase.from("banking_sessions").upsert({
-              user_id: userId,
-              session_id: d.session_id,
-              bank_name: aspspName || "Banque",
-              created_at: new Date().toISOString(),
-            });
-            // Nettoyer l'URL
+            // Stocker en localStorage (pas Supabase pour éviter les blocages)
+            try {
+              const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
+              const exists = sessions.find(s => s.session_id === d.session_id);
+              if (!exists) sessions.push({ session_id: d.session_id, bank_name: bankName });
+              localStorage.setItem("eb_sessions", JSON.stringify(sessions));
+            } catch {}
+            sessionStorage.removeItem("eb_bank_name");
             window.history.replaceState({}, "", window.location.pathname);
-            loadBankData();
           }
-        });
+          loadBankData();
+        })
+        .catch(() => loadBankData());
     } else {
       loadBankData();
     }
-  }, [userId, loadBankData]);
+  }, [loadBankData]);
 
   const loadAspsps = async () => {
-    const r = await fetch("/api/banking?action=aspsps&country=FR");
-    const d = await r.json();
-    setAspsps(d.aspsps || []);
+    if (aspsps.length > 0) return;
+    try {
+      const r = await fetch("/api/banking?action=aspsps&country=FR");
+      const d = await r.json();
+      setAspsps(d.aspsps || []);
+    } catch {}
   };
 
-  const connectBank = async (aspsp_name) => {
-    setConnecting(true);
+  const connectBank = async (aspspName) => {
+    setConnecting(true); setError("");
     try {
-      const redirect_url = window.location.origin + "/portfolio";
-      const r = await fetch(`/api/banking?action=start_auth&aspsp_name=${encodeURIComponent(aspsp_name)}&country=FR&redirect_url=${encodeURIComponent(redirect_url)}`);
+      const redirectUrl = window.location.origin + window.location.pathname;
+      const r = await fetch(`/api/banking?action=start_auth&aspsp_name=${encodeURIComponent(aspspName)}&country=FR&redirect_url=${encodeURIComponent(redirectUrl)}`);
       const d = await r.json();
       if (d.error) throw new Error(d.error);
-      // Sauvegarder le nom de la banque dans sessionStorage pour le récupérer au retour
       if (d.url) {
-        sessionStorage.setItem("eb_aspsp_name", aspsp_name);
+        sessionStorage.setItem("eb_bank_name", aspspName);
         window.location.href = d.url;
       }
-    } catch(e: any) { setError(e.message); }
-    setConnecting(false);
+    } catch(e) { setError(e.message || "Erreur de connexion"); setConnecting(false); }
   };
 
-  // Calcul total solde
-  const totalBalance = Object.entries(ebBalances).reduce((sum, [uid, bal]: any) => {
-    const b = (bal.balances || []).find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV") || (bal.balances||[])[0];
-    return sum + (b ? Number(b.balance_amount?.amount || 0) : 0);
-  }, 0);
+  const disconnectAll = () => {
+    try { localStorage.removeItem("eb_sessions"); } catch {}
+    setAccounts([]); setBalances({}); setTransactions({}); setSelectedAcc(null);
+  };
 
-  const selectedTxs = selectedAccount ? ((ebTransactions[selectedAccount]?.transactions?.booked) || []) : [];
-  const selectedBal = selectedAccount ? (() => {
-    const bals = ebBalances[selectedAccount]?.balances || [];
+  // Calculs solde
+  const getBalance = (uid) => {
+    const bals = balances[uid]?.balances || [];
     const b = bals.find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV") || bals[0];
     return b ? Number(b.balance_amount?.amount || 0) : 0;
-  })() : 0;
-
+  };
+  const totalBalance = accounts.reduce((s, acc) => s + getBalance(acc.uid), 0);
+  const selectedTxs = selectedAcc ? (transactions[selectedAcc]?.transactions?.booked || []) : [];
   const filteredAspsps = aspsps.filter(a => a.name?.toLowerCase().includes(aspspSearch.toLowerCase()));
+
+  // État : spin CSS
+  const spinStyle = `@keyframes spin{to{transform:rotate(360deg)}}`;
 
   if (loading) return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 20px",gap:12}}>
+      <style>{spinStyle}</style>
       <div style={{width:32,height:32,border:"3px solid #1E3A28",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
       <div style={{color:"#3A6A50",fontSize:12,fontFamily:"'DM Mono',monospace"}}>Chargement des comptes…</div>
     </div>
   );
 
-  if (ebAccounts.length === 0 && !error) return (
-    <div style={{padding:"0 20px 100px"}} onTouchEnd={e=>e.stopPropagation()}>
+  if (accounts.length === 0) return (
+    <div style={{padding:"0 20px 100px"}}>
+      <style>{spinStyle}</style>
       <div style={{background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"32px 24px",border:"1px solid #1E3A28",textAlign:"center",marginBottom:16}}>
         <div style={{fontSize:40,marginBottom:12}}>🏦</div>
         <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:8}}>Connectez votre banque</div>
-        <div style={{color:"#5A7A60",fontSize:13,marginBottom:24,lineHeight:1.5}}>Visualisez vos soldes et transactions directement dans l'app via Enable Banking</div>
-        <button onClick={()=>{setShowConnect(true);loadAspsps();}} style={{background:"linear-gradient(135deg,#4ADE80,#22C55E)",border:"none",borderRadius:14,padding:"13px 28px",color:"#0A1A0E",fontSize:14,fontWeight:700,cursor:"pointer",position:"relative",zIndex:10}}>
+        <div style={{color:"#5A7A60",fontSize:13,marginBottom:24,lineHeight:1.6}}>Visualisez vos soldes et transactions directement dans l'app via Open Banking</div>
+        <button onClick={()=>{ setShowConnect(true); loadAspsps(); }}
+          style={{background:"linear-gradient(135deg,#4ADE80,#22C55E)",border:"none",borderRadius:14,padding:"13px 28px",color:"#0A1A0E",fontSize:14,fontWeight:700,cursor:"pointer"}}>
           + Connecter une banque
         </button>
       </div>
-      {error && <div style={{color:"#F87171",fontSize:12,textAlign:"center",padding:8}}>{error}</div>}
+      {error && <div style={{color:"#F87171",fontSize:12,textAlign:"center",padding:8,background:"#F8717110",borderRadius:10}}>{error}</div>}
+
+      {/* Modal choix banque */}
+      {showConnect && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowConnect(false)}>
+          <div style={{background:"#111009",borderRadius:"28px 28px 0 0",padding:"0 0 32px",width:"100%",maxWidth:430,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"12px auto 0",flexShrink:0}}/>
+            <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #1E1B16",flexShrink:0}}>
+              <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700}}>Choisir une banque</div>
+            </div>
+            <div style={{padding:"12px 20px",flexShrink:0}}>
+              <input value={aspspSearch} onChange={e=>setAspspSearch(e.target.value)} placeholder="Rechercher (ex: Boursorama, BNP…)"
+                style={{width:"100%",background:"#1A1915",border:"1px solid #2A2520",borderRadius:12,padding:"10px 14px",color:"#F0EDE8",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{overflowY:"auto",flex:1,padding:"0 20px 8px"}}>
+              {aspsps.length === 0 && (
+                <div style={{display:"flex",alignItems:"center",gap:10,color:"#5A5550",fontSize:12,padding:16}}>
+                  <div style={{width:20,height:20,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite",flexShrink:0}}/>
+                  Chargement des banques…
+                </div>
+              )}
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {filteredAspsps.slice(0, 30).map(a => (
+                  <button key={a.name} onClick={()=>connectBank(a.name)} disabled={connecting}
+                    style={{background:connecting?"#0E0D0A":"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:connecting?"#4A4540":"#C8C4BC",fontSize:13,cursor:connecting?"not-allowed":"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}}
+                    onMouseEnter={e=>!connecting&&(e.currentTarget.style.borderColor="#4ADE8050")}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor="#2A2520"}>
+                    {a.logo && <img src={a.logo} style={{width:28,height:28,borderRadius:8,objectFit:"contain"}} onError={e=>e.currentTarget.style.display="none"}/>}
+                    <span>{a.name}</span>
+                    {connecting && <div style={{marginLeft:"auto",width:16,height:16,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
   return (
     <div className="fadein">
+      <style>{spinStyle}</style>
       {/* Header total */}
-      <div style={{margin:"0 20px 16px",background:"linear-gradient(135deg,#0E1A14,#122018,#0C1810)",borderRadius:22,padding:"18px 20px",border:"1px solid #1E3A28"}}>
+      <div style={{margin:"0 20px 16px",background:"linear-gradient(135deg,#0E1A14,#122018,#0C1810)",borderRadius:22,padding:"18px 20px",border:"1px solid #1E3A28",position:"relative",overflow:"hidden"}}>
         <div style={{color:"#3A6A50",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:6}}>Total bancaire</div>
         <div style={{fontFamily:"'DM Mono',monospace",fontSize:30,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmtEur(totalBalance)}</div>
-        <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
-          {ebAccounts.map(acc => {
-            const bals = ebBalances[acc.uid]?.balances || [];
-            const b = bals.find(b => b.balance_type==="CLBD"||b.balance_type==="ITAV")||bals[0];
-            const bal = b ? Number(b.balance_amount?.amount||0) : 0;
-            return (
-              <button key={acc.uid} onClick={()=>setSelectedAccount(acc.uid)}
-                style={{display:"flex",alignItems:"center",gap:6,background:selectedAccount===acc.uid?"#4ADE8020":"#0A1A0E",borderRadius:12,padding:"6px 12px",border:`1px solid ${selectedAccount===acc.uid?"#4ADE8050":"#1E3A28"}`,cursor:"pointer",transition:"all 0.2s"}}>
-                <div style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
-                <span style={{color:"#4ADE80",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{acc.bank_name?.split(" ")[0]}</span>
-                <span style={{color:"#5A7A60",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{fmtEur(bal,0)}</span>
-              </button>
-            );
-          })}
-          <button onClick={()=>{setShowConnect(true);loadAspsps();}}
-            style={{display:"flex",alignItems:"center",gap:6,background:"#0A1A0E",borderRadius:12,padding:"6px 12px",border:"1px dashed #1E3A28",cursor:"pointer"}}>
+        <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"center"}}>
+          {accounts.map(acc => (
+            <button key={acc.uid} onClick={()=>setSelectedAcc(acc.uid)}
+              style={{display:"flex",alignItems:"center",gap:6,background:selectedAcc===acc.uid?"#4ADE8025":"#0A1A0E",borderRadius:12,padding:"5px 11px",border:`1px solid ${selectedAcc===acc.uid?"#4ADE8060":"#1E3A28"}`,cursor:"pointer",transition:"all 0.2s"}}>
+              <div style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
+              <span style={{color:"#4ADE80",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{acc.bank_name?.split(" ")[0]}</span>
+              <span style={{color:"#5A7A60",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{fmtEur(getBalance(acc.uid),0)}</span>
+            </button>
+          ))}
+          <button onClick={()=>{ setShowConnect(true); loadAspsps(); }}
+            style={{display:"flex",alignItems:"center",gap:5,background:"transparent",borderRadius:12,padding:"5px 11px",border:"1px dashed #1E3A28",cursor:"pointer"}}>
             <span style={{color:"#3A6A50",fontSize:11}}>+ Banque</span>
           </button>
         </div>
       </div>
 
-      {/* Solde compte sélectionné */}
-      {selectedAccount && (
-        <div style={{margin:"0 20px 16px"}}>
-          {(() => {
-            const acc = ebAccounts.find(a=>a.uid===selectedAccount);
-            return (
-              <div style={{background:"#0E0D0A",borderRadius:18,padding:"16px 20px",border:"1px solid #1E2A1A"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                  <div>
-                    <div style={{color:"#3A6A50",fontSize:10,letterSpacing:1,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>{acc?.bank_name}</div>
-                    <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600,marginBottom:2}}>{acc?.details || acc?.iban || acc?.uid?.slice(0,20)+"…"}</div>
-                    <div style={{color:"#5A7A60",fontSize:11}}>{acc?.currency || "EUR"}</div>
-                  </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:700}}>{fmtEur(selectedBal)}</div>
-                    <div style={{color:"#3A6A50",fontSize:10,marginTop:2}}>Solde disponible</div>
-                  </div>
-                </div>
+      {/* Détail compte sélectionné */}
+      {selectedAcc && (() => {
+        const acc = accounts.find(a => a.uid === selectedAcc);
+        const bal = getBalance(selectedAcc);
+        const iban = acc?.iban || acc?.details || (acc?.uid ? acc.uid.slice(0,8)+"…" : "");
+        return (
+          <div style={{margin:"0 20px 16px",background:"#0E0D0A",borderRadius:18,padding:"16px 20px",border:"1px solid #1A2A1A"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div>
+                <div style={{color:"#3A6A50",fontSize:10,letterSpacing:1,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>{acc?.bank_name}</div>
+                <div style={{color:"#8A8480",fontSize:11,fontFamily:"'DM Mono',monospace",marginBottom:4}}>{iban}</div>
+                <div style={{color:"#4A4540",fontSize:10}}>{acc?.currency || "EUR"}</div>
               </div>
-            );
-          })()}
-        </div>
-      )}
+              <div style={{textAlign:"right"}}>
+                <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:700}}>{fmtEur(bal)}</div>
+                <div style={{color:"#3A6A50",fontSize:10,marginTop:2}}>Solde disponible</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Transactions */}
       {selectedTxs.length > 0 && (
         <div style={{margin:"0 20px 16px"}}>
-          <div style={{color:"#5A5550",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>Transactions récentes</div>
+          <div style={{color:"#5A5550",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>
+            Transactions récentes · {selectedTxs.length}
+          </div>
           <div style={{display:"flex",flexDirection:"column",gap:2}}>
-            {selectedTxs.slice(0,30).map((tx,i) => {
+            {selectedTxs.slice(0, 50).map((tx, i) => {
               const amount = Number(tx.transaction_amount?.amount || 0);
               const isPos = amount >= 0;
+              const label = tx.remittance_information?.unstructured?.[0] || tx.creditor_name || tx.debtor_name || "Transaction";
+              const date = tx.booking_date || tx.value_date || "";
               return (
-                <div key={i} style={{background:"#0E0D0A",borderRadius:14,padding:"12px 16px",border:"1px solid #1A1A15",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div key={tx.transaction_id || i} style={{background:"#0E0D0A",borderRadius:12,padding:"11px 16px",border:"1px solid #1A1A15",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{color:"#C8C4BC",fontSize:12,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-                      {tx.remittance_information?.unstructured?.[0] || tx.creditor_name || tx.debtor_name || "Transaction"}
-                    </div>
-                    <div style={{color:"#3A3530",fontSize:10,marginTop:2}}>{fmtDate(tx.booking_date || tx.value_date)}</div>
+                    <div style={{color:"#C8C4BC",fontSize:12,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</div>
+                    <div style={{color:"#3A3530",fontSize:10,marginTop:2,fontFamily:"'DM Mono',monospace"}}>{fmtDate(date)}</div>
                   </div>
-                  <div style={{color:isPos?"#4ADE80":"#F87171",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,marginLeft:12,flexShrink:0}}>
+                  <div style={{color:isPos?"#4ADE80":"#F87171",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,flexShrink:0}}>
                     {isPos?"+":""}{fmtEur(amount)}
                   </div>
                 </div>
@@ -1352,25 +1294,52 @@ function BankTab({ userId }) {
         </div>
       )}
 
-      {error && <div style={{color:"#F87171",fontSize:12,textAlign:"center",padding:"8px 20px"}}>{error}</div>}
+      {selectedTxs.length === 0 && selectedAcc && (
+        <div style={{margin:"0 20px",padding:"20px",textAlign:"center",border:"1px dashed #1E3A28",borderRadius:16}}>
+          <div style={{color:"#3A5A40",fontSize:12}}>Aucune transaction disponible</div>
+        </div>
+      )}
+
+      {error && <div style={{margin:"8px 20px",color:"#F87171",fontSize:12,textAlign:"center",padding:"8px 12px",background:"#F8717110",borderRadius:10}}>{error}</div>}
+
+      {/* Bouton déconnecter */}
+      <div style={{margin:"16px 20px 8px"}}>
+        <button onClick={disconnectAll}
+          style={{width:"100%",background:"transparent",border:"1px solid #2A2520",borderRadius:12,padding:"11px",color:"#5A5550",fontSize:12,cursor:"pointer"}}>
+          Déconnecter toutes les banques
+        </button>
+      </div>
 
       {/* Modal connexion banque */}
       {showConnect && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:1000,display:"flex",alignItems:"flex-end"}} onClick={()=>setShowConnect(false)}>
-          <div style={{background:"#111009",borderRadius:"28px 28px 0 0",padding:"24px 20px",width:"100%",maxHeight:"75vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-            <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"0 auto 20px"}}/>
-            <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:16}}>Choisir une banque</div>
-            <input value={aspspSearch} onChange={e=>setAspspSearch(e.target.value)} placeholder="Rechercher (ex: Boursorama, BNP…)"
-              style={{width:"100%",background:"#1A1915",border:"1px solid #2A2520",borderRadius:12,padding:"10px 14px",color:"#F0EDE8",fontSize:13,outline:"none",marginBottom:12,boxSizing:"border-box"}}/>
-            {aspsps.length === 0 && <div style={{color:"#5A5550",fontSize:12,textAlign:"center",padding:16}}>Chargement des banques…</div>}
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {filteredAspsps.slice(0,20).map(a => (
-                <button key={a.name} onClick={()=>connectBank(a.name)} disabled={connecting}
-                  style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
-                  {a.logo && <img src={a.logo} style={{width:24,height:24,borderRadius:6,objectFit:"contain"}} onError={e=>(e.currentTarget.style.display="none")}/>}
-                  <span>{a.name}</span>
-                </button>
-              ))}
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowConnect(false)}>
+          <div style={{background:"#111009",borderRadius:"28px 28px 0 0",padding:"0 0 32px",width:"100%",maxWidth:430,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"12px auto 0",flexShrink:0}}/>
+            <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #1E1B16",flexShrink:0}}>
+              <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700}}>Choisir une banque</div>
+            </div>
+            <div style={{padding:"12px 20px",flexShrink:0}}>
+              <input value={aspspSearch} onChange={e=>setAspspSearch(e.target.value)} placeholder="Rechercher (ex: Boursorama, BNP…)"
+                style={{width:"100%",background:"#1A1915",border:"1px solid #2A2520",borderRadius:12,padding:"10px 14px",color:"#F0EDE8",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+            </div>
+            <div style={{overflowY:"auto",flex:1,padding:"0 20px 8px"}}>
+              {aspsps.length === 0 && (
+                <div style={{display:"flex",alignItems:"center",gap:10,color:"#5A5550",fontSize:12,padding:16}}>
+                  <div style={{width:20,height:20,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite",flexShrink:0}}/>
+                  Chargement des banques…
+                </div>
+              )}
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {filteredAspsps.slice(0, 30).map(a => (
+                  <button key={a.name} onClick={()=>{ setShowConnect(false); connectBank(a.name); }} disabled={connecting}
+                    style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor="#4ADE8050"}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor="#2A2520"}>
+                    {a.logo && <img src={a.logo} style={{width:28,height:28,borderRadius:8,objectFit:"contain"}} onError={e=>e.currentTarget.style.display="none"}/>}
+                    <span>{a.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1619,16 +1588,17 @@ export default function App() {
   const loadUserData = async (uid) => {
     // Toutes les requêtes en parallèle
     const [profileRes, portfoliosRes] = await Promise.all([
-      supabase.from('profiles').select('display_name, session_duration').eq('id', uid).single(),
+      supabase.from('profiles').select('*').eq('id', uid).single(),
       supabase.from('portfolios').select('id, name').eq('user_id', uid).order('created_at', { ascending: true }),
     ]);
 
-    // Profil
+    // Profil - robuste même si colonnes manquantes
     if (profileRes.data) {
-      setProfileName(profileRes.data.display_name || '');
+      setProfileName(profileRes.data.display_name || profileRes.data.name || '');
       if (profileRes.data.session_duration) setSessionDuration(profileRes.data.session_duration);
-    } else {
-      supabase.from('profiles').insert({ id: uid, display_name: '' }).then(() => {});
+    } else if (!profileRes.error || profileRes.error.code === 'PGRST116') {
+      // Pas de profil → essayer de créer (silencieux si ça rate)
+      supabase.from('profiles').insert({ id: uid }).then(() => {});
       setProfileName('');
     }
 
@@ -1650,9 +1620,14 @@ export default function App() {
   };
 
   const saveProfileNameToDB = async (name, uid) => {
+    // Essayer avec display_name d'abord, sinon juste upsert sans la colonne
     try {
-      await supabase.from('profiles')
-        .upsert({ id: uid, display_name: name, updated_at: new Date().toISOString() });
+      const { error } = await supabase.from('profiles')
+        .upsert({ id: uid, display_name: name });
+      if (error) {
+        // Colonne display_name peut ne pas exister, on ignore silencieusement
+        console.warn('saveProfileName (display_name manquant?):', error.message);
+      }
     } catch(e) { console.error('saveProfileName:', e); }
   };
 
@@ -1749,7 +1724,6 @@ export default function App() {
       setDbLoading(false);
     };
     init();
-    return () => {};
   }, []);
 
   // ── Auth ──
