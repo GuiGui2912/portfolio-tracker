@@ -1130,7 +1130,7 @@ function BankCard({ bank, onRemove, expandedAccount, setExpandedAccount }) {
   );
 }
 
-function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }) {
+function BankTab({ userId }) {
   const fmtEur = (v,dec=2) => Number(v).toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec})+" €";
   const fmtDate = (d) => new Date(d).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"});
 
@@ -1145,53 +1145,77 @@ function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }) {
   const [aspspSearch, setAspspSearch] = React.useState("");
   const [connecting, setConnecting] = React.useState(false);
 
+  // Charger les sessions stockées dans Supabase puis les comptes/soldes/transactions
   const loadBankData = React.useCallback(async () => {
+    if (!userId) { setLoading(false); return; }
     setLoading(true); setError(null);
     try {
-      // Charger les sessions Enable Banking
-      const sessRes = await fetch("/api/banking?action=sessions");
-      const sessData = await sessRes.json();
-      if (sessData.error) throw new Error(sessData.error);
+      const { data: sessionsData } = await supabase
+        .from("banking_sessions")
+        .select("session_id, bank_name")
+        .eq("user_id", userId);
 
-      const sessions = sessData.sessions || [];
+      if (!sessionsData || sessionsData.length === 0) { setLoading(false); return; }
+
       const allAccounts = [];
-
-      // Pour chaque session, charger les comptes
-      for (const session of sessions) {
-        if (session.status !== "AUTHORIZED") continue;
-        const accRes = await fetch(`/api/banking?action=accounts&session_id=${session.session_id}`);
-        const accData = await accRes.json();
-        const accounts = accData.accounts || [];
+      for (const s of sessionsData) {
+        const r = await fetch(`/api/banking?action=session&session_id=${s.session_id}`);
+        const d = await r.json();
+        if (d.error) continue;
+        const accounts = d.accounts || [];
         for (const acc of accounts) {
-          allAccounts.push({ ...acc, session_id: session.session_id, bank_name: session.aspsp?.name || "Banque" });
+          allAccounts.push({ ...acc, session_id: s.session_id, bank_name: s.bank_name || d.aspsp?.name || "Banque" });
         }
       }
 
       setEbAccounts(allAccounts);
+      if (allAccounts.length === 0) { setLoading(false); return; }
 
       // Charger soldes et transactions en parallèle
-      if (allAccounts.length > 0) {
-        const [bals, txs] = await Promise.all([
-          Promise.all(allAccounts.map(async acc => {
-            const r = await fetch(`/api/banking?action=balances&account_id=${acc.uid}`);
-            return { uid: acc.uid, data: await r.json() };
-          })),
-          Promise.all(allAccounts.map(async acc => {
-            const r = await fetch(`/api/banking?action=transactions&account_id=${acc.uid}`);
-            return { uid: acc.uid, data: await r.json() };
-          }))
-        ]);
-        const balMap = {}; bals.forEach(b => { balMap[b.uid] = b.data; });
-        const txMap = {}; txs.forEach(t => { txMap[t.uid] = t.data; });
-        setEbBalances(balMap);
-        setEbTransactions(txMap);
-        if (allAccounts.length > 0) setSelectedAccount(allAccounts[0].uid);
-      }
+      const [bals, txs] = await Promise.all([
+        Promise.all(allAccounts.map(async acc => {
+          const r = await fetch(`/api/banking?action=balances&account_id=${acc.uid}`);
+          return { uid: acc.uid, data: await r.json() };
+        })),
+        Promise.all(allAccounts.map(async acc => {
+          const r = await fetch(`/api/banking?action=transactions&account_id=${acc.uid}`);
+          return { uid: acc.uid, data: await r.json() };
+        }))
+      ]);
+      const balMap = {}; bals.forEach(b => { balMap[b.uid] = b.data; });
+      const txMap = {}; txs.forEach(t => { txMap[t.uid] = t.data; });
+      setEbBalances(balMap);
+      setEbTransactions(txMap);
+      setSelectedAccount(allAccounts[0].uid);
     } catch(e) { setError(e.message); }
     setLoading(false);
-  }, []);
+  }, [userId]);
 
-  React.useEffect(() => { loadBankData(); }, [loadBankData]);
+  // Vérifier si on revient d'une auth Enable Banking (code dans l'URL)
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const aspspName = params.get("state");
+    if (code && userId) {
+      fetch(`/api/banking?action=create_session&code=${encodeURIComponent(code)}`)
+        .then(r => r.json())
+        .then(async d => {
+          if (d.session_id) {
+            await supabase.from("banking_sessions").upsert({
+              user_id: userId,
+              session_id: d.session_id,
+              bank_name: aspspName || "Banque",
+              created_at: new Date().toISOString(),
+            });
+            // Nettoyer l'URL
+            window.history.replaceState({}, "", window.location.pathname);
+            loadBankData();
+          }
+        });
+    } else {
+      loadBankData();
+    }
+  }, [userId, loadBankData]);
 
   const loadAspsps = async () => {
     const r = await fetch("/api/banking?action=aspsps&country=FR");
@@ -1202,11 +1226,16 @@ function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }) {
   const connectBank = async (aspsp_name) => {
     setConnecting(true);
     try {
-      const r = await fetch(`/api/banking?action=connect&aspsp_id=${encodeURIComponent(aspsp_name)}&country=FR`);
+      const redirect_url = window.location.origin + "/portfolio";
+      const r = await fetch(`/api/banking?action=start_auth&aspsp_name=${encodeURIComponent(aspsp_name)}&country=FR&redirect_url=${encodeURIComponent(redirect_url)}`);
       const d = await r.json();
-      if (d.url) window.open(d.url, "_blank");
-      setShowConnect(false);
-    } catch(e) { setError(e.message); }
+      if (d.error) throw new Error(d.error);
+      // Sauvegarder le nom de la banque dans sessionStorage pour le récupérer au retour
+      if (d.url) {
+        sessionStorage.setItem("eb_aspsp_name", aspsp_name);
+        window.location.href = d.url;
+      }
+    } catch(e: any) { setError(e.message); }
     setConnecting(false);
   };
 
@@ -2315,7 +2344,7 @@ export default function App() {
           )}
 
           {/* ── BANQUE ── */}
-          {tab===2 && <BankTab banks={banks} onRemove={id=>setBanks(prev=>prev.filter(b=>b.id!==id))} expandedAccount={expandedAcc} setExpandedAccount={setExpandedAcc}/>}
+          {tab===2 && <BankTab userId={userId}/>}
         </div>
 
         {/* Ghost drag ACTIFS */}
