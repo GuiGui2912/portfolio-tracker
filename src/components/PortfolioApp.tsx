@@ -1769,7 +1769,10 @@ export default function App() {
       if (!session) { setDbLoading(false); }
     });
 
-    return () => subscription.unsubscribe();
+    // Timeout de sécurité - si après 8 secondes dbLoading est encore true, on force false
+    const timeout = setTimeout(() => setDbLoading(false), 8000);
+
+    return () => { subscription.unsubscribe(); clearTimeout(timeout); };
   }, []);
 
   // ── Auth ──
