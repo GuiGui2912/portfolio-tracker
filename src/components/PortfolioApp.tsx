@@ -1131,30 +1131,221 @@ function BankCard({ bank, onRemove, expandedAccount, setExpandedAccount }) {
 }
 
 function BankTab({ banks, onRemove, expandedAccount, setExpandedAccount }) {
-  const fmtEur = (v,dec=2) => v.toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec})+" €";
-  const totalBalance = banks.flatMap(b=>b.accounts).reduce((s,a)=>s+a.balance,0);
+  const fmtEur = (v,dec=2) => Number(v).toLocaleString("fr-FR",{minimumFractionDigits:dec,maximumFractionDigits:dec})+" €";
+  const fmtDate = (d) => new Date(d).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"});
+
+  const [ebAccounts, setEbAccounts] = React.useState([]);
+  const [ebTransactions, setEbTransactions] = React.useState({});
+  const [ebBalances, setEbBalances] = React.useState({});
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+  const [selectedAccount, setSelectedAccount] = React.useState(null);
+  const [showConnect, setShowConnect] = React.useState(false);
+  const [aspsps, setAspsps] = React.useState([]);
+  const [aspspSearch, setAspspSearch] = React.useState("");
+  const [connecting, setConnecting] = React.useState(false);
+
+  const loadBankData = React.useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      // Charger les sessions Enable Banking
+      const sessRes = await fetch("/api/banking?action=sessions");
+      const sessData = await sessRes.json();
+      if (sessData.error) throw new Error(sessData.error);
+
+      const sessions = sessData.sessions || [];
+      const allAccounts = [];
+
+      // Pour chaque session, charger les comptes
+      for (const session of sessions) {
+        if (session.status !== "AUTHORIZED") continue;
+        const accRes = await fetch(`/api/banking?action=accounts&session_id=${session.session_id}`);
+        const accData = await accRes.json();
+        const accounts = accData.accounts || [];
+        for (const acc of accounts) {
+          allAccounts.push({ ...acc, session_id: session.session_id, bank_name: session.aspsp?.name || "Banque" });
+        }
+      }
+
+      setEbAccounts(allAccounts);
+
+      // Charger soldes et transactions en parallèle
+      if (allAccounts.length > 0) {
+        const [bals, txs] = await Promise.all([
+          Promise.all(allAccounts.map(async acc => {
+            const r = await fetch(`/api/banking?action=balances&account_id=${acc.uid}`);
+            return { uid: acc.uid, data: await r.json() };
+          })),
+          Promise.all(allAccounts.map(async acc => {
+            const r = await fetch(`/api/banking?action=transactions&account_id=${acc.uid}`);
+            return { uid: acc.uid, data: await r.json() };
+          }))
+        ]);
+        const balMap = {}; bals.forEach(b => { balMap[b.uid] = b.data; });
+        const txMap = {}; txs.forEach(t => { txMap[t.uid] = t.data; });
+        setEbBalances(balMap);
+        setEbTransactions(txMap);
+        if (allAccounts.length > 0) setSelectedAccount(allAccounts[0].uid);
+      }
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  }, []);
+
+  React.useEffect(() => { loadBankData(); }, [loadBankData]);
+
+  const loadAspsps = async () => {
+    const r = await fetch("/api/banking?action=aspsps&country=FR");
+    const d = await r.json();
+    setAspsps(d.aspsps || []);
+  };
+
+  const connectBank = async (aspsp_name) => {
+    setConnecting(true);
+    try {
+      const r = await fetch(`/api/banking?action=connect&aspsp_id=${encodeURIComponent(aspsp_name)}&country=FR`);
+      const d = await r.json();
+      if (d.url) window.open(d.url, "_blank");
+      setShowConnect(false);
+    } catch(e) { setError(e.message); }
+    setConnecting(false);
+  };
+
+  // Calcul total solde
+  const totalBalance = Object.entries(ebBalances).reduce((sum, [uid, bal]: any) => {
+    const b = (bal.balances || []).find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV") || (bal.balances||[])[0];
+    return sum + (b ? Number(b.balance_amount?.amount || 0) : 0);
+  }, 0);
+
+  const selectedTxs = selectedAccount ? ((ebTransactions[selectedAccount]?.transactions?.booked) || []) : [];
+  const selectedBal = selectedAccount ? (() => {
+    const bals = ebBalances[selectedAccount]?.balances || [];
+    const b = bals.find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV") || bals[0];
+    return b ? Number(b.balance_amount?.amount || 0) : 0;
+  })() : 0;
+
+  const filteredAspsps = aspsps.filter(a => a.name?.toLowerCase().includes(aspspSearch.toLowerCase()));
+
+  if (loading) return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 20px",gap:12}}>
+      <div style={{width:32,height:32,border:"3px solid #1E3A28",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+      <div style={{color:"#3A6A50",fontSize:12,fontFamily:"'DM Mono',monospace"}}>Chargement des comptes…</div>
+    </div>
+  );
+
+  if (ebAccounts.length === 0 && !error) return (
+    <div style={{padding:"0 20px"}}>
+      <div style={{background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"32px 24px",border:"1px solid #1E3A28",textAlign:"center",marginBottom:16}}>
+        <div style={{fontSize:40,marginBottom:12}}>🏦</div>
+        <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:8}}>Connectez votre banque</div>
+        <div style={{color:"#5A7A60",fontSize:13,marginBottom:24,lineHeight:1.5}}>Visualisez vos soldes et transactions directement dans l'app via Enable Banking</div>
+        <button onClick={()=>{setShowConnect(true);loadAspsps();}} style={{background:"linear-gradient(135deg,#4ADE80,#22C55E)",border:"none",borderRadius:14,padding:"13px 28px",color:"#0A1A0E",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+          + Connecter une banque
+        </button>
+      </div>
+      {error && <div style={{color:"#F87171",fontSize:12,textAlign:"center",padding:8}}>{error}</div>}
+    </div>
+  );
+
   return (
     <div className="fadein">
-      <div style={{margin:"0 20px 16px",background:"linear-gradient(135deg,#0E1A14,#122018,#0C1810)",borderRadius:22,padding:"18px 20px",border:"1px solid #1E3A28",position:"relative",overflow:"hidden"}}>
+      {/* Header total */}
+      <div style={{margin:"0 20px 16px",background:"linear-gradient(135deg,#0E1A14,#122018,#0C1810)",borderRadius:22,padding:"18px 20px",border:"1px solid #1E3A28"}}>
         <div style={{color:"#3A6A50",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:6}}>Total bancaire</div>
         <div style={{fontFamily:"'DM Mono',monospace",fontSize:30,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmtEur(totalBalance)}</div>
-        <div style={{display:"flex",gap:10,marginTop:10,flexWrap:"wrap"}}>
-          {banks.map(b=>{
-            const bTotal=b.accounts.reduce((s,a)=>s+a.balance,0);
+        <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
+          {ebAccounts.map(acc => {
+            const bals = ebBalances[acc.uid]?.balances || [];
+            const b = bals.find(b => b.balance_type==="CLBD"||b.balance_type==="ITAV")||bals[0];
+            const bal = b ? Number(b.balance_amount?.amount||0) : 0;
             return (
-              <div key={b.id} style={{display:"flex",alignItems:"center",gap:5,background:`${b.color}12`,borderRadius:10,padding:"4px 10px",border:`1px solid ${b.color}20`}}>
-                <div style={{width:6,height:6,borderRadius:3,background:b.color}}/>
-                <span style={{color:b.color,fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{b.name.split(" ")[0]}</span>
-                <span style={{color:"#5A7A60",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{fmtEur(bTotal,0)}</span>
-              </div>
+              <button key={acc.uid} onClick={()=>setSelectedAccount(acc.uid)}
+                style={{display:"flex",alignItems:"center",gap:6,background:selectedAccount===acc.uid?"#4ADE8020":"#0A1A0E",borderRadius:12,padding:"6px 12px",border:`1px solid ${selectedAccount===acc.uid?"#4ADE8050":"#1E3A28"}`,cursor:"pointer",transition:"all 0.2s"}}>
+                <div style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
+                <span style={{color:"#4ADE80",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{acc.bank_name?.split(" ")[0]}</span>
+                <span style={{color:"#5A7A60",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{fmtEur(bal,0)}</span>
+              </button>
             );
           })}
+          <button onClick={()=>{setShowConnect(true);loadAspsps();}}
+            style={{display:"flex",alignItems:"center",gap:6,background:"#0A1A0E",borderRadius:12,padding:"6px 12px",border:"1px dashed #1E3A28",cursor:"pointer"}}>
+            <span style={{color:"#3A6A50",fontSize:11}}>+ Banque</span>
+          </button>
         </div>
       </div>
-      {banks.map(bank=><BankCard key={bank.id} bank={bank} onRemove={onRemove} expandedAccount={expandedAccount} setExpandedAccount={setExpandedAccount}/>)}
-      <div style={{margin:"4px 20px 0",padding:"16px",textAlign:"center"}}>
-        <div style={{color:"#3A3530",fontSize:11,fontFamily:"'DM Mono',monospace"}}>Connexion bancaire — bientôt disponible</div>
-      </div>
+
+      {/* Solde compte sélectionné */}
+      {selectedAccount && (
+        <div style={{margin:"0 20px 16px"}}>
+          {(() => {
+            const acc = ebAccounts.find(a=>a.uid===selectedAccount);
+            return (
+              <div style={{background:"#0E0D0A",borderRadius:18,padding:"16px 20px",border:"1px solid #1E2A1A"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                  <div>
+                    <div style={{color:"#3A6A50",fontSize:10,letterSpacing:1,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>{acc?.bank_name}</div>
+                    <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600,marginBottom:2}}>{acc?.details || acc?.iban || acc?.uid?.slice(0,20)+"…"}</div>
+                    <div style={{color:"#5A7A60",fontSize:11}}>{acc?.currency || "EUR"}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:700}}>{fmtEur(selectedBal)}</div>
+                    <div style={{color:"#3A6A50",fontSize:10,marginTop:2}}>Solde disponible</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Transactions */}
+      {selectedTxs.length > 0 && (
+        <div style={{margin:"0 20px 16px"}}>
+          <div style={{color:"#5A5550",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>Transactions récentes</div>
+          <div style={{display:"flex",flexDirection:"column",gap:2}}>
+            {selectedTxs.slice(0,30).map((tx,i) => {
+              const amount = Number(tx.transaction_amount?.amount || 0);
+              const isPos = amount >= 0;
+              return (
+                <div key={i} style={{background:"#0E0D0A",borderRadius:14,padding:"12px 16px",border:"1px solid #1A1A15",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{color:"#C8C4BC",fontSize:12,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                      {tx.remittance_information?.unstructured?.[0] || tx.creditor_name || tx.debtor_name || "Transaction"}
+                    </div>
+                    <div style={{color:"#3A3530",fontSize:10,marginTop:2}}>{fmtDate(tx.booking_date || tx.value_date)}</div>
+                  </div>
+                  <div style={{color:isPos?"#4ADE80":"#F87171",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,marginLeft:12,flexShrink:0}}>
+                    {isPos?"+":""}{fmtEur(amount)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {error && <div style={{color:"#F87171",fontSize:12,textAlign:"center",padding:"8px 20px"}}>{error}</div>}
+
+      {/* Modal connexion banque */}
+      {showConnect && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:1000,display:"flex",alignItems:"flex-end"}} onClick={()=>setShowConnect(false)}>
+          <div style={{background:"#111009",borderRadius:"28px 28px 0 0",padding:"24px 20px",width:"100%",maxHeight:"75vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"0 auto 20px"}}/>
+            <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:16}}>Choisir une banque</div>
+            <input value={aspspSearch} onChange={e=>setAspspSearch(e.target.value)} placeholder="Rechercher (ex: Boursorama, BNP…)"
+              style={{width:"100%",background:"#1A1915",border:"1px solid #2A2520",borderRadius:12,padding:"10px 14px",color:"#F0EDE8",fontSize:13,outline:"none",marginBottom:12,boxSizing:"border-box"}}/>
+            {aspsps.length === 0 && <div style={{color:"#5A5550",fontSize:12,textAlign:"center",padding:16}}>Chargement des banques…</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {filteredAspsps.slice(0,20).map(a => (
+                <button key={a.name} onClick={()=>connectBank(a.name)} disabled={connecting}
+                  style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
+                  {a.logo && <img src={a.logo} style={{width:24,height:24,borderRadius:6,objectFit:"contain"}} onError={e=>(e.currentTarget.style.display="none")}/>}
+                  <span>{a.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
