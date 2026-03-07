@@ -2334,7 +2334,7 @@ export default function App() {
                 <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Compte</div>
                 <button onClick={()=>{setShowSettings(false);handleLogout();}}
                   style={{width:"100%",background:"#F8717110",border:"1px solid #F8717130",borderRadius:12,padding:"14px 16px",color:"#F87171",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:12,fontFamily:"'DM Sans',sans-serif"}}>
-                  <span style={{fontSize:20}}>⏻</span> Se déconnecter
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3v9" stroke="#F87171" strokeWidth="2.5" strokeLinecap="round"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0" stroke="#F87171" strokeWidth="2.5" strokeLinecap="round"/></svg> Se déconnecter
                 </button>
               </div>
             </div>
