@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { SignJWT, importPKCS8 } from "jose";
 
 const APP_ID = process.env.ENABLE_BANKING_APP_ID!;
-const PRIVATE_KEY_PEM = process.env.ENABLE_BANKING_PRIVATE_KEY!;
+// Vercel encode parfois les \n en littéral - on les restaure
+const PRIVATE_KEY_PEM = (process.env.ENABLE_BANKING_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 const BASE_URL = "https://api.enablebanking.com";
 
 async function getJWT() {
@@ -33,6 +34,8 @@ export async function GET(req: NextRequest) {
   const action = searchParams.get("action");
 
   try {
+    console.log("APP_ID:", APP_ID);
+    console.log("PEM starts with:", PRIVATE_KEY_PEM.substring(0, 40));
     const token = await getJWT();
 
     // Lister les sessions actives
