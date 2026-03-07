@@ -1182,8 +1182,8 @@ export default function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showSettings, setShowSettings]       = useState(false);
-  const [sessionDuration, setSessionDuration] = useState(() => { try { return localStorage.getItem("sessionDuration")||"always"; } catch { return "always"; } });
-  const [rememberMe, setRememberMe] = useState(() => { try { return localStorage.getItem("rememberMe")!=="false"; } catch { return true; } });
+  const [sessionDuration, setSessionDuration] = useState("always");
+  const [rememberMe, setRememberMe] = useState(true);
   const [portfolios, setPortfolios]           = useState([{id:"default", name:"Mon Portefeuille"}]);
   const [activePortfolioId, setActivePortfolioId] = useState("default");
   const [showAddPortfolio, setShowAddPortfolio]   = useState(false);
@@ -1400,9 +1400,10 @@ export default function App() {
     // 1. Profil
     try {
       const { data: profileData } = await supabase
-        .from('profiles').select('display_name').eq('id', uid).single();
+        .from('profiles').select('display_name, session_duration').eq('id', uid).single();
       if (profileData) {
         setProfileName(profileData.display_name || '');
+        if (profileData.session_duration) setSessionDuration(profileData.session_duration);
       } else {
         await supabase.from('profiles').insert({ id: uid, display_name: '' });
         setProfileName('');
@@ -1559,7 +1560,8 @@ export default function App() {
     if (error) { setAuthError(error.message); setAuthLoading(false); return; }
     // Forcer la persistance de session
     if (rememberMe) {
-      try { localStorage.setItem("supabase-session-persisted", "true"); } catch {}
+      // Forcer le refresh du token pour maximiser la durée de session
+      await supabase.auth.refreshSession();
     }
     const { data: { user: u } } = await supabase.auth.getUser();
     setUser(u); setUserId(u.id);
@@ -1760,11 +1762,11 @@ export default function App() {
             )}
             {isLogin && (
               <div style={{display:"flex",alignItems:"center",gap:10,padding:"4px 2px"}}>
-                <div onClick={()=>{const v=!rememberMe;setRememberMe(v);try{localStorage.setItem("rememberMe",String(v));}catch{}}}
+                <div onClick={()=>setRememberMe(v=>!v)}
                   style={{width:20,height:20,borderRadius:6,border:`2px solid ${rememberMe?"#C8A96E":"#3A3530"}`,background:rememberMe?"#C8A96E":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
                   {rememberMe&&<div style={{color:"#111009",fontSize:12,fontWeight:900,lineHeight:1}}>✓</div>}
                 </div>
-                <span style={{color:"#8A8580",fontSize:12,cursor:"pointer"}} onClick={()=>{const v=!rememberMe;setRememberMe(v);try{localStorage.setItem("rememberMe",String(v));}catch{}}}>Rester connecté</span>
+                <span style={{color:"#8A8580",fontSize:12,cursor:"pointer"}} onClick={()=>setRememberMe(v=>!v)}>Rester connecté</span>
               </div>
             )}
             <button onClick={isLogin?handleLogin:handleRegister} disabled={authLoading}
@@ -2318,7 +2320,7 @@ export default function App() {
                     {value:"24h",   label:"24 heures"},
                     {value:"always",label:"Toujours connecté"},
                   ].map(opt=>(
-                    <div key={opt.value} onClick={()=>{setSessionDuration(opt.value);try{localStorage.setItem("sessionDuration",opt.value);}catch{}}}
+                    <div key={opt.value} onClick={async()=>{setSessionDuration(opt.value);if(userId){try{await supabase.from('profiles').upsert({id:userId,session_duration:opt.value,updated_at:new Date().toISOString()});}catch{}}}}
                       style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 16px",borderRadius:12,background:sessionDuration===opt.value?"#C8A96E15":"#0E0D0A",border:`1px solid ${sessionDuration===opt.value?"#C8A96E50":"#252015"}`,cursor:"pointer",transition:"all 0.15s"}}>
                       <span style={{color:sessionDuration===opt.value?"#C8A96E":"#8A8580",fontSize:13,fontWeight:sessionDuration===opt.value?600:400}}>{opt.label}</span>
                       {sessionDuration===opt.value&&<div style={{width:8,height:8,borderRadius:4,background:"#C8A96E"}}/>}
