@@ -1397,40 +1397,36 @@ export default function App() {
   // ── Supabase : charger profil + portefeuilles (MIGRATION localStorage → Supabase)
   // ═══════════════════════════════════════════════════════════════════════════
   const loadUserData = async (uid) => {
-    // 1. Profil
-    try {
-      const { data: profileData } = await supabase
-        .from('profiles').select('display_name, session_duration').eq('id', uid).single();
-      if (profileData) {
-        setProfileName(profileData.display_name || '');
-        if (profileData.session_duration) setSessionDuration(profileData.session_duration);
-      } else {
-        await supabase.from('profiles').insert({ id: uid, display_name: '' });
-        setProfileName('');
-      }
-    } catch(e) {
-      try { await supabase.from('profiles').insert({ id: uid, display_name: '' }); } catch {}
+    // Toutes les requêtes en parallèle
+    const [profileRes, portfoliosRes] = await Promise.all([
+      supabase.from('profiles').select('display_name, session_duration').eq('id', uid).single(),
+      supabase.from('portfolios').select('id, name').eq('user_id', uid).order('created_at', { ascending: true }),
+    ]);
+
+    // Profil
+    if (profileRes.data) {
+      setProfileName(profileRes.data.display_name || '');
+      if (profileRes.data.session_duration) setSessionDuration(profileRes.data.session_duration);
+    } else {
+      supabase.from('profiles').insert({ id: uid, display_name: '' }).then(() => {});
       setProfileName('');
     }
-    // 2. Portefeuilles
-    try {
-      const { data: portfoliosData } = await supabase
-        .from('portfolios').select('id, name').eq('user_id', uid)
-        .order('created_at', { ascending: true });
-      if (portfoliosData && portfoliosData.length > 0) {
-        setPortfolios(portfoliosData);
-        setActivePortfolioId(portfoliosData[0].id);
-        setPortfolioName(portfoliosData[0].name);
-        return portfoliosData[0].id;
-      } else {
-        const def = { id: 'default', name: 'Mon Portefeuille' };
-        await supabase.from('portfolios').insert({ ...def, user_id: uid });
-        setPortfolios([def]);
-        setActivePortfolioId('default');
-        setPortfolioName('Mon Portefeuille');
-        return 'default';
-      }
-    } catch(e) { console.error('loadPortfolios:', e); return 'default'; }
+
+    // Portefeuilles
+    const portfoliosData = portfoliosRes.data;
+    if (portfoliosData && portfoliosData.length > 0) {
+      setPortfolios(portfoliosData);
+      setActivePortfolioId(portfoliosData[0].id);
+      setPortfolioName(portfoliosData[0].name);
+      return portfoliosData[0].id;
+    } else {
+      const def = { id: 'default', name: 'Mon Portefeuille' };
+      supabase.from('portfolios').insert({ ...def, user_id: uid }).then(() => {});
+      setPortfolios([def]);
+      setActivePortfolioId('default');
+      setPortfolioName('Mon Portefeuille');
+      return 'default';
+    }
   };
 
   const saveProfileNameToDB = async (name, uid) => {
@@ -1511,7 +1507,10 @@ export default function App() {
     const loadForUser = async (u) => {
       setDbLoading(true);
       try {
-        const activeId = await loadUserData(u.id);
+        // Charger profil/portfolios ET assets en parallèle
+        const [activeId] = await Promise.all([
+          loadUserData(u.id),
+        ]);
         const { data, error } = await supabase.from("assets").select("*")
           .eq("user_id", u.id).eq("portfolio_id", activeId)
           .order("created_at", { ascending: true });
