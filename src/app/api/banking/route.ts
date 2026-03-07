@@ -12,7 +12,8 @@ async function getJWT() {
     .setProtectedHeader({ alg: "RS256", kid: APP_ID })
     .setIssuedAt(now)
     .setExpirationTime(now + 3600)
-    .setIssuer(APP_ID)
+    .setIssuer("enablebanking.com")
+    .setAudience("api.enablebanking.com")
     .sign(privateKey);
 }
 
