@@ -1724,13 +1724,13 @@ export default function App() {
 
   // ── Chargement initial ──
   useEffect(() => {
-    const loadForUser = async (u) => {
+    const init = async () => {
       setDbLoading(true);
       try {
-        // Charger profil/portfolios ET assets en parallèle
-        const [activeId] = await Promise.all([
-          loadUserData(u.id),
-        ]);
+        const { data: { user: u } } = await supabase.auth.getUser();
+        if (!u) { setDbLoading(false); return; }
+        setUser(u); setUserId(u.id);
+        const activeId = await loadUserData(u.id);
         const { data, error } = await supabase.from("assets").select("*")
           .eq("user_id", u.id).eq("portfolio_id", activeId)
           .order("created_at", { ascending: true });
@@ -1748,31 +1748,8 @@ export default function App() {
       } catch(e) { console.error("init:", e); }
       setDbLoading(false);
     };
-
-    // Écoute les changements d auth (restauration session, login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setUser(session.user); setUserId(session.user.id);
-        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
-          await loadForUser(session.user);
-        }
-      } else if (event === "SIGNED_OUT") {
-        setUser(null); setUserId(null); setAssets([]); setChartAsset(null);
-        setPortfolios([{id:"default", name:"Mon Portefeuille"}]);
-        setActivePortfolioId("default"); setPortfolioName("Mon Portefeuille"); setProfileName("");
-        setDbLoading(false);
-      }
-    });
-
-    // Vérification initiale
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { setDbLoading(false); }
-    });
-
-    // Timeout de sécurité - si après 8 secondes dbLoading est encore true, on force false
-    const timeout = setTimeout(() => setDbLoading(false), 8000);
-
-    return () => { subscription.unsubscribe(); clearTimeout(timeout); };
+    init();
+    return () => {};
   }, []);
 
   // ── Auth ──
