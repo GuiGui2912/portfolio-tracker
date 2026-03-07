@@ -1262,7 +1262,7 @@ function BankTab({ userId }) {
   );
 
   if (ebAccounts.length === 0 && !error) return (
-    <div style={{padding:"0 20px 100px"}}>
+    <div style={{padding:"0 20px 100px"}} onTouchEnd={e=>e.stopPropagation()}>
       <div style={{background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"32px 24px",border:"1px solid #1E3A28",textAlign:"center",marginBottom:16}}>
         <div style={{fontSize:40,marginBottom:12}}>🏦</div>
         <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:8}}>Connectez votre banque</div>
