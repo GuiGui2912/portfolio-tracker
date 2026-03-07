@@ -1122,25 +1122,32 @@ function BankTab({ userId }) {
 
   const loadAspsps = async () => {
     if (aspsps.length > 0) return;
+    setError("");
     try {
       const r = await fetch("/api/banking?action=aspsps&country=FR");
       const d = await r.json();
-      setAspsps(d.aspsps || []);
-    } catch {}
+      if (d.error) { setError("Erreur liste banques : " + d.error); return; }
+      const list = d.aspsps || [];
+      if (list.length === 0) setError("Aucune banque disponible — vérifier les variables Vercel");
+      setAspsps(list);
+    } catch(e: any) { setError("Erreur API : " + e.message); }
   };
 
   const connectBank = async (aspspName) => {
     setConnecting(true); setError("");
     try {
-      const redirectUrl = window.location.origin + window.location.pathname;
+      // IMPORTANT: cette URL doit être ajoutée dans le dashboard Enable Banking → Redirect URIs
+      const redirectUrl = window.location.origin + "/portfolio";
       const r = await fetch(`/api/banking?action=start_auth&aspsp_name=${encodeURIComponent(aspspName)}&country=FR&redirect_url=${encodeURIComponent(redirectUrl)}`);
       const d = await r.json();
       if (d.error) throw new Error(d.error);
       if (d.url) {
         sessionStorage.setItem("eb_bank_name", aspspName);
         window.location.href = d.url;
+      } else {
+        throw new Error("Pas d'URL de redirection — réponse: " + JSON.stringify(d).slice(0, 200));
       }
-    } catch(e) { setError(e.message || "Erreur de connexion"); setConnecting(false); }
+    } catch(e: any) { setError("Erreur : " + e.message); setConnecting(false); }
   };
 
   const disconnectAll = () => {
@@ -1699,6 +1706,10 @@ export default function App() {
 
   // ── Chargement initial ──
   useEffect(() => {
+    // Si on revient d'une auth Enable Banking, basculer sur l'onglet Banque
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("code")) setTab(2);
+
     const init = async () => {
       setDbLoading(true);
       try {

@@ -52,7 +52,9 @@ export async function GET(req: NextRequest) {
     if (action === "start_auth") {
       const aspsp_name = searchParams.get("aspsp_name");
       const country = searchParams.get("country") || "FR";
-      const redirect_url = searchParams.get("redirect_url") || `${req.headers.get("origin") || ""}/`;
+      // ⚠️ Cette URL DOIT correspondre exactement à celle enregistrée dans le dashboard Enable Banking
+      // Vérifier sur https://app.enablebanking.com → ton app → Redirect URIs
+      const redirect_url = "https://portfolio-tracker-livid-alpha.vercel.app/";
       if (!aspsp_name) return NextResponse.json({ error: "aspsp_name requis" }, { status: 400 });
       
       // valid_until : ISO complet avec timezone (l'API rejette le format date seul sans timezone)
