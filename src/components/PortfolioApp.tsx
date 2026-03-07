@@ -1262,12 +1262,12 @@ function BankTab({ userId }) {
   );
 
   if (ebAccounts.length === 0 && !error) return (
-    <div style={{padding:"0 20px"}}>
+    <div style={{padding:"0 20px 100px"}}>
       <div style={{background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"32px 24px",border:"1px solid #1E3A28",textAlign:"center",marginBottom:16}}>
         <div style={{fontSize:40,marginBottom:12}}>🏦</div>
         <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:8}}>Connectez votre banque</div>
         <div style={{color:"#5A7A60",fontSize:13,marginBottom:24,lineHeight:1.5}}>Visualisez vos soldes et transactions directement dans l'app via Enable Banking</div>
-        <button onClick={()=>{setShowConnect(true);loadAspsps();}} style={{background:"linear-gradient(135deg,#4ADE80,#22C55E)",border:"none",borderRadius:14,padding:"13px 28px",color:"#0A1A0E",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+        <button onClick={()=>{setShowConnect(true);loadAspsps();}} style={{background:"linear-gradient(135deg,#4ADE80,#22C55E)",border:"none",borderRadius:14,padding:"13px 28px",color:"#0A1A0E",fontSize:14,fontWeight:700,cursor:"pointer",position:"relative",zIndex:10}}>
           + Connecter une banque
         </button>
       </div>
