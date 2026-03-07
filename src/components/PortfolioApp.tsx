@@ -2344,7 +2344,7 @@ export default function App() {
           )}
 
           {/* ── BANQUE ── */}
-          {tab===2 && <BankTab userId={userId}/>}
+          {tab===2 && <div onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()}><BankTab userId={userId}/></div>}
         </div>
 
         {/* Ghost drag ACTIFS */}
