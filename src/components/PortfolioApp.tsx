@@ -1062,9 +1062,12 @@ function BankTab({ userId }) {
           const accs = d.accounts || d.data || [];
           console.log("[Session accounts]", JSON.stringify(accs).slice(0, 500));
           for (const acc of accs) {
-            // L'ID peut être uid, id, account_id, resourceId
-            const accId = acc.uid || acc.id || acc.account_id || acc.resourceId;
-            allAccounts.push({ ...acc, uid: accId, session_id: s.session_id, bank_name: s.bank_name || "Banque" });
+            // Les comptes peuvent être des strings UUID ou des objets
+            const accId = typeof acc === "string" ? acc : (acc.uid || acc.id || acc.account_id || acc.resourceId);
+            const accObj = typeof acc === "string" 
+              ? { uid: accId, session_id: s.session_id, bank_name: s.bank_name || "Banque" }
+              : { ...acc, uid: accId, session_id: s.session_id, bank_name: s.bank_name || "Banque" };
+            allAccounts.push(accObj);
           }
         } catch {}
       }
