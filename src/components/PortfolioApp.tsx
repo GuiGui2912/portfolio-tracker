@@ -1197,9 +1197,6 @@ function BankTab({ userId, connectTrigger = 0 }) {
   const getBalance = (uid) => {
     const raw = balances[uid];
     if (!raw) return 0;
-    // Format 1: { balances: [{ balance_type, balance_amount: { amount } }] }
-    // Format 2: { balances: [{ type, amount: { amount } }] }
-    // Format 3: { balance: { amount } }
     const bals = raw.balances || raw.data?.balances || [];
     const b = bals.find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV" || b.balance_type === "VALU")
            || bals[0];
@@ -1207,6 +1204,10 @@ function BankTab({ userId, connectTrigger = 0 }) {
       const amount = b.balance_amount?.amount ?? b.amount?.amount ?? b.amount ?? 0;
       return Number(amount);
     }
+    if (raw.balance?.amount) return Number(raw.balance.amount);
+    return 0;
+  };
+
   // Grouper les comptes par banque
   const accountsByBank = accounts.reduce((acc, a) => {
     const key = a.bank_name || "Banque";
