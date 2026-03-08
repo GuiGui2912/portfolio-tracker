@@ -1029,7 +1029,7 @@ function AccIcon({ type, color }) {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.7"/><path d="M2 10h20" stroke={color} strokeWidth="1.7"/><path d="M6 15h4" stroke={color} strokeWidth="1.7" strokeLinecap="round"/></svg>;
 }
 
-function BankTab({ userId }) {
+function BankTab({ userId, connectTrigger = 0 }) {
   const fmtEur = (v, dec=2) => Number(v||0).toLocaleString("fr-FR", {minimumFractionDigits:dec, maximumFractionDigits:dec}) + " €";
   const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("fr-FR", {day:"2-digit", month:"short"}); } catch { return d||""; } };
 
@@ -1043,6 +1043,11 @@ function BankTab({ userId }) {
   const [aspsps, setAspsps]           = useState([]);
   const [aspspSearch, setAspspSearch] = useState("");
   const [connecting, setConnecting]   = useState(false);
+
+  // Réagir au trigger externe (bouton + Connecter en bas de l'app)
+  useEffect(() => {
+    if (connectTrigger > 0) { setShowConnect(true); loadAspsps(); }
+  }, [connectTrigger]);
 
   // Charger les données bancaires depuis l'API (sessions stockées en localStorage)
   const loadBankData = useCallback(async () => {
@@ -1199,6 +1204,24 @@ function BankTab({ userId }) {
   // État : spin CSS
   const spinStyle = `@keyframes spin{to{transform:rotate(360deg)}}`;
 
+  // Grouper les comptes par banque
+  const accountsByBank = accounts.reduce((acc, a) => {
+    const key = a.bank_name || "Banque";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(a);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  // Nom lisible du compte
+  const getAccountLabel = (acc) => {
+    const type = acc.account_type || acc.cash_account_type || acc.product || "";
+    if (type.match(/CACC|current|courant/i)) return "Compte courant";
+    if (type.match(/SVGS|saving|livret|épargne/i)) return "Livret / Épargne";
+    if (type.match(/CARD|card/i)) return "Carte";
+    if (acc.name) return acc.name;
+    return "Compte";
+  };
+
   if (loading) return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 20px",gap:12}}>
       <style>{spinStyle}</style>
@@ -1214,12 +1237,8 @@ function BankTab({ userId }) {
         <div style={{fontSize:40,marginBottom:12}}>🏦</div>
         <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:8}}>Connectez votre banque</div>
         <div style={{color:"#5A7A60",fontSize:13,marginBottom:24,lineHeight:1.6}}>Visualisez vos soldes et transactions directement dans l'app via Open Banking</div>
-        <button onClick={()=>{ setShowConnect(true); loadAspsps(); }}
-          style={{background:"linear-gradient(135deg,#4ADE80,#22C55E)",border:"none",borderRadius:14,padding:"13px 28px",color:"#0A1A0E",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-          + Connecter une banque
-        </button>
       </div>
-      {error && <div style={{color:"#F87171",fontSize:12,textAlign:"center",padding:8,background:"#F8717110",borderRadius:10}}>{error}</div>}
+      {error && <div style={{color:"#F87171",fontSize:12,textAlign:"center",padding:8,background:"#F8717110",borderRadius:10,marginBottom:12}}>{error}</div>}
 
       {/* Modal choix banque */}
       {showConnect && (
@@ -1242,10 +1261,8 @@ function BankTab({ userId }) {
               )}
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {filteredAspsps.slice(0, 30).map(a => (
-                  <button key={a.name} onClick={()=>connectBank(a.name)} disabled={connecting}
-                    style={{background:connecting?"#0E0D0A":"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:connecting?"#4A4540":"#C8C4BC",fontSize:13,cursor:connecting?"not-allowed":"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}}
-                    onMouseEnter={e=>!connecting&&(e.currentTarget.style.borderColor="#4ADE8050")}
-                    onMouseLeave={e=>e.currentTarget.style.borderColor="#2A2520"}>
+                  <button key={a.name} onClick={()=>{ setShowConnect(false); connectBank(a.name); }} disabled={connecting}
+                    style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
                     {a.logo && <img src={a.logo} style={{width:28,height:28,borderRadius:8,objectFit:"contain"}} onError={e=>e.currentTarget.style.display="none"}/>}
                     <span>{a.name}</span>
                     {connecting && <div style={{marginLeft:"auto",width:16,height:16,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
@@ -1260,52 +1277,49 @@ function BankTab({ userId }) {
   );
 
   return (
-    <div className="fadein">
+    <div className="fadein" style={{paddingBottom: 100}}>
       <style>{spinStyle}</style>
-      {/* Header total */}
-      <div style={{margin:"0 20px 16px",background:"linear-gradient(135deg,#0E1A14,#122018,#0C1810)",borderRadius:22,padding:"18px 20px",border:"1px solid #1E3A28",position:"relative",overflow:"hidden"}}>
+
+      {/* ── Total bancaire global ── */}
+      <div style={{margin:"0 20px 20px",background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"20px 22px",border:"1px solid #1E3A28"}}>
         <div style={{color:"#3A6A50",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:6}}>Total bancaire</div>
-        <div style={{fontFamily:"'DM Mono',monospace",fontSize:30,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmtEur(totalBalance)}</div>
-        <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"center"}}>
-          {accounts.map(acc => (
-            <button key={acc.uid} onClick={()=>setSelectedAcc(acc.uid)}
-              style={{display:"flex",alignItems:"center",gap:6,background:selectedAcc===acc.uid?"#4ADE8025":"#0A1A0E",borderRadius:12,padding:"5px 11px",border:`1px solid ${selectedAcc===acc.uid?"#4ADE8060":"#1E3A28"}`,cursor:"pointer",transition:"all 0.2s"}}>
-              <div style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
-              <span style={{color:"#4ADE80",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{acc.bank_name?.split(" ")[0]}</span>
-              <span style={{color:"#5A7A60",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{fmtEur(getBalance(acc.uid),0)}</span>
-            </button>
-          ))}
-          <button onClick={()=>{ setShowConnect(true); loadAspsps(); }}
-            style={{display:"flex",alignItems:"center",gap:5,background:"transparent",borderRadius:12,padding:"5px 11px",border:"1px dashed #1E3A28",cursor:"pointer"}}>
-            <span style={{color:"#3A6A50",fontSize:11}}>+ Banque</span>
-          </button>
-        </div>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:32,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmtEur(totalBalance)}</div>
       </div>
 
-      {/* Détail compte sélectionné */}
-      {selectedAcc && (() => {
-        const acc = accounts.find(a => a.uid === selectedAcc);
-        const bal = getBalance(selectedAcc);
-        const iban = acc?.iban || acc?.details || (acc?.uid ? acc.uid.slice(0,8)+"…" : "");
+      {/* ── Carte par banque ── */}
+      {Object.entries(accountsByBank).map(([bankName, bankAccounts]) => {
+        const bankTotal = bankAccounts.reduce((s, a) => s + getBalance(a.uid), 0);
         return (
-          <div style={{margin:"0 20px 16px",background:"#0E0D0A",borderRadius:18,padding:"16px 20px",border:"1px solid #1A2A1A"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div>
-                <div style={{color:"#3A6A50",fontSize:10,letterSpacing:1,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>{acc?.bank_name}</div>
-                <div style={{color:"#8A8480",fontSize:11,fontFamily:"'DM Mono',monospace",marginBottom:4}}>{iban}</div>
-                <div style={{color:"#4A4540",fontSize:10}}>{acc?.currency || "EUR"}</div>
+          <div key={bankName} style={{margin:"0 20px 14px"}}>
+            <button onClick={()=>setSelectedAcc(selectedAcc === bankAccounts[0]?.uid && bankAccounts.length === 1 ? null : bankAccounts[0]?.uid)}
+              style={{width:"100%",background:"#0E0D0A",borderRadius:18,padding:"16px 18px",border:"1px solid #1E2A1E",cursor:"pointer",textAlign:"left",transition:"border-color 0.2s"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor="#4ADE8040"}
+              onMouseLeave={e=>e.currentTarget.style.borderColor="#1E2A1E"}>
+              {/* Nom banque + total */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <div style={{color:"#F0EDE8",fontSize:14,fontWeight:700}}>{bankName}</div>
+                <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>{fmtEur(bankTotal)}</div>
               </div>
-              <div style={{textAlign:"right"}}>
-                <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:700}}>{fmtEur(bal)}</div>
-                <div style={{color:"#3A6A50",fontSize:10,marginTop:2}}>Solde disponible</div>
+              {/* Ligne séparatrice */}
+              <div style={{height:1,background:"#1E2A1E",marginBottom:12}}/>
+              {/* Liste des comptes */}
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {bankAccounts.map(acc => (
+                  <div key={acc.uid} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{color:"#8A8480",fontSize:12}}>{getAccountLabel(acc)}</div>
+                    <div style={{color:"#C8C4BC",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600}}>{fmtEur(getBalance(acc.uid))}</div>
+                  </div>
+                ))}
               </div>
-            </div>
+              {/* Flèche */}
+              <div style={{textAlign:"right",marginTop:10,color:"#3A6A50",fontSize:11}}>Voir les transactions →</div>
+            </button>
           </div>
         );
-      })()}
+      })}
 
-      {/* Transactions */}
-      {selectedTxs.length > 0 && (
+      {/* ── Transactions de la banque sélectionnée ── */}
+      {selectedAcc && selectedTxs.length > 0 && (
         <div style={{margin:"0 20px 16px"}}>
           <div style={{color:"#5A5550",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>
             Transactions récentes · {selectedTxs.length}
@@ -1332,16 +1346,10 @@ function BankTab({ userId }) {
         </div>
       )}
 
-      {selectedTxs.length === 0 && selectedAcc && (
-        <div style={{margin:"0 20px",padding:"20px",textAlign:"center",border:"1px dashed #1E3A28",borderRadius:16}}>
-          <div style={{color:"#3A5A40",fontSize:12}}>Aucune transaction disponible</div>
-        </div>
-      )}
-
       {error && <div style={{margin:"8px 20px",color:"#F87171",fontSize:12,textAlign:"center",padding:"8px 12px",background:"#F8717110",borderRadius:10}}>{error}</div>}
 
       {/* Bouton déconnecter */}
-      <div style={{margin:"16px 20px 8px"}}>
+      <div style={{margin:"8px 20px 0"}}>
         <button onClick={disconnectAll}
           style={{width:"100%",background:"transparent",border:"1px solid #2A2520",borderRadius:12,padding:"11px",color:"#5A5550",fontSize:12,cursor:"pointer"}}>
           Déconnecter toutes les banques
@@ -1370,11 +1378,10 @@ function BankTab({ userId }) {
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {filteredAspsps.slice(0, 30).map(a => (
                   <button key={a.name} onClick={()=>{ setShowConnect(false); connectBank(a.name); }} disabled={connecting}
-                    style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10,transition:"all 0.15s"}}
-                    onMouseEnter={e=>e.currentTarget.style.borderColor="#4ADE8050"}
-                    onMouseLeave={e=>e.currentTarget.style.borderColor="#2A2520"}>
+                    style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
                     {a.logo && <img src={a.logo} style={{width:28,height:28,borderRadius:8,objectFit:"contain"}} onError={e=>e.currentTarget.style.display="none"}/>}
                     <span>{a.name}</span>
+                    {connecting && <div style={{marginLeft:"auto",width:16,height:16,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
                   </button>
                 ))}
               </div>
@@ -1416,6 +1423,7 @@ export default function App() {
   const [showAddPortfolio, setShowAddPortfolio]   = useState(false);
   const [newPortfolioName, setNewPortfolioName]   = useState("");
   const [editingPortfolioId, setEditingPortfolioId] = useState(null);
+  const [bankConnectTrigger, setBankConnectTrigger] = useState(0);
   const [editingPortfolioName, setEditingPortfolioName] = useState("");
   const [portfolioName, setPortfolioName]     = useState("Mon Portefeuille");
   const [profileName, setProfileName]         = useState("");
@@ -2339,7 +2347,7 @@ export default function App() {
           )}
 
           {/* ── BANQUE ── */}
-          {tab===2 && <div onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()}><BankTab userId={userId}/></div>}
+          {tab===2 && <div onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()}><BankTab userId={userId} connectTrigger={bankConnectTrigger}/></div>}
         </div>
 
         {/* Ghost drag ACTIFS */}
@@ -2395,6 +2403,16 @@ export default function App() {
                 {mktAddLoading?"…":"OK"}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Bouton + Connecter une banque (onglet Banque uniquement) */}
+        {tab === 2 && (
+          <div style={{flexShrink:0,padding:"8px 20px",background:"#111009EE",borderTop:"1px solid #1E1B16",backdropFilter:"blur(24px)"}}>
+            <button onClick={()=>{ setBankConnectTrigger(t => t+1); }}
+              style={{width:"100%",background:"linear-gradient(135deg,#4ADE80,#22C55E)",border:"none",borderRadius:14,padding:"12px",color:"#0A1A0E",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              🏦 + Connecter une banque
+            </button>
           </div>
         )}
 
