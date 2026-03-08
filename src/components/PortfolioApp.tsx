@@ -1091,19 +1091,19 @@ function BankTab({ userId }) {
     setLoading(false);
   }, []);
 
-  // Au mount : vérifier si retour d'auth (code dans URL) ou charger sessions existantes
+  // Au mount : vérifier si retour d'auth Enable Banking ou charger sessions existantes
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
+    // Supabase intercepte ?code= dans l'URL → on passe par sessionStorage via /banking-callback
+    const code = sessionStorage.getItem("eb_pending_code");
     const bankName = sessionStorage.getItem("eb_bank_name") || "Boursorama Banque";
 
     if (code) {
+      sessionStorage.removeItem("eb_pending_code");
       setLoading(true);
       setError("Connexion en cours...");
       fetch(`/api/banking?action=create_session&code=${encodeURIComponent(code)}`)
         .then(r => r.json())
         .then(d => {
-          // Chercher session_id dans tous les champs possibles
           const sid = d.session_id || d.id || d.uid || d.sessionId;
           if (sid) {
             try {
@@ -1113,11 +1113,9 @@ function BankTab({ userId }) {
               localStorage.setItem("eb_sessions", JSON.stringify(sessions));
             } catch {}
             sessionStorage.removeItem("eb_bank_name");
-            window.history.replaceState({}, "", window.location.pathname);
             setError("");
             loadBankData();
           } else {
-            // Afficher la réponse complète pour déboguer
             setError("Session créée mais ID introuvable. Réponse: " + JSON.stringify(d).slice(0, 300));
             setLoading(false);
           }
@@ -1718,8 +1716,7 @@ export default function App() {
   // ── Chargement initial ──
   useEffect(() => {
     // Si on revient d'une auth Enable Banking, basculer sur l'onglet Banque
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("code")) setTab(2);
+    if (sessionStorage.getItem("eb_pending_code")) setTab(2);
 
     const init = async () => {
       setDbLoading(true);
