@@ -1057,9 +1057,13 @@ function BankTab({ userId }) {
         try {
           const r = await fetch(`/api/banking?action=session&session_id=${s.session_id}`);
           const d = await r.json();
-          if (d.error || !d.accounts) continue;
-          for (const acc of d.accounts) {
-            allAccounts.push({ ...acc, session_id: s.session_id, bank_name: s.bank_name || "Banque" });
+          if (d.error) continue;
+          // Les comptes peuvent être dans d.accounts ou d.data ou directement d
+          const accs = d.accounts || d.data || [];
+          for (const acc of accs) {
+            // L'ID peut être uid, id, account_id, resourceId
+            const accId = acc.uid || acc.id || acc.account_id || acc.resourceId;
+            allAccounts.push({ ...acc, uid: accId, session_id: s.session_id, bank_name: s.bank_name || "Banque" });
           }
         } catch {}
       }
@@ -1072,7 +1076,9 @@ function BankTab({ userId }) {
         Promise.all(allAccounts.map(async acc => {
           try {
             const r = await fetch(`/api/banking?action=balances&account_id=${acc.uid}`);
-            return { uid: acc.uid, data: await r.json() };
+            const data = await r.json();
+            console.log("[Balances]", acc.uid, JSON.stringify(data).slice(0, 200));
+            return { uid: acc.uid, data };
           } catch { return { uid: acc.uid, data: {} }; }
         })),
         Promise.all(allAccounts.map(async acc => {
@@ -1164,11 +1170,23 @@ function BankTab({ userId }) {
     setAccounts([]); setBalances({}); setTransactions({}); setSelectedAcc(null);
   };
 
-  // Calculs solde
+  // Calculs solde — gère tous les formats possibles de l'API Enable Banking
   const getBalance = (uid) => {
-    const bals = balances[uid]?.balances || [];
-    const b = bals.find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV") || bals[0];
-    return b ? Number(b.balance_amount?.amount || 0) : 0;
+    const raw = balances[uid];
+    if (!raw) return 0;
+    // Format 1: { balances: [{ balance_type, balance_amount: { amount } }] }
+    // Format 2: { balances: [{ type, amount: { amount } }] }
+    // Format 3: { balance: { amount } }
+    const bals = raw.balances || raw.data?.balances || [];
+    const b = bals.find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV" || b.balance_type === "VALU")
+           || bals[0];
+    if (b) {
+      const amount = b.balance_amount?.amount ?? b.amount?.amount ?? b.amount ?? 0;
+      return Number(amount);
+    }
+    // Format direct
+    if (raw.balance?.amount) return Number(raw.balance.amount);
+    return 0;
   };
   const totalBalance = accounts.reduce((s, acc) => s + getBalance(acc.uid), 0);
   const selectedTxs = selectedAcc ? (transactions[selectedAcc]?.transactions?.booked || []) : [];
