@@ -1095,26 +1095,37 @@ function BankTab({ userId }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
-    const bankName = params.get("state") || sessionStorage.getItem("eb_bank_name") || "Banque";
+    const bankName = sessionStorage.getItem("eb_bank_name") || "Boursorama Banque";
+
     if (code) {
-      // Créer la session Enable Banking
+      setLoading(true);
+      setError("Connexion en cours...");
       fetch(`/api/banking?action=create_session&code=${encodeURIComponent(code)}`)
         .then(r => r.json())
         .then(d => {
-          if (d.session_id) {
-            // Stocker en localStorage (pas Supabase pour éviter les blocages)
+          // Chercher session_id dans tous les champs possibles
+          const sid = d.session_id || d.id || d.uid || d.sessionId;
+          if (sid) {
             try {
               const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
-              const exists = sessions.find(s => s.session_id === d.session_id);
-              if (!exists) sessions.push({ session_id: d.session_id, bank_name: bankName });
+              const exists = sessions.find(s => s.session_id === sid);
+              if (!exists) sessions.push({ session_id: sid, bank_name: bankName });
               localStorage.setItem("eb_sessions", JSON.stringify(sessions));
             } catch {}
             sessionStorage.removeItem("eb_bank_name");
             window.history.replaceState({}, "", window.location.pathname);
+            setError("");
+            loadBankData();
+          } else {
+            // Afficher la réponse complète pour déboguer
+            setError("Session créée mais ID introuvable. Réponse: " + JSON.stringify(d).slice(0, 300));
+            setLoading(false);
           }
-          loadBankData();
         })
-        .catch(() => loadBankData());
+        .catch(e => {
+          setError("Erreur create_session: " + e.message);
+          setLoading(false);
+        });
     } else {
       loadBankData();
     }
