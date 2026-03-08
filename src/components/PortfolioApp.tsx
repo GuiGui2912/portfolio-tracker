@@ -1060,6 +1060,7 @@ function BankTab({ userId }) {
           if (d.error) continue;
           // Les comptes peuvent être dans d.accounts ou d.data ou directement d
           const accs = d.accounts || d.data || [];
+          console.log("[Session accounts]", JSON.stringify(accs).slice(0, 500));
           for (const acc of accs) {
             // L'ID peut être uid, id, account_id, resourceId
             const accId = acc.uid || acc.id || acc.account_id || acc.resourceId;
