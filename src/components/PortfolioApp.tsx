@@ -1080,13 +1080,20 @@ function BankTab({ userId, connectTrigger = 0 }) {
       setAccounts(allAccounts);
       if (allAccounts.length === 0) { setLoading(false); return; }
 
-      // Charger soldes et transactions en parallèle
-      const [bals, txs] = await Promise.all([
+      // Charger détails, soldes et transactions en parallèle
+      const [details, bals, txs] = await Promise.all([
+        Promise.all(allAccounts.map(async acc => {
+          try {
+            const r = await fetch(`/api/banking?action=account_details&account_id=${acc.uid}`);
+            const data = await r.json();
+            return { uid: acc.uid, data };
+          } catch { return { uid: acc.uid, data: {} }; }
+        })),
         Promise.all(allAccounts.map(async acc => {
           try {
             const r = await fetch(`/api/banking?action=balances&account_id=${acc.uid}`);
             const data = await r.json();
-            console.log("[Balances]", acc.uid, JSON.stringify(data).slice(0, 200));
+            console.log("[Balances]", acc.uid, JSON.stringify(data).slice(0, 300));
             return { uid: acc.uid, data };
           } catch { return { uid: acc.uid, data: {} }; }
         })),
@@ -1097,6 +1104,13 @@ function BankTab({ userId, connectTrigger = 0 }) {
           } catch { return { uid: acc.uid, data: {} }; }
         }))
       ]);
+
+      // Enrichir les comptes avec leurs détails (nom, type, IBAN)
+      const enriched = allAccounts.map(acc => {
+        const d = details.find(x => x.uid === acc.uid)?.data || {};
+        return { ...acc, name: d.name || d.product || acc.name, details: d.details, account_type: d.cash_account_type || d.account_type || acc.account_type };
+      });
+      setAccounts(enriched);
       const balMap = {}; bals.forEach(b => { balMap[b.uid] = b.data; });
       const txMap  = {}; txs.forEach(t => { txMap[t.uid]  = t.data; });
       setBalances(balMap);
@@ -1193,17 +1207,6 @@ function BankTab({ userId, connectTrigger = 0 }) {
       const amount = b.balance_amount?.amount ?? b.amount?.amount ?? b.amount ?? 0;
       return Number(amount);
     }
-    // Format direct
-    if (raw.balance?.amount) return Number(raw.balance.amount);
-    return 0;
-  };
-  const totalBalance = accounts.reduce((s, acc) => s + getBalance(acc.uid), 0);
-  const selectedTxs = selectedAcc ? (transactions[selectedAcc]?.transactions?.booked || []) : [];
-  const filteredAspsps = aspsps.filter(a => a.name?.toLowerCase().includes(aspspSearch.toLowerCase()));
-
-  // État : spin CSS
-  const spinStyle = `@keyframes spin{to{transform:rotate(360deg)}}`;
-
   // Grouper les comptes par banque
   const accountsByBank = accounts.reduce((acc, a) => {
     const key = a.bank_name || "Banque";
@@ -1212,15 +1215,35 @@ function BankTab({ userId, connectTrigger = 0 }) {
     return acc;
   }, {} as Record<string, any[]>);
 
+  // Panel détail banque sélectionnée
+  const [selectedBank, setSelectedBank] = useState<string|null>(null);
+
+  // Déconnecter une banque spécifique
+  const disconnectBank = (bankName: string) => {
+    try {
+      const bankSids = (accountsByBank[bankName] || []).map(a => a.session_id);
+      const unique = [...new Set(bankSids)];
+      const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
+      const filtered = sessions.filter(s => !unique.includes(s.session_id));
+      localStorage.setItem("eb_sessions", JSON.stringify(filtered));
+    } catch {}
+    setAccounts(prev => prev.filter(a => a.bank_name !== bankName));
+    setSelectedBank(null);
+  };
+
   // Nom lisible du compte
   const getAccountLabel = (acc) => {
-    const type = acc.account_type || acc.cash_account_type || acc.product || "";
-    if (type.match(/CACC|current|courant/i)) return "Compte courant";
-    if (type.match(/SVGS|saving|livret|épargne/i)) return "Livret / Épargne";
-    if (type.match(/CARD|card/i)) return "Carte";
+    if (acc.details) return acc.details;
     if (acc.name) return acc.name;
-    return "Compte";
+    if (acc.product) return acc.product;
+    const type = acc.account_type || acc.cash_account_type || "";
+    if (/CACC|current|courant/i.test(type)) return "Compte courant";
+    if (/SVGS|saving|livret|épargne/i.test(type)) return "Livret / Épargne";
+    if (/CARD/i.test(type)) return "Carte";
+    return acc.uid ? `Compte ···${acc.uid.slice(-4)}` : "Compte";
   };
+
+  const spinStyle = `@keyframes spin{to{transform:rotate(360deg)}}`;
 
   if (loading) return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"60px 20px",gap:12}}>
@@ -1231,164 +1254,184 @@ function BankTab({ userId, connectTrigger = 0 }) {
   );
 
   if (accounts.length === 0) return (
-    <div style={{padding:"0 20px 100px"}}>
+    <div style={{padding:"0 20px 120px"}}>
       <style>{spinStyle}</style>
-      <div style={{background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"32px 24px",border:"1px solid #1E3A28",textAlign:"center",marginBottom:16}}>
-        <div style={{fontSize:40,marginBottom:12}}>🏦</div>
+      <div style={{background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"40px 24px",border:"1px solid #1E3A28",textAlign:"center"}}>
+        <div style={{fontSize:48,marginBottom:14}}>🏦</div>
         <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:8}}>Connectez votre banque</div>
-        <div style={{color:"#5A7A60",fontSize:13,marginBottom:24,lineHeight:1.6}}>Visualisez vos soldes et transactions directement dans l'app via Open Banking</div>
+        <div style={{color:"#5A7A60",fontSize:13,lineHeight:1.6}}>Visualisez vos soldes et transactions directement dans l'app via Open Banking</div>
       </div>
-      {error && <div style={{color:"#F87171",fontSize:12,textAlign:"center",padding:8,background:"#F8717110",borderRadius:10,marginBottom:12}}>{error}</div>}
-
-      {/* Modal choix banque */}
+      {error && <div style={{color:"#F87171",fontSize:12,padding:"10px 14px",background:"#F8717115",borderRadius:10,marginTop:12}}>{error}</div>}
       {showConnect && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowConnect(false)}>
-          <div style={{background:"#111009",borderRadius:"28px 28px 0 0",padding:"0 0 32px",width:"100%",maxWidth:430,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-            <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"12px auto 0",flexShrink:0}}/>
-            <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #1E1B16",flexShrink:0}}>
-              <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700}}>Choisir une banque</div>
-            </div>
-            <div style={{padding:"12px 20px",flexShrink:0}}>
-              <input value={aspspSearch} onChange={e=>setAspspSearch(e.target.value)} placeholder="Rechercher (ex: Boursorama, BNP…)"
-                style={{width:"100%",background:"#1A1915",border:"1px solid #2A2520",borderRadius:12,padding:"10px 14px",color:"#F0EDE8",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            </div>
-            <div style={{overflowY:"auto",flex:1,padding:"0 20px 8px"}}>
-              {aspsps.length === 0 && (
-                <div style={{display:"flex",alignItems:"center",gap:10,color:"#5A5550",fontSize:12,padding:16}}>
-                  <div style={{width:20,height:20,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite",flexShrink:0}}/>
-                  Chargement des banques…
+        <BankConnectModal aspsps={aspsps} aspspSearch={aspspSearch} setAspspSearch={setAspspSearch}
+          connecting={connecting} onClose={()=>setShowConnect(false)}
+          onSelect={(name)=>{setShowConnect(false);connectBank(name);}} spinStyle={spinStyle}/>
+      )}
+    </div>
+  );
+
+  // Transactions de la banque sélectionnée dans le panel
+  const selectedBankAccounts = selectedBank ? (accountsByBank[selectedBank] || []) : [];
+  const selectedBankTxs = selectedBankAccounts
+    .flatMap(acc => (transactions[acc.uid]?.transactions?.booked || []))
+    .sort((a,b) => new Date(b.booking_date||0).getTime() - new Date(a.booking_date||0).getTime());
+
+  return (
+    <div className="fadein" style={{paddingBottom:120}}>
+      <style>{spinStyle}</style>
+
+      {/* ── Total bancaire ── */}
+      <div style={{margin:"0 20px 18px",background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"20px 22px",border:"1px solid #1E3A28"}}>
+        <div style={{color:"#3A6A50",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:6}}>Total bancaire</div>
+        <div style={{fontFamily:"'DM Mono',monospace",fontSize:32,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>
+          {accounts.reduce((s,a)=>s+getBalance(a.uid),0).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
+        </div>
+      </div>
+
+      {/* ── Cartes banques ── */}
+      {Object.entries(accountsByBank).map(([bankName, bankAccounts]) => {
+        const bankTotal = bankAccounts.reduce((s,a)=>s+getBalance(a.uid),0);
+        return (
+          <div key={bankName} style={{margin:"0 20px 12px"}}>
+            <button onClick={()=>setSelectedBank(bankName)}
+              style={{width:"100%",background:"#0E0D0A",borderRadius:18,padding:"16px 18px",border:"1px solid #1E2A1E",cursor:"pointer",textAlign:"left"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor="#4ADE8050"}
+              onMouseLeave={e=>e.currentTarget.style.borderColor="#1E2A1E"}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <div style={{color:"#F0EDE8",fontSize:14,fontWeight:700}}>{bankName}</div>
+                <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>
+                  {bankTotal.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
                 </div>
-              )}
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {filteredAspsps.slice(0, 30).map(a => (
-                  <button key={a.name} onClick={()=>{ setShowConnect(false); connectBank(a.name); }} disabled={connecting}
-                    style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
-                    {a.logo && <img src={a.logo} style={{width:28,height:28,borderRadius:8,objectFit:"contain"}} onError={e=>e.currentTarget.style.display="none"}/>}
-                    <span>{a.name}</span>
-                    {connecting && <div style={{marginLeft:"auto",width:16,height:16,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
-                  </button>
+              </div>
+              <div style={{height:1,background:"#1E2A1E",marginBottom:12}}/>
+              <div style={{display:"flex",flexDirection:"column",gap:9}}>
+                {bankAccounts.map(acc => (
+                  <div key={acc.uid} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{color:"#8A8480",fontSize:12}}>{getAccountLabel(acc)}</div>
+                    <div style={{color:"#C8C4BC",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600}}>
+                      {getBalance(acc.uid).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
+                    </div>
+                  </div>
                 ))}
               </div>
+              <div style={{textAlign:"right",marginTop:10,color:"#3A6A50",fontSize:11}}>Voir le détail →</div>
+            </button>
+          </div>
+        );
+      })}
+
+      {error && <div style={{margin:"8px 20px",color:"#F87171",fontSize:12,padding:"10px 14px",background:"#F8717115",borderRadius:10}}>{error}</div>}
+
+      {/* Modal connexion banque */}
+      {showConnect && (
+        <BankConnectModal aspsps={aspsps} aspspSearch={aspspSearch} setAspspSearch={setAspspSearch}
+          connecting={connecting} onClose={()=>setShowConnect(false)}
+          onSelect={(name)=>{setShowConnect(false);connectBank(name);}} spinStyle={spinStyle}/>
+      )}
+
+      {/* ── Panel détail banque (bottom sheet) ── */}
+      {selectedBank && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setSelectedBank(null)}>
+          <div style={{background:"#111009",borderRadius:"28px 28px 0 0",width:"100%",maxWidth:430,maxHeight:"85vh",display:"flex",flexDirection:"column",paddingBottom:"calc(24px + env(safe-area-inset-bottom,0px))"}} onClick={e=>e.stopPropagation()}>
+            <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"12px auto 8px",flexShrink:0}}/>
+            <div style={{padding:"8px 20px 14px",borderBottom:"1px solid #1E1B16",flexShrink:0,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700}}>{selectedBank}</div>
+              <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>
+                {selectedBankAccounts.reduce((s,a)=>s+getBalance(a.uid),0).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
+              </div>
+            </div>
+            <div style={{overflowY:"auto",flex:1,padding:"14px 20px"}}>
+              {/* Comptes */}
+              {selectedBankAccounts.map(acc => (
+                <div key={acc.uid} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:"1px solid #1A1A15"}}>
+                  <div>
+                    <div style={{color:"#C8C4BC",fontSize:13,fontWeight:500}}>{getAccountLabel(acc)}</div>
+                    <div style={{color:"#3A3530",fontSize:10,fontFamily:"'DM Mono',monospace",marginTop:2}}>···{acc.uid?.slice(-8)}</div>
+                  </div>
+                  <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:14,fontWeight:700}}>
+                    {getBalance(acc.uid).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
+                  </div>
+                </div>
+              ))}
+              {/* Transactions */}
+              {selectedBankTxs.length > 0 && (
+                <div style={{marginTop:16}}>
+                  <div style={{color:"#5A5550",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>
+                    Transactions · {selectedBankTxs.length}
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                    {selectedBankTxs.slice(0,50).map((tx,i) => {
+                      const amount = Number(tx.transaction_amount?.amount || 0);
+                      const isPos = amount >= 0;
+                      const label = tx.remittance_information?.unstructured?.[0] || tx.creditor_name || tx.debtor_name || "Transaction";
+                      const date = tx.booking_date || tx.value_date || "";
+                      return (
+                        <div key={tx.transaction_id||i} style={{background:"#0E0D0A",borderRadius:12,padding:"11px 14px",border:"1px solid #1A1A15",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{color:"#C8C4BC",fontSize:12,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</div>
+                            <div style={{color:"#3A3530",fontSize:10,marginTop:2,fontFamily:"'DM Mono',monospace"}}>{date ? new Date(date).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}) : ""}</div>
+                          </div>
+                          <div style={{color:isPos?"#4ADE80":"#F87171",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,flexShrink:0}}>
+                            {isPos?"+":""}{amount.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {selectedBankTxs.length === 0 && (
+                <div style={{textAlign:"center",padding:"20px 0",color:"#3A5A40",fontSize:12,border:"1px dashed #1E3A28",borderRadius:12,marginTop:16}}>
+                  Aucune transaction disponible
+                </div>
+              )}
+              {/* Bouton déconnecter cette banque — rouge, en bas */}
+              <button onClick={()=>disconnectBank(selectedBank)}
+                style={{width:"100%",marginTop:24,background:"#F8717112",border:"1px solid #F8717150",borderRadius:14,padding:"13px",color:"#F87171",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                Déconnecter {selectedBank}
+              </button>
             </div>
           </div>
         </div>
       )}
     </div>
   );
+}
 
+// ── Modal choix banque (composant séparé) ──
+function BankConnectModal({aspsps, aspspSearch, setAspspSearch, connecting, onClose, onSelect, spinStyle}: any) {
+  const filtered = aspsps.filter(a => a.name?.toLowerCase().includes((aspspSearch||"").toLowerCase()));
   return (
-    <div className="fadein" style={{paddingBottom: 100}}>
-      <style>{spinStyle}</style>
-
-      {/* ── Total bancaire global ── */}
-      <div style={{margin:"0 20px 20px",background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"20px 22px",border:"1px solid #1E3A28"}}>
-        <div style={{color:"#3A6A50",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:6}}>Total bancaire</div>
-        <div style={{fontFamily:"'DM Mono',monospace",fontSize:32,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmtEur(totalBalance)}</div>
-      </div>
-
-      {/* ── Carte par banque ── */}
-      {Object.entries(accountsByBank).map(([bankName, bankAccounts]) => {
-        const bankTotal = bankAccounts.reduce((s, a) => s + getBalance(a.uid), 0);
-        return (
-          <div key={bankName} style={{margin:"0 20px 14px"}}>
-            <button onClick={()=>setSelectedAcc(selectedAcc === bankAccounts[0]?.uid && bankAccounts.length === 1 ? null : bankAccounts[0]?.uid)}
-              style={{width:"100%",background:"#0E0D0A",borderRadius:18,padding:"16px 18px",border:"1px solid #1E2A1E",cursor:"pointer",textAlign:"left",transition:"border-color 0.2s"}}
-              onMouseEnter={e=>e.currentTarget.style.borderColor="#4ADE8040"}
-              onMouseLeave={e=>e.currentTarget.style.borderColor="#1E2A1E"}>
-              {/* Nom banque + total */}
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                <div style={{color:"#F0EDE8",fontSize:14,fontWeight:700}}>{bankName}</div>
-                <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>{fmtEur(bankTotal)}</div>
-              </div>
-              {/* Ligne séparatrice */}
-              <div style={{height:1,background:"#1E2A1E",marginBottom:12}}/>
-              {/* Liste des comptes */}
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {bankAccounts.map(acc => (
-                  <div key={acc.uid} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <div style={{color:"#8A8480",fontSize:12}}>{getAccountLabel(acc)}</div>
-                    <div style={{color:"#C8C4BC",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600}}>{fmtEur(getBalance(acc.uid))}</div>
-                  </div>
-                ))}
-              </div>
-              {/* Flèche */}
-              <div style={{textAlign:"right",marginTop:10,color:"#3A6A50",fontSize:11}}>Voir les transactions →</div>
-            </button>
-          </div>
-        );
-      })}
-
-      {/* ── Transactions de la banque sélectionnée ── */}
-      {selectedAcc && selectedTxs.length > 0 && (
-        <div style={{margin:"0 20px 16px"}}>
-          <div style={{color:"#5A5550",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>
-            Transactions récentes · {selectedTxs.length}
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:2}}>
-            {selectedTxs.slice(0, 50).map((tx, i) => {
-              const amount = Number(tx.transaction_amount?.amount || 0);
-              const isPos = amount >= 0;
-              const label = tx.remittance_information?.unstructured?.[0] || tx.creditor_name || tx.debtor_name || "Transaction";
-              const date = tx.booking_date || tx.value_date || "";
-              return (
-                <div key={tx.transaction_id || i} style={{background:"#0E0D0A",borderRadius:12,padding:"11px 16px",border:"1px solid #1A1A15",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{color:"#C8C4BC",fontSize:12,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</div>
-                    <div style={{color:"#3A3530",fontSize:10,marginTop:2,fontFamily:"'DM Mono',monospace"}}>{fmtDate(date)}</div>
-                  </div>
-                  <div style={{color:isPos?"#4ADE80":"#F87171",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,flexShrink:0}}>
-                    {isPos?"+":""}{fmtEur(amount)}
-                  </div>
-                </div>
-              );
-            })}
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
+      <div style={{background:"#111009",borderRadius:"28px 28px 0 0",padding:"0 0 32px",width:"100%",maxWidth:430,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
+        <style>{spinStyle}</style>
+        <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"12px auto 0",flexShrink:0}}/>
+        <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #1E1B16",flexShrink:0}}>
+          <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700}}>Choisir une banque</div>
+        </div>
+        <div style={{padding:"12px 20px",flexShrink:0}}>
+          <input value={aspspSearch} onChange={e=>setAspspSearch(e.target.value)} placeholder="Rechercher (ex: Boursorama, BNP…)"
+            style={{width:"100%",background:"#1A1915",border:"1px solid #2A2520",borderRadius:12,padding:"10px 14px",color:"#F0EDE8",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{overflowY:"auto",flex:1,padding:"0 20px 8px"}}>
+          {aspsps.length === 0 && (
+            <div style={{display:"flex",alignItems:"center",gap:10,color:"#5A5550",fontSize:12,padding:16}}>
+              <div style={{width:20,height:20,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite",flexShrink:0}}/>
+              Chargement des banques…
+            </div>
+          )}
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {filtered.slice(0,30).map(a => (
+              <button key={a.name} onClick={()=>onSelect(a.name)} disabled={connecting}
+                style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
+                {a.logo && <img src={a.logo} style={{width:28,height:28,borderRadius:8,objectFit:"contain"}} onError={e=>e.currentTarget.style.display="none"}/>}
+                <span>{a.name}</span>
+                {connecting && <div style={{marginLeft:"auto",width:16,height:16,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
+              </button>
+            ))}
           </div>
         </div>
-      )}
-
-      {error && <div style={{margin:"8px 20px",color:"#F87171",fontSize:12,textAlign:"center",padding:"8px 12px",background:"#F8717110",borderRadius:10}}>{error}</div>}
-
-      {/* Bouton déconnecter */}
-      <div style={{margin:"8px 20px 0"}}>
-        <button onClick={disconnectAll}
-          style={{width:"100%",background:"transparent",border:"1px solid #2A2520",borderRadius:12,padding:"11px",color:"#5A5550",fontSize:12,cursor:"pointer"}}>
-          Déconnecter toutes les banques
-        </button>
       </div>
-
-      {/* Modal connexion banque */}
-      {showConnect && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowConnect(false)}>
-          <div style={{background:"#111009",borderRadius:"28px 28px 0 0",padding:"0 0 32px",width:"100%",maxWidth:430,maxHeight:"80vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-            <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"12px auto 0",flexShrink:0}}/>
-            <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #1E1B16",flexShrink:0}}>
-              <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700}}>Choisir une banque</div>
-            </div>
-            <div style={{padding:"12px 20px",flexShrink:0}}>
-              <input value={aspspSearch} onChange={e=>setAspspSearch(e.target.value)} placeholder="Rechercher (ex: Boursorama, BNP…)"
-                style={{width:"100%",background:"#1A1915",border:"1px solid #2A2520",borderRadius:12,padding:"10px 14px",color:"#F0EDE8",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            </div>
-            <div style={{overflowY:"auto",flex:1,padding:"0 20px 8px"}}>
-              {aspsps.length === 0 && (
-                <div style={{display:"flex",alignItems:"center",gap:10,color:"#5A5550",fontSize:12,padding:16}}>
-                  <div style={{width:20,height:20,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite",flexShrink:0}}/>
-                  Chargement des banques…
-                </div>
-              )}
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {filteredAspsps.slice(0, 30).map(a => (
-                  <button key={a.name} onClick={()=>{ setShowConnect(false); connectBank(a.name); }} disabled={connecting}
-                    style={{background:"#1A1915",border:"1px solid #2A2520",borderRadius:14,padding:"12px 16px",color:"#C8C4BC",fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}}>
-                    {a.logo && <img src={a.logo} style={{width:28,height:28,borderRadius:8,objectFit:"contain"}} onError={e=>e.currentTarget.style.display="none"}/>}
-                    <span>{a.name}</span>
-                    {connecting && <div style={{marginLeft:"auto",width:16,height:16,border:"2px solid #2A2520",borderTopColor:"#4ADE80",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

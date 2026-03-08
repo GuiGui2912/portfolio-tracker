@@ -94,9 +94,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(data);
     }
 
+    if (action === "account_details") {
+      const account_id = searchParams.get("account_id");
+      if (!account_id) return NextResponse.json({ error: "account_id requis" }, { status: 400 });
+      const data = await ebFetch(`/accounts/${account_id}/details`, token);
+      return NextResponse.json(data);
+    }
+
     if (action === "balances") {
       const account_id = searchParams.get("account_id");
       if (!account_id) return NextResponse.json({ error: "account_id requis" }, { status: 400 });
+      console.log("[EB] fetching balances for account:", account_id);
       const data = await ebFetch(`/accounts/${account_id}/balances`, token);
       return NextResponse.json(data);
     }
