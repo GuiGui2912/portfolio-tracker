@@ -1108,7 +1108,14 @@ function BankTab({ userId, connectTrigger = 0 }) {
       // Enrichir les comptes avec leurs détails (nom, type, IBAN)
       const enriched = allAccounts.map(acc => {
         const d = details.find(x => x.uid === acc.uid)?.data || {};
-        return { ...acc, name: d.name || d.product || acc.name, details: d.details, account_type: d.cash_account_type || d.account_type || acc.account_type };
+        console.log("[Account details]", acc.uid, JSON.stringify(d).slice(0, 300));
+        const bal = bals.find(x => x.uid === acc.uid)?.data || {};
+        console.log("[Balance raw]", acc.uid, JSON.stringify(bal).slice(0, 300));
+        // IBAN peut être dans details.account.iban ou details.iban
+        const iban = d.account?.iban || d.iban || d.account_number?.iban || "";
+        const name = d.name || d.product || d.account?.product || acc.name || "";
+        const accountType = d.cash_account_type || d.account_type || d.account?.cash_account_type || acc.account_type || "";
+        return { ...acc, name, iban, details: d.details, account_type: accountType };
       });
       setAccounts(enriched);
       const balMap = {}; bals.forEach(b => { balMap[b.uid] = b.data; });
@@ -1198,7 +1205,7 @@ function BankTab({ userId, connectTrigger = 0 }) {
     const raw = balances[uid];
     if (!raw) return 0;
     const bals = raw.balances || raw.data?.balances || [];
-    const b = bals.find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV" || b.balance_type === "VALU")
+    const b = bals.find(b => b.balance_type === "CLBD" || b.balance_type === "ITAV" || b.balance_type === "VALU" || b.balance_type === "OTHR")
            || bals[0];
     if (b) {
       const amount = b.balance_amount?.amount ?? b.amount?.amount ?? b.amount ?? 0;
@@ -1347,7 +1354,9 @@ function BankTab({ userId, connectTrigger = 0 }) {
                 <div key={acc.uid} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:"1px solid #1A1A15"}}>
                   <div>
                     <div style={{color:"#C8C4BC",fontSize:13,fontWeight:500}}>{getAccountLabel(acc)}</div>
-                    <div style={{color:"#3A3530",fontSize:10,fontFamily:"'DM Mono',monospace",marginTop:2}}>···{acc.uid?.slice(-8)}</div>
+                    <div style={{color:"#3A3530",fontSize:10,fontFamily:"'DM Mono',monospace",marginTop:2}}>
+                      {acc.iban ? `IBAN ···${acc.iban.slice(-4)}` : `···${acc.uid?.slice(-8)}`}
+                    </div>
                   </div>
                   <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:14,fontWeight:700}}>
                     {getBalance(acc.uid).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
