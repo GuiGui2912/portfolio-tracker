@@ -1203,7 +1203,9 @@ function BankTab({ userId, connectTrigger = 0 }) {
         localStorage.setItem("eb_auth_id", d.authorization_id || "");
         localStorage.setItem("eb_auth_ts", Date.now().toString());
         setPendingAuthId(d.authorization_id || "");
-        window.location.href = d.url;
+        // Forcer ouverture dans Chrome (pas l'app native Boursorama)
+        window.open(d.url, "_blank");
+        setConnecting(false);
       } else {
         throw new Error("Pas d'URL de redirection — réponse: " + JSON.stringify(d).slice(0, 200));
       }
@@ -2162,7 +2164,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.7</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
