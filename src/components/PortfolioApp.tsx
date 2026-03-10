@@ -1129,12 +1129,15 @@ function BankTab({ userId, connectTrigger = 0 }) {
 
   // Au mount : vérifier si retour d'auth Enable Banking ou charger sessions existantes
   useEffect(() => {
-    // Supabase intercepte ?code= dans l'URL → on passe par sessionStorage via /banking-callback
-    const code = sessionStorage.getItem("eb_pending_code");
-    const bankName = sessionStorage.getItem("eb_bank_name") || "Boursorama Banque";
+    // Lire le code depuis localStorage (plus fiable sur mobile que sessionStorage)
+    const code = localStorage.getItem("eb_pending_code");
+    const ts = Number(localStorage.getItem("eb_pending_ts") || 0);
+    const isRecent = Date.now() - ts < 5 * 60 * 1000; // valide 5 minutes
+    const bankName = localStorage.getItem("eb_bank_name") || sessionStorage.getItem("eb_bank_name") || "Boursorama Banque";
 
-    if (code) {
-      sessionStorage.removeItem("eb_pending_code");
+    if (code && isRecent) {
+      localStorage.removeItem("eb_pending_code");
+      localStorage.removeItem("eb_pending_ts");
       setLoading(true);
       setError("Connexion en cours...");
       fetch(`/api/banking?action=create_session&code=${encodeURIComponent(code)}`)
@@ -1799,7 +1802,9 @@ export default function App() {
   // ── Chargement initial ──
   useEffect(() => {
     // Si on revient d'une auth Enable Banking, basculer sur l'onglet Banque
-    if (sessionStorage.getItem("eb_pending_code")) setTab(2);
+    const pendingCode = localStorage.getItem("eb_pending_code");
+    const pendingTs = Number(localStorage.getItem("eb_pending_ts") || 0);
+    if (pendingCode && Date.now() - pendingTs < 5 * 60 * 1000) setTab(2);
 
     const init = async () => {
       setDbLoading(true);
@@ -2102,9 +2107,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.3
-                  
-                </div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.2</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
