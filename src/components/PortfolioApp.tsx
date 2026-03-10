@@ -1184,18 +1184,48 @@ function BankTab({ userId, connectTrigger = 0 }) {
   const connectBank = async (aspspName) => {
     setConnecting(true); setError("");
     try {
-      // IMPORTANT: cette URL doit être ajoutée dans le dashboard Enable Banking → Redirect URIs
-      const redirectUrl = window.location.origin + "/portfolio";
-      const r = await fetch(`/api/banking?action=start_auth&aspsp_name=${encodeURIComponent(aspspName)}&country=FR&redirect_url=${encodeURIComponent(redirectUrl)}`);
+      const r = await fetch(`/api/banking?action=start_auth&aspsp_name=${encodeURIComponent(aspspName)}&country=FR`);
       const d = await r.json();
       if (d.error) throw new Error(d.error);
       if (d.url) {
-        sessionStorage.setItem("eb_bank_name", aspspName);
+        // Stocker le nom de banque ET l'authorization_id pour vérification manuelle
+        localStorage.setItem("eb_bank_name", aspspName);
+        localStorage.setItem("eb_auth_id", d.authorization_id || "");
+        localStorage.setItem("eb_auth_ts", Date.now().toString());
         window.location.href = d.url;
       } else {
         throw new Error("Pas d'URL de redirection — réponse: " + JSON.stringify(d).slice(0, 200));
       }
     } catch(e: any) { setError("Erreur : " + e.message); setConnecting(false); }
+  };
+
+  // Vérifier manuellement si l'auth est complète (pour mobile)
+  const checkAuthManually = async () => {
+    const authId = localStorage.getItem("eb_auth_id");
+    const bankName = localStorage.getItem("eb_bank_name") || "Banque";
+    if (!authId) { setError("Aucune autorisation en attente"); return; }
+    setLoading(true); setError("Vérification en cours...");
+    try {
+      const r = await fetch(`/api/banking?action=check_auth&authorization_id=${authId}`);
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      const sid = d.session_id || d.id;
+      if (sid) {
+        const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
+        if (!sessions.find(s => s.session_id === sid)) {
+          sessions.push({ session_id: sid, bank_name: bankName });
+          localStorage.setItem("eb_sessions", JSON.stringify(sessions));
+        }
+        localStorage.removeItem("eb_auth_id");
+        localStorage.removeItem("eb_auth_ts");
+        localStorage.removeItem("eb_bank_name");
+        setError("");
+        loadBankData();
+      } else {
+        setError("Autorisation pas encore complète — réessaie après avoir validé sur Boursorama");
+        setLoading(false);
+      }
+    } catch(e: any) { setError("Erreur : " + e.message); setLoading(false); }
   };
 
   const disconnectAll = () => {
@@ -1267,6 +1297,18 @@ function BankTab({ userId, connectTrigger = 0 }) {
   if (accounts.length === 0) return (
     <div style={{padding:"0 20px 120px"}}>
       <style>{spinStyle}</style>
+
+      {/* Bannière auth en attente */}
+      {localStorage.getItem("eb_auth_id") && (
+        <div style={{background:"#1A2A1A",borderRadius:16,padding:"16px 18px",border:"1px solid #4ADE8040",marginBottom:16}}>
+          <div style={{color:"#4ADE80",fontSize:13,fontWeight:600,marginBottom:6}}>✅ Authentification en cours</div>
+          <div style={{color:"#8A8480",fontSize:12,marginBottom:12}}>Une fois que tu as validé sur Boursorama, appuie sur le bouton ci-dessous.</div>
+          <button onClick={checkAuthManually}
+            style={{width:"100%",background:"linear-gradient(135deg,#4ADE80,#22C55E)",border:"none",borderRadius:12,padding:"11px",color:"#0A1A0E",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+            ✓ J'ai validé sur Boursorama
+          </button>
+        </div>
+      )}
       <div style={{background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"40px 24px",border:"1px solid #1E3A28",textAlign:"center"}}>
         <div style={{fontSize:48,marginBottom:14}}>🏦</div>
         <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:8}}>Connectez votre banque</div>
@@ -2107,7 +2149,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.5</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>

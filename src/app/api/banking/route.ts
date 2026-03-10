@@ -87,6 +87,24 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ...data, session_id });
     }
 
+    // Vérifier statut d'une autorisation et créer la session (pour mobile sans redirection)
+    if (action === "check_auth") {
+      const authorization_id = searchParams.get("authorization_id");
+      if (!authorization_id) return NextResponse.json({ error: "authorization_id requis" }, { status: 400 });
+      // Récupérer le statut de l'autorisation
+      const auth = await ebFetch(`/authorizations/${authorization_id}`, token);
+      console.log("[EB] auth status:", JSON.stringify(auth).slice(0, 300));
+      if (auth.status === "AUTHORIZED" || auth.code) {
+        const code = auth.code || auth.authorization_code;
+        if (code) {
+          const data = await ebFetch("/sessions", token, "POST", { code });
+          const session_id = data.session_id || data.id || data.uid;
+          return NextResponse.json({ ...data, session_id });
+        }
+      }
+      return NextResponse.json({ status: auth.status || "PENDING", message: "Autorisation pas encore complète" });
+    }
+
     if (action === "session") {
       const session_id = searchParams.get("session_id");
       if (!session_id) return NextResponse.json({ error: "session_id requis" }, { status: 400 });
