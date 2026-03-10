@@ -1043,6 +1043,16 @@ function BankTab({ userId, connectTrigger = 0 }) {
   const [aspsps, setAspsps]           = useState([]);
   const [aspspSearch, setAspspSearch] = useState("");
   const [connecting, setConnecting]   = useState(false);
+  const [pendingAuthId, setPendingAuthId] = useState<string|null>(null);
+
+  // Vérifier au mount si une auth est en attente
+  useEffect(() => {
+    const authId = localStorage.getItem("eb_auth_id");
+    const authTs = Number(localStorage.getItem("eb_pending_ts") || 0);
+    if (authId && Date.now() - authTs < 10 * 60 * 1000) {
+      setPendingAuthId(authId);
+    }
+  }, []);
 
   // Réagir au trigger externe (bouton + Connecter en bas de l'app)
   useEffect(() => {
@@ -1192,6 +1202,7 @@ function BankTab({ userId, connectTrigger = 0 }) {
         localStorage.setItem("eb_bank_name", aspspName);
         localStorage.setItem("eb_auth_id", d.authorization_id || "");
         localStorage.setItem("eb_auth_ts", Date.now().toString());
+        setPendingAuthId(d.authorization_id || "");
         window.location.href = d.url;
       } else {
         throw new Error("Pas d'URL de redirection — réponse: " + JSON.stringify(d).slice(0, 200));
@@ -1201,10 +1212,10 @@ function BankTab({ userId, connectTrigger = 0 }) {
 
   // Vérifier manuellement si l'auth est complète (pour mobile)
   const checkAuthManually = async () => {
-    const authId = localStorage.getItem("eb_auth_id");
+    const authId = pendingAuthId || localStorage.getItem("eb_auth_id");
     const bankName = localStorage.getItem("eb_bank_name") || "Banque";
     if (!authId) { setError("Aucune autorisation en attente"); return; }
-    setLoading(true); setError("Vérification en cours...");
+    setLoading(true); setError("");
     try {
       const r = await fetch(`/api/banking?action=check_auth&authorization_id=${authId}`);
       const d = await r.json();
@@ -1219,10 +1230,12 @@ function BankTab({ userId, connectTrigger = 0 }) {
         localStorage.removeItem("eb_auth_id");
         localStorage.removeItem("eb_auth_ts");
         localStorage.removeItem("eb_bank_name");
+        localStorage.removeItem("eb_pending_ts");
+        setPendingAuthId(null);
         setError("");
         loadBankData();
       } else {
-        setError("Autorisation pas encore complète — réessaie après avoir validé sur Boursorama");
+        setError("Pas encore validé — réessaie après avoir confirmé sur Boursorama (statut: " + (d.status||"inconnu") + ")");
         setLoading(false);
       }
     } catch(e: any) { setError("Erreur : " + e.message); setLoading(false); }
@@ -1299,7 +1312,7 @@ function BankTab({ userId, connectTrigger = 0 }) {
       <style>{spinStyle}</style>
 
       {/* Bannière auth en attente */}
-      {localStorage.getItem("eb_auth_id") && (
+      {pendingAuthId && (
         <div style={{background:"#1A2A1A",borderRadius:16,padding:"16px 18px",border:"1px solid #4ADE8040",marginBottom:16}}>
           <div style={{color:"#4ADE80",fontSize:13,fontWeight:600,marginBottom:6}}>✅ Authentification en cours</div>
           <div style={{color:"#8A8480",fontSize:12,marginBottom:12}}>Une fois que tu as validé sur Boursorama, appuie sur le bouton ci-dessous.</div>
@@ -2149,7 +2162,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.6</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
