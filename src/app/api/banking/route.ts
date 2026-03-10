@@ -49,6 +49,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ aspsps: list });
     }
 
+    // Lister les sessions existantes de l'app (comptes déjà liés)
+    if (action === "list_sessions") {
+      const data = await ebFetch(`/sessions`, token);
+      console.log("[EB] sessions list:", JSON.stringify(data).slice(0, 500));
+      return NextResponse.json(data);
+    }
+
     if (action === "start_auth") {
       const aspsp_name = searchParams.get("aspsp_name");
       const country = searchParams.get("country") || "FR";
@@ -76,7 +83,7 @@ export async function GET(req: NextRequest) {
       if (!redirectUrl) {
         return NextResponse.json({ error: "Pas d'URL de redirection", raw: data }, { status: 500 });
       }
-      return NextResponse.json({ url: redirectUrl });
+      return NextResponse.json({ url: redirectUrl, authorization_id: data.authorization_id || data.id });
     }
 
     if (action === "create_session") {

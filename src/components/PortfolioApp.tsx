@@ -1065,6 +1065,26 @@ function BankTab({ userId, connectTrigger = 0 }) {
     try {
       let sessions = [];
       try { sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]"); } catch {}
+
+      // Si pas de session locale, chercher les sessions existantes sur Enable Banking
+      if (sessions.length === 0) {
+        try {
+          const r = await fetch("/api/banking?action=list_sessions");
+          const d = await r.json();
+          const list = d.sessions || d.data || (Array.isArray(d) ? d : []);
+          console.log("[Sessions existantes]", JSON.stringify(list).slice(0, 300));
+          if (list.length > 0) {
+            sessions = list.map(s => ({
+              session_id: s.session_id || s.id || s.uid,
+              bank_name: s.aspsp?.name || s.bank_name || "Boursorama Banque"
+            })).filter(s => s.session_id);
+            if (sessions.length > 0) {
+              localStorage.setItem("eb_sessions", JSON.stringify(sessions));
+            }
+          }
+        } catch(e) { console.log("[list_sessions error]", e); }
+      }
+
       if (sessions.length === 0) { setLoading(false); return; }
 
       const allAccounts = [];
@@ -2164,7 +2184,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.7</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.8</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
