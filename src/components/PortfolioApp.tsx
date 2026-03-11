@@ -2241,7 +2241,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.6</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2344,6 +2344,7 @@ export default function App() {
         <div style={{flex:1,overflow:"hidden",position:"relative",minHeight:0}}>
           <div ref={slideRef} style={{
             display:"flex",
+            alignItems:"flex-start",
             width:"300%",
             height:"100%",
             willChange:"transform",
