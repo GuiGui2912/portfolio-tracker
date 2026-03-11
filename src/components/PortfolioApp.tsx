@@ -1371,7 +1371,7 @@ function BankTab({ userId, connectTrigger = 0 }) {
     .sort((a,b) => new Date(b.booking_date||0).getTime() - new Date(a.booking_date||0).getTime());
 
   return (
-    <div className="fadein" style={{paddingBottom:120}}>
+    <div style={{paddingBottom:120}}>
       <style>{spinStyle}</style>
 
       {/* ── Total bancaire ── */}
@@ -2241,7 +2241,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.5</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2356,7 +2356,7 @@ export default function App() {
               onTouchEnd={e=>{ if(dragMode||dragMktMode) return; onSwipeEnd(e); if(!swipeActive.current&&e.changedTouches[0].clientX-swipeStartX.current===0) setDetailAsset(null); }}>
 
           {/* ── ACTIFS ── */}
-          <div className="fadein">
+          <div>
               {viewMode==="grouped" ? (
                 <div ref={assetsListRef} onTouchMove={handleAssetTouchMove} onTouchEnd={handleAssetTouchEnd}>
                 {assets.map((a,idx)=>{
