@@ -1375,7 +1375,7 @@ function BankTab({ userId, connectTrigger = 0 }) {
       <style>{spinStyle}</style>
 
       {/* ── Total bancaire ── */}
-      <div style={{margin:"0 20px 18px",background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"20px 22px",border:"1px solid #1E3A28"}}>
+      <div style={{margin:"12px 20px 18px",background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"20px 22px",border:"1px solid #1E3A28"}}>
         <div style={{color:"#3A6A50",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:6}}>Total bancaire</div>
         <div style={{fontFamily:"'DM Mono',monospace",fontSize:32,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>
           {accounts.reduce((s,a)=>s+getBalance(a.uid),0).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
@@ -2190,7 +2190,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.9</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.10</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2284,18 +2284,27 @@ export default function App() {
           )}
         </div>
 
-        {/* Scrollable content */}
-        <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}
-          onTouchStart={e=>{ if(!dragMode&&!dragMktMode) swipeStartX.current=e.touches[0].clientX; }}
-          onTouchEnd={e=>{
-            if(dragMode||dragMktMode) return;
-            const dx=e.changedTouches[0].clientX-swipeStartX.current;
-            if(Math.abs(dx)>60){if(dx<0&&tab<2){setTab(tab+1);setDetailAsset(null);}if(dx>0&&tab>0){setTab(tab-1);setDetailAsset(null);}}
+        {/* Scrollable content with slide animation */}
+        <div style={{flex:1,overflow:"hidden",position:"relative"}}>
+          <div style={{
+            display:"flex",
+            width:"300%",
+            transform:`translateX(${-tab * (100/3)}%)`,
+            transition:"transform 0.28s cubic-bezier(0.4,0,0.2,1)",
+            height:"100%",
           }}>
 
           {/* ── ACTIFS ── */}
-          {tab===0 && (
-            <div className="fadein">
+          <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+              onTouchStart={e=>{ if(!dragMode&&!dragMktMode) swipeStartX.current=e.touches[0].clientX; }}
+              onTouchEnd={e=>{
+                if(dragMode||dragMktMode) return;
+                const dx=e.changedTouches[0].clientX-swipeStartX.current;
+                if(Math.abs(dx)>60){if(dx<0&&tab<2){setTab(tab+1);setDetailAsset(null);}if(dx>0&&tab>0){setTab(tab-1);setDetailAsset(null);}}
+              }}>
+
+          {/* ── ACTIFS ── */}
+          <div className="fadein">
               {viewMode==="grouped" ? (
                 <div ref={assetsListRef} onTouchMove={handleAssetTouchMove} onTouchEnd={handleAssetTouchEnd}>
                 {assets.map((a,idx)=>{
@@ -2426,52 +2435,38 @@ export default function App() {
                       </div>
                     );
                   })}
-                </>
-              )}
             </div>
-          )}
+          </div>
 
           {/* ── MARCHÉS ── */}
-          {tab===1 && (
-            <div className="fadein" style={{padding:"0 20px", userSelect:"none", WebkitUserSelect:"none"}}
+          <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+            onTouchStart={e=>{ swipeStartX.current=e.touches[0].clientX; }}
+            onTouchEnd={e=>{
+              const dx=e.changedTouches[0].clientX-swipeStartX.current;
+              if(Math.abs(dx)>60){if(dx<0&&tab<2){setTab(tab+1);}if(dx>0&&tab>0){setTab(tab-1);setDetailAsset(null);}}
+            }}>
+            <div style={{padding:"0 20px", userSelect:"none", WebkitUserSelect:"none"}}
               ref={mktListRef}
               onTouchMove={handleMktTouchMove}
               onTouchEnd={handleMktTouchEnd}>
-
               {mktList.map((a,idx)=>{
                 const realIdx=allMarket.indexOf(a);
                 const dbEntry=SYMBOL_DATABASE.find(s=>s.symbol===a.symbol);
                 const displayName=(a.name&&a.name!==a.symbol)?a.name:(dbEntry?.name||a.symbol);
                 const isDragging = mktDraggingIdx === realIdx;
-                // La barre s'affiche AU-DESSUS de l'item mktDragOverIdx
                 const showBarBefore = dragMktMode && mktDragOverIdx === realIdx && mktDraggingIdx !== realIdx;
-                // Barre finale après le dernier item
                 const isLast = idx === mktList.length - 1;
                 const showBarAfter = dragMktMode && isLast && mktDragOverIdx !== null && mktDragOverIdx > realIdx && mktDraggingIdx !== realIdx;
                 return (
                   <div key={a.symbol}>
-                    {/* Barre d'insertion AVANT cet item */}
-                    {showBarBefore && (
-                      <div style={{height:2, background:"#C8A96E", borderRadius:2, margin:"0 0", boxShadow:"0 0 6px #C8A96E80"}}/>
-                    )}
-                    <div
-                      data-mkt-item={realIdx}
-                      onTouchStart={e=>handleMktTouchStart(e, realIdx)}
+                    {showBarBefore && <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 0",boxShadow:"0 0 6px #C8A96E80"}}/>}
+                    <div data-mkt-item={realIdx} onTouchStart={e=>handleMktTouchStart(e,realIdx)}
                       onTouchMove={e=>{ if(mktDragActive.current) handleMktTouchMove(e); }}
-                      onTouchEnd={e=>{ if(mktDragActive.current) { e.stopPropagation(); handleMktTouchEnd(); } }}
+                      onTouchEnd={e=>{ if(mktDragActive.current){e.stopPropagation();handleMktTouchEnd();} }}
                       onTouchCancel={handleMktTouchEnd}
-                      style={{
-                        display:"flex", alignItems:"center", justifyContent:"space-between",
-                        padding:"12px 0", borderBottom:"1px solid #191612",
-                        cursor:dragMktMode?"grab":"default",
-                        opacity: isDragging ? 0.25 : 1,
-                        transition: "opacity 0.1s",
-                        userSelect: "none",
-                        WebkitUserSelect: "none",
-                        touchAction: dragMktMode ? "none" : "auto",
-                      }}>
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"default",opacity:isDragging?0.25:1,transition:"opacity 0.1s",userSelect:"none",WebkitUserSelect:"none",touchAction:dragMktMode?"none":"auto"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
-                        {dragMktMode&&<div style={{color: isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
+                        {dragMktMode&&<div style={{color:isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
                         <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
                         <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
                       </div>
@@ -2480,19 +2475,25 @@ export default function App() {
                         <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
                       </div>}
                     </div>
-                    {/* Barre d'insertion APRÈS le dernier item si on drop tout en bas */}
-                    {showBarAfter && (
-                      <div style={{height:2, background:"#C8A96E", borderRadius:2, margin:"0 0", boxShadow:"0 0 6px #C8A96E80"}}/>
-                    )}
+                    {showBarAfter && <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 0",boxShadow:"0 0 6px #C8A96E80"}}/>}
                   </div>
                 );
               })}
             </div>
-          )}
+          </div>
 
           {/* ── BANQUE ── */}
-          {tab===2 && <div onTouchStart={e=>e.stopPropagation()} onTouchEnd={e=>e.stopPropagation()}><BankTab userId={userId} connectTrigger={bankConnectTrigger}/></div>}
-        </div>
+          <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+            onTouchStart={e=>{ swipeStartX.current=e.touches[0].clientX; }}
+            onTouchEnd={e=>{
+              const dx=e.changedTouches[0].clientX-swipeStartX.current;
+              if(Math.abs(dx)>60&&dx>0){setTab(tab-1);}
+            }}>
+            <BankTab userId={userId} connectTrigger={bankConnectTrigger}/>
+          </div>
+
+          </div>{/* fin flex 300% */}
+        </div>{/* fin overflow hidden */}
 
         {/* Ghost drag ACTIFS */}
         {assetGhostItem && (
