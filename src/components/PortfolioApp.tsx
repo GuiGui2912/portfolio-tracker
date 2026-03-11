@@ -1045,12 +1045,14 @@ function BankTab({ userId, connectTrigger = 0 }) {
   const [connecting, setConnecting]   = useState(false);
   const [pendingAuthId, setPendingAuthId] = useState<string|null>(null);
 
-  // Vérifier au mount si une auth est en attente
+  // Vérifier au mount si une auth ou un code est en attente
   useEffect(() => {
+    const code = localStorage.getItem("eb_pending_code");
     const authId = localStorage.getItem("eb_auth_id");
     const authTs = Number(localStorage.getItem("eb_pending_ts") || 0);
-    if (authId && Date.now() - authTs < 10 * 60 * 1000) {
-      setPendingAuthId(authId);
+    const isRecent = Date.now() - authTs < 10 * 60 * 1000;
+    if (code || (authId && isRecent)) {
+      setPendingAuthId(authId || "pending");
     }
   }, []);
 
@@ -1234,33 +1236,37 @@ function BankTab({ userId, connectTrigger = 0 }) {
 
   // Vérifier manuellement si l'auth est complète (pour mobile)
   const checkAuthManually = async () => {
-    const authId = pendingAuthId || localStorage.getItem("eb_auth_id");
-    const bankName = localStorage.getItem("eb_bank_name") || "Banque";
-    if (!authId) { setError("Aucune autorisation en attente"); return; }
-    setLoading(true); setError("");
-    try {
-      const r = await fetch(`/api/banking?action=check_auth&authorization_id=${authId}`);
-      const d = await r.json();
-      if (d.error) throw new Error(d.error);
-      const sid = d.session_id || d.id;
-      if (sid) {
-        const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
-        if (!sessions.find(s => s.session_id === sid)) {
-          sessions.push({ session_id: sid, bank_name: bankName });
-          localStorage.setItem("eb_sessions", JSON.stringify(sessions));
+    const bankName = localStorage.getItem("eb_bank_name") || "Boursorama Banque";
+    // Utiliser le code reçu par /banking-callback s'il existe
+    const code = localStorage.getItem("eb_pending_code");
+    if (code) {
+      setLoading(true); setError("");
+      try {
+        const r = await fetch(`/api/banking?action=create_session&code=${code}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        const sid = d.session_id || d.id;
+        if (sid) {
+          const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
+          if (!sessions.find(s => s.session_id === sid)) {
+            sessions.push({ session_id: sid, bank_name: bankName });
+            localStorage.setItem("eb_sessions", JSON.stringify(sessions));
+          }
+          localStorage.removeItem("eb_pending_code");
+          localStorage.removeItem("eb_pending_ts");
+          localStorage.removeItem("eb_auth_id");
+          localStorage.removeItem("eb_bank_name");
+          setPendingAuthId(null);
+          setError("");
+          loadBankData();
+        } else {
+          throw new Error("Pas de session_id dans la réponse: " + JSON.stringify(d).slice(0, 100));
         }
-        localStorage.removeItem("eb_auth_id");
-        localStorage.removeItem("eb_auth_ts");
-        localStorage.removeItem("eb_bank_name");
-        localStorage.removeItem("eb_pending_ts");
-        setPendingAuthId(null);
-        setError("");
-        loadBankData();
-      } else {
-        setError("Pas encore validé — réessaie après avoir confirmé sur Boursorama (statut: " + (d.status||"inconnu") + ")");
-        setLoading(false);
-      }
-    } catch(e: any) { setError("Erreur : " + e.message); setLoading(false); }
+      } catch(e: any) { setError("Erreur : " + e.message); setLoading(false); }
+      return;
+    }
+    // Pas de code — demander de refaire l'auth
+    setError("Retourne sur Boursorama et valide l'autorisation d'accès, puis reviens ici.");
   };
 
   const disconnectAll = () => {
@@ -2184,7 +2190,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.8</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.4.9</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
