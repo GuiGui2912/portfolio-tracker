@@ -1538,11 +1538,13 @@ export default function App() {
   const swipeActive = useRef(false);
   const tabRef = useRef(0); // mirror de tab pour les closures touch
 
+  const getW = () => slideRef.current ? slideRef.current.offsetWidth / 3 : window.innerWidth;
+
   const goToTab = (next: number, animated = true) => {
     tabRef.current = next;
     setTab(next);
     if (!slideRef.current) return;
-    const w = slideRef.current.parentElement?.clientWidth || window.innerWidth;
+    const w = getW();
     slideRef.current.style.transition = animated ? "transform 0.28s cubic-bezier(0.4,0,0.2,1)" : "none";
     slideRef.current.style.transform = `translateX(${-next * w}px)`;
   };
@@ -1557,9 +1559,8 @@ export default function App() {
     if (Math.abs(dx) < 6) return;
     swipeActive.current = true;
     if (!slideRef.current) return;
-    const w = slideRef.current.parentElement?.clientWidth || window.innerWidth;
+    const w = getW();
     const base = -tabRef.current * w;
-    // Résistance aux bords
     let offset = dx;
     if ((tabRef.current === 0 && dx > 0) || (tabRef.current === 2 && dx < 0)) offset = dx * 0.2;
     slideRef.current.style.transition = "none";
@@ -1570,18 +1571,16 @@ export default function App() {
     if (!swipeActive.current) return;
     swipeActive.current = false;
     const dx = e.changedTouches[0].clientX - swipeStartX.current;
-    const w = slideRef.current?.parentElement?.clientWidth || window.innerWidth;
-    const threshold = w * 0.3; // 30% de l'écran
+    const threshold = getW() * 0.3;
     if (dx < -threshold && tabRef.current < 2) goToTab(tabRef.current + 1);
     else if (dx > threshold && tabRef.current > 0) goToTab(tabRef.current - 1);
-    else goToTab(tabRef.current); // snap back
+    else goToTab(tabRef.current);
   };
 
-  // Sync quand tab change via nav bar
   useEffect(() => {
     tabRef.current = tab;
     if (!slideRef.current) return;
-    const w = slideRef.current.parentElement?.clientWidth || window.innerWidth;
+    const w = getW();
     slideRef.current.style.transition = "transform 0.28s cubic-bezier(0.4,0,0.2,1)";
     slideRef.current.style.transform = `translateX(${-tab * w}px)`;
   }, [tab]);
@@ -2241,7 +2240,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.7</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2341,17 +2340,17 @@ export default function App() {
         </div>
 
         {/* Scrollable content with slide animation */}
-        <div style={{flex:1,overflow:"hidden",position:"relative",minHeight:0}}>
+        <div style={{flex:1,overflow:"hidden",position:"relative",minHeight:0,isolation:"isolate"}}>
           <div ref={slideRef} style={{
             display:"flex",
-            alignItems:"flex-start",
             width:"300%",
             height:"100%",
             willChange:"transform",
+            alignItems:"flex-start",
           }}>
 
           {/* ── ACTIFS ── */}
-          <div style={{width:"33.333%",height:"100%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+          <div style={{width:"33.333%",minWidth:"33.333%",height:"100%",overflow:"hidden auto",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
               onTouchStart={e=>{ if(dragMode||dragMktMode) return; onSwipeStart(e); }}
               onTouchMove={e=>{ if(dragMode||dragMktMode) return; onSwipeMove(e); }}
               onTouchEnd={e=>{ if(dragMode||dragMktMode) return; onSwipeEnd(e); if(!swipeActive.current&&e.changedTouches[0].clientX-swipeStartX.current===0) setDetailAsset(null); }}>
@@ -2494,7 +2493,7 @@ export default function App() {
           </div>
 
           {/* ── MARCHÉS ── */}
-          <div style={{width:"33.333%",height:"100%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+          <div style={{width:"33.333%",minWidth:"33.333%",height:"100%",overflow:"hidden auto",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
             onTouchStart={e=>{ if(dragMktMode) return; onSwipeStart(e); }}
             onTouchMove={e=>{ if(dragMktMode) return; onSwipeMove(e); }}
             onTouchEnd={e=>{ if(dragMktMode) return; onSwipeEnd(e); }}>
@@ -2536,7 +2535,7 @@ export default function App() {
           </div>
 
           {/* ── BANQUE ── */}
-          <div style={{width:"33.333%",height:"100%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+          <div style={{width:"33.333%",minWidth:"33.333%",height:"100%",overflow:"hidden auto",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
             onTouchStart={onSwipeStart}
             onTouchMove={onSwipeMove}
             onTouchEnd={onSwipeEnd}>
