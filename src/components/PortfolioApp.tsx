@@ -2251,8 +2251,13 @@ export default function App() {
             </div>
           </div>
 
-          {/* Total card */}
-          {tab!==2 && (
+          {/* Total card — cachée sur l'onglet Banque avec transition */}
+          <div style={{
+            overflow:"hidden",
+            maxHeight: tab !== 2 ? "200px" : "0px",
+            opacity: tab !== 2 ? 1 : 0,
+            transition: "max-height 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease",
+          }}>{(
             <div className="fadein" style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
               <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
@@ -2281,7 +2286,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-          )}
+          )}</div>
 
           {/* Toolbar Marchés */}
           {tab===1 && (
@@ -2336,7 +2341,7 @@ export default function App() {
         </div>
 
         {/* Scrollable content with slide animation */}
-        <div style={{flex:1,overflow:"hidden",position:"relative"}}>
+        <div style={{flex:1,overflow:"hidden",position:"relative",minHeight:0}}>
           <div ref={slideRef} style={{
             display:"flex",
             width:"300%",
@@ -2345,7 +2350,7 @@ export default function App() {
           }}>
 
           {/* ── ACTIFS ── */}
-          <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+          <div style={{width:"33.333%",height:"100%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
               onTouchStart={e=>{ if(dragMode||dragMktMode) return; onSwipeStart(e); }}
               onTouchMove={e=>{ if(dragMode||dragMktMode) return; onSwipeMove(e); }}
               onTouchEnd={e=>{ if(dragMode||dragMktMode) return; onSwipeEnd(e); if(!swipeActive.current&&e.changedTouches[0].clientX-swipeStartX.current===0) setDetailAsset(null); }}>
@@ -2488,7 +2493,7 @@ export default function App() {
           </div>
 
           {/* ── MARCHÉS ── */}
-          <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+          <div style={{width:"33.333%",height:"100%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
             onTouchStart={e=>{ if(dragMktMode) return; onSwipeStart(e); }}
             onTouchMove={e=>{ if(dragMktMode) return; onSwipeMove(e); }}
             onTouchEnd={e=>{ if(dragMktMode) return; onSwipeEnd(e); }}>
@@ -2530,7 +2535,7 @@ export default function App() {
           </div>
 
           {/* ── BANQUE ── */}
-          <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
+          <div style={{width:"33.333%",height:"100%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
             onTouchStart={onSwipeStart}
             onTouchMove={onSwipeMove}
             onTouchEnd={onSwipeEnd}>
