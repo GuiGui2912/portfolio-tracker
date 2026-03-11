@@ -1534,23 +1534,56 @@ function BankConnectModal({aspsps, aspspSearch, setAspspSearch, connecting, onCl
 
 export default function App() {
   const [tab, setTab]               = useState(0);
-  const [swipeDx, setSwipeDx]       = useState(0);
   const slideRef = useRef<HTMLDivElement>(null);
   const swipeActive = useRef(false);
+  const tabRef = useRef(0); // mirror de tab pour les closures touch
 
-  const applySlide = (dx: number, animated: boolean) => {
+  const goToTab = (next: number, animated = true) => {
+    tabRef.current = next;
+    setTab(next);
     if (!slideRef.current) return;
-    const tabCount = 3;
-    const pct = -tab * (100 / tabCount);
+    const w = slideRef.current.parentElement?.clientWidth || window.innerWidth;
     slideRef.current.style.transition = animated ? "transform 0.28s cubic-bezier(0.4,0,0.2,1)" : "none";
-    slideRef.current.style.transform = `translateX(calc(${pct}% + ${dx / tabCount}px))`;
+    slideRef.current.style.transform = `translateX(${-next * w}px)`;
   };
 
-  // Sync position when tab changes via click on nav bar
-  useEffect(() => {
+  const onSwipeStart = (e: React.TouchEvent) => {
+    swipeStartX.current = e.touches[0].clientX;
+    swipeActive.current = false;
+  };
+
+  const onSwipeMove = (e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - swipeStartX.current;
+    if (Math.abs(dx) < 6) return;
+    swipeActive.current = true;
     if (!slideRef.current) return;
+    const w = slideRef.current.parentElement?.clientWidth || window.innerWidth;
+    const base = -tabRef.current * w;
+    // Résistance aux bords
+    let offset = dx;
+    if ((tabRef.current === 0 && dx > 0) || (tabRef.current === 2 && dx < 0)) offset = dx * 0.2;
+    slideRef.current.style.transition = "none";
+    slideRef.current.style.transform = `translateX(${base + offset}px)`;
+  };
+
+  const onSwipeEnd = (e: React.TouchEvent) => {
+    if (!swipeActive.current) return;
+    swipeActive.current = false;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    const w = slideRef.current?.parentElement?.clientWidth || window.innerWidth;
+    const threshold = w * 0.3; // 30% de l'écran
+    if (dx < -threshold && tabRef.current < 2) goToTab(tabRef.current + 1);
+    else if (dx > threshold && tabRef.current > 0) goToTab(tabRef.current - 1);
+    else goToTab(tabRef.current); // snap back
+  };
+
+  // Sync quand tab change via nav bar
+  useEffect(() => {
+    tabRef.current = tab;
+    if (!slideRef.current) return;
+    const w = slideRef.current.parentElement?.clientWidth || window.innerWidth;
     slideRef.current.style.transition = "transform 0.28s cubic-bezier(0.4,0,0.2,1)";
-    slideRef.current.style.transform = `translateX(${-tab * (100/3)}%)`;
+    slideRef.current.style.transform = `translateX(${-tab * w}px)`;
   }, [tab]);
   const [assets, setAssets]         = useState([]);
   const [dbLoading, setDbLoading]   = useState(true);
@@ -2208,7 +2241,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.3</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2307,24 +2340,15 @@ export default function App() {
           <div ref={slideRef} style={{
             display:"flex",
             width:"300%",
-            transform:`translateX(${-tab * (100/3)}%)`,
-            transition:"transform 0.28s cubic-bezier(0.4,0,0.2,1)",
             height:"100%",
+            willChange:"transform",
           }}>
 
           {/* ── ACTIFS ── */}
           <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
-              onTouchStart={e=>{ if(dragMode||dragMktMode) return; swipeStartX.current=e.touches[0].clientX; swipeActive.current=false; }}
-              onTouchMove={e=>{ if(dragMode||dragMktMode) return; const dx=e.touches[0].clientX-swipeStartX.current; if(Math.abs(dx)>8){swipeActive.current=true; applySlide(dx,false);} }}
-              onTouchEnd={e=>{
-                if(dragMode||dragMktMode) return;
-                const dx=e.changedTouches[0].clientX-swipeStartX.current;
-                if(swipeActive.current){
-                  if(Math.abs(dx)>60){const next=dx<0?Math.min(tab+1,2):Math.max(tab-1,0); setTab(next); setDetailAsset(null);}
-                  else { applySlide(0,true); }
-                }
-                swipeActive.current=false;
-              }}>
+              onTouchStart={e=>{ if(dragMode||dragMktMode) return; onSwipeStart(e); }}
+              onTouchMove={e=>{ if(dragMode||dragMktMode) return; onSwipeMove(e); }}
+              onTouchEnd={e=>{ if(dragMode||dragMktMode) return; onSwipeEnd(e); if(!swipeActive.current&&e.changedTouches[0].clientX-swipeStartX.current===0) setDetailAsset(null); }}>
 
           {/* ── ACTIFS ── */}
           <div className="fadein">
@@ -2465,17 +2489,9 @@ export default function App() {
 
           {/* ── MARCHÉS ── */}
           <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
-            onTouchStart={e=>{ if(dragMktMode) return; swipeStartX.current=e.touches[0].clientX; swipeActive.current=false; }}
-            onTouchMove={e=>{ if(dragMktMode) return; const dx=e.touches[0].clientX-swipeStartX.current; if(Math.abs(dx)>8){swipeActive.current=true; applySlide(dx,false);} }}
-            onTouchEnd={e=>{
-              if(dragMktMode) return;
-              const dx=e.changedTouches[0].clientX-swipeStartX.current;
-              if(swipeActive.current){
-                if(Math.abs(dx)>60){const next=dx<0?Math.min(tab+1,2):Math.max(tab-1,0); setTab(next);}
-                else { applySlide(0,true); }
-              }
-              swipeActive.current=false;
-            }}>
+            onTouchStart={e=>{ if(dragMktMode) return; onSwipeStart(e); }}
+            onTouchMove={e=>{ if(dragMktMode) return; onSwipeMove(e); }}
+            onTouchEnd={e=>{ if(dragMktMode) return; onSwipeEnd(e); }}>
             <div style={{padding:"0 20px", userSelect:"none", WebkitUserSelect:"none"}}
               ref={mktListRef}
               onTouchMove={handleMktTouchMove}
@@ -2515,16 +2531,9 @@ export default function App() {
 
           {/* ── BANQUE ── */}
           <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
-            onTouchStart={e=>{ swipeStartX.current=e.touches[0].clientX; swipeActive.current=false; }}
-            onTouchMove={e=>{ const dx=e.touches[0].clientX-swipeStartX.current; if(Math.abs(dx)>8){swipeActive.current=true; applySlide(dx,false);} }}
-            onTouchEnd={e=>{
-              const dx=e.changedTouches[0].clientX-swipeStartX.current;
-              if(swipeActive.current){
-                if(Math.abs(dx)>60&&dx>0){setTab(tab-1);}
-                else { applySlide(0,true); }
-              }
-              swipeActive.current=false;
-            }}>
+            onTouchStart={onSwipeStart}
+            onTouchMove={onSwipeMove}
+            onTouchEnd={onSwipeEnd}>
             <BankTab userId={userId} connectTrigger={bankConnectTrigger}/>
           </div>
 
