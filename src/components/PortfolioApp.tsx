@@ -1534,6 +1534,7 @@ function BankConnectModal({aspsps, aspspSearch, setAspspSearch, connecting, onCl
 
 export default function App() {
   const [tab, setTab]               = useState(0);
+  const [swipeDx, setSwipeDx]       = useState(0);
   const [assets, setAssets]         = useState([]);
   const [dbLoading, setDbLoading]   = useState(true);
   const [userId, setUserId]         = useState(null);
@@ -2190,7 +2191,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.5.1</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2289,17 +2290,19 @@ export default function App() {
           <div style={{
             display:"flex",
             width:"300%",
-            transform:`translateX(${-tab * (100/3)}%)`,
-            transition:"transform 0.28s cubic-bezier(0.4,0,0.2,1)",
+            transform:`translateX(calc(${-tab * (100/3)}% + ${swipeDx / 3}px))`,
+            transition: swipeDx !== 0 ? "none" : "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
             height:"100%",
           }}>
 
           {/* ── ACTIFS ── */}
           <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
               onTouchStart={e=>{ if(!dragMode&&!dragMktMode) swipeStartX.current=e.touches[0].clientX; }}
+              onTouchMove={e=>{ if(dragMode||dragMktMode) return; const dx=e.touches[0].clientX-swipeStartX.current; if(Math.abs(dx)>8) setSwipeDx(dx); }}
               onTouchEnd={e=>{
                 if(dragMode||dragMktMode) return;
                 const dx=e.changedTouches[0].clientX-swipeStartX.current;
+                setSwipeDx(0);
                 if(Math.abs(dx)>60){if(dx<0&&tab<2){setTab(tab+1);setDetailAsset(null);}if(dx>0&&tab>0){setTab(tab-1);setDetailAsset(null);}}
               }}>
 
@@ -2442,9 +2445,12 @@ export default function App() {
 
           {/* ── MARCHÉS ── */}
           <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
-            onTouchStart={e=>{ swipeStartX.current=e.touches[0].clientX; }}
+            onTouchStart={e=>{ if(!dragMktMode) swipeStartX.current=e.touches[0].clientX; }}
+            onTouchMove={e=>{ if(dragMktMode) return; const dx=e.touches[0].clientX-swipeStartX.current; if(Math.abs(dx)>8) setSwipeDx(dx); }}
             onTouchEnd={e=>{
+              if(dragMktMode) return;
               const dx=e.changedTouches[0].clientX-swipeStartX.current;
+              setSwipeDx(0);
               if(Math.abs(dx)>60){if(dx<0&&tab<2){setTab(tab+1);}if(dx>0&&tab>0){setTab(tab-1);setDetailAsset(null);}}
             }}>
             <div style={{padding:"0 20px", userSelect:"none", WebkitUserSelect:"none"}}
@@ -2487,8 +2493,10 @@ export default function App() {
           {/* ── BANQUE ── */}
           <div style={{width:"33.333%",overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch",flexShrink:0}}
             onTouchStart={e=>{ swipeStartX.current=e.touches[0].clientX; }}
+            onTouchMove={e=>{ const dx=e.touches[0].clientX-swipeStartX.current; if(Math.abs(dx)>8) setSwipeDx(dx); }}
             onTouchEnd={e=>{
               const dx=e.changedTouches[0].clientX-swipeStartX.current;
+              setSwipeDx(0);
               if(Math.abs(dx)>60&&dx>0){setTab(tab-1);}
             }}>
             <BankTab userId={userId} connectTrigger={bankConnectTrigger}/>
