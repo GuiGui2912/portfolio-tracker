@@ -2368,7 +2368,8 @@ export default function App() {
               <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}>
 
           {/* ── ACTIFS ── */}
-          {pageIdx===0 && <div>
+          {pageIdx===0 && (
+            <div>
               {viewMode==="grouped" ? (
                 <div ref={assetsListRef} onTouchMove={handleAssetTouchMove} onTouchEnd={handleAssetTouchEnd}>
                 {assets.map((a,idx)=>{
@@ -2379,7 +2380,6 @@ export default function App() {
                   const pos=scalePct>=0; const iconSize=44,chartW=68,chartH=28,fontSize=15;
                   return (
                     <div key={a.id}>
-                      {/* Barre d'insertion avant cet item */}
                       {dragMode && assetDragOverIdx === idx && assetDraggingIdx !== idx && (
                         <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 20px",boxShadow:"0 0 6px #C8A96E80"}}/>
                       )}
@@ -2502,8 +2502,7 @@ export default function App() {
                 </>
               )}
             </div>
-          </div>
-          }{/* fin pageIdx===0 actifs */}
+          )}
 
           {/* ── MARCHÉS ── */}
           {pageIdx===1 && (
@@ -2547,12 +2546,12 @@ export default function App() {
           {/* ── BANQUE ── */}
           {pageIdx===2 && <BankTab userId={userId} connectTrigger={bankConnectTrigger}/>}
 
-              </div>{/* fin scroll */}
-            </div>{/* fin page */}
+              </div>
+            </div>
             );
           })}
-          </div>{/* fin slideRef */}
-        </div>{/* fin overflow hidden wrapper */}
+          </div>
+        </div>
 
         {/* Ghost drag ACTIFS */}
         {assetGhostItem && (
