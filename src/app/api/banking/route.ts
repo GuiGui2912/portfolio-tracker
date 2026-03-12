@@ -31,6 +31,25 @@ async function ebFetch(path: string, token: string, method = "GET", body?: any) 
   return data;
 }
 
+// Version qui ne throw pas — retourne null si erreur 400/404
+async function ebFetchSafe(path: string, token: string) {
+  const url = `${BASE_URL}${path}`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.warn(`[EB] ${res.status} (ignoré) ${path}:`, JSON.stringify(data).slice(0, 200));
+      return null;
+    }
+    return data;
+  } catch (e: any) {
+    console.warn(`[EB] fetch error (ignoré) ${path}:`, e.message);
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const action = searchParams.get("action");
@@ -122,16 +141,15 @@ export async function GET(req: NextRequest) {
     if (action === "account_details") {
       const account_id = searchParams.get("account_id");
       if (!account_id) return NextResponse.json({ error: "account_id requis" }, { status: 400 });
-      const data = await ebFetch(`/accounts/${account_id}/details`, token);
-      return NextResponse.json(data);
+      const data = await ebFetchSafe(`/accounts/${account_id}/details`, token);
+      return NextResponse.json(data ?? { error: "account_not_found" });
     }
 
     if (action === "balances") {
       const account_id = searchParams.get("account_id");
       if (!account_id) return NextResponse.json({ error: "account_id requis" }, { status: 400 });
-      console.log("[EB] fetching balances for account:", account_id);
-      const data = await ebFetch(`/accounts/${account_id}/balances`, token);
-      return NextResponse.json(data);
+      const data = await ebFetchSafe(`/accounts/${account_id}/balances`, token);
+      return NextResponse.json(data ?? { balances: [] });
     }
 
     if (action === "transactions") {
@@ -139,8 +157,8 @@ export async function GET(req: NextRequest) {
       if (!account_id) return NextResponse.json({ error: "account_id requis" }, { status: 400 });
       const date_from = searchParams.get("date_from")
         || new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().split("T")[0];
-      const data = await ebFetch(`/accounts/${account_id}/transactions?date_from=${date_from}`, token);
-      return NextResponse.json(data);
+      const data = await ebFetchSafe(`/accounts/${account_id}/transactions?date_from=${date_from}`, token);
+      return NextResponse.json(data ?? { transactions: [] });
     }
 
     if (action === "test") {
