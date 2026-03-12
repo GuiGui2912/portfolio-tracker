@@ -2584,7 +2584,7 @@ export default function App() {
         </div>
 
 
-        {/* Ghost drag ACTIFS */}}
+        {/* Ghost drag ACTIFS */}
         {assetGhostItem && (
           <div style={{position:"fixed",left:assetGhostPos.x-175,top:assetGhostPos.y-30,width:350,pointerEvents:"none",zIndex:9999,background:"#1E1B16",border:"1px solid #C8A96E60",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:11,boxShadow:"0 8px 32px #000c",opacity:0.95,transform:"scale(1.04)"}}>
             <div style={{color:"#C8A96E",fontSize:16,flexShrink:0}}>⠿</div>
