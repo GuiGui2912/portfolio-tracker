@@ -2371,6 +2371,8 @@ export default function App() {
             </div>
           </div>
 
+        </div>{/* fin header fixe */}
+
         {/* ═══════════════════════════════════════════
             ZONE SLIDE — 3 colonnes, seul le contenu
             scrollable glisse. Header reste immobile.
