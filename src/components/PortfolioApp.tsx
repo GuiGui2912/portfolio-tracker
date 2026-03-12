@@ -1567,7 +1567,7 @@ export default function App() {
     if (!swipeActive.current) return;
     swipeActive.current = false;
     const dx = e.changedTouches[0].clientX - swipeStartX.current;
-    const threshold = getW() * 0.3;
+    const threshold = getW() * 0.15;
     if (dx < -threshold && tabRef.current < 2) goToTab(tabRef.current + 1);
     else if (dx > threshold && tabRef.current > 0) goToTab(tabRef.current - 1);
     else goToTab(tabRef.current);
@@ -2255,7 +2255,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.6</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
