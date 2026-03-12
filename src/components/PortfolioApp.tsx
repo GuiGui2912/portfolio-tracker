@@ -2235,7 +2235,7 @@ export default function App() {
           {[0,1,2].map(pageIdx => {
             const isActive = pageIdx === tab;
             return (
-            <div key={pageIdx} style={{width:"33.333%",height:"100%",display:"flex",flexDirection:"column",flexShrink:0,overflow:"hidden"}}
+            <div key={pageIdx} style={{width:"33.333%",height:"100%",display:"flex",flexDirection:"column",flexShrink:0,overflow:pageIdx===2?"clip":"hidden"}}
               onTouchStart={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeStart(e); }}
               onTouchMove={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeMove(e); }}
               onTouchEnd={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeEnd(e); }}>
