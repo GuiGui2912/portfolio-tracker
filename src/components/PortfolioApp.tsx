@@ -1555,8 +1555,19 @@ export default function App() {
 
   const getW = () => slideRef.current?.parentElement?.offsetWidth || window.innerWidth;
 
-  const animateHeader = (_progress: number, _transition: string) => {
-    // Le header variable utilise maintenant opacity+position React (pas de DOM direct)
+  const animateHeader = (progress: number, transition: string) => {
+    const el = headerSlideRef.current;
+    if (!el) return;
+    const w = getW();
+    // Panneau 0 : part de translateX(0) vers translateX(-w) quand on va vers droite
+    // Panneau 1 : part de translateX(+w) vers translateX(0)
+    // progress = position fractionnaire (0=actifs, 1=marchés, 2=banque)
+    const panels = el.querySelectorAll<HTMLElement>(":scope > div");
+    panels.forEach((panel, i) => {
+      const offset = (i - progress) * w;
+      panel.style.transition = transition;
+      panel.style.transform = `translateX(${offset}px)`;
+    });
   };
 
   const goToTab = (next: number, animated = true) => {
@@ -1608,6 +1619,11 @@ export default function App() {
     slideRef.current.style.transform = `translateX(${-tab * w}px)`;
     animateHeader(tab, tr);
   }, [tab]);
+
+  // Initialise les positions des panneaux header au montage
+  useEffect(() => {
+    animateHeader(0, "none");
+  }, []);
   const [assets, setAssets]         = useState([]);
   const [dbLoading, setDbLoading]   = useState(true);
   const [userId, setUserId]         = useState(null);
@@ -2267,7 +2283,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.6.3</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.6.4</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2277,17 +2293,16 @@ export default function App() {
             </div>
           </div>
 
-          {/* Partie variable du header — positionnement absolu par panneau,
-              le wrapper prend la hauteur du panneau visible (pas de vide parasite) */}
+          {/* Partie variable du header — chaque panneau est absolu quand inactif
+              (pas de hauteur parasite) mais translateX animé en sync avec le slide */}
           <div ref={headerSlideRef} style={{position:"relative",overflow:"hidden"}}>
 
             {/* Panneau 0 — Actifs : carte total + toolbar */}
             <div style={{
               position: tab===0 ? "relative" : "absolute",
               top:0, left:0, right:0,
-              opacity: tab===0 ? 1 : 0,
               pointerEvents: tab===0 ? "auto" : "none",
-              transition:"opacity 0.28s cubic-bezier(0.4,0,0.2,1)",
+              willChange:"transform",
             }}>
               <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
                 <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
@@ -2349,9 +2364,8 @@ export default function App() {
             <div style={{
               position: tab===1 ? "relative" : "absolute",
               top:0, left:0, right:0,
-              opacity: tab===1 ? 1 : 0,
               pointerEvents: tab===1 ? "auto" : "none",
-              transition:"opacity 0.28s cubic-bezier(0.4,0,0.2,1)",
+              willChange:"transform",
             }}>
               <div style={{padding:"8px 20px 10px",background:"#151210"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -2372,7 +2386,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Panneau 2 — Banque : rien */}
+            {/* Panneau 2 — Banque : rien (hauteur 0) */}
+            <div style={{position:"absolute",top:0,left:0,right:0,pointerEvents:"none",willChange:"transform"}}/>
 
           </div>
 
