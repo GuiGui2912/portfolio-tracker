@@ -1581,7 +1581,7 @@ export default function App() {
     slideRef.current.style.transform = `translateX(${-tab * w}px)`;
   }, [tab]);
   const [assets, setAssets]         = useState([]);
-  const [livePrices, setLivePrices] = useState<Record<string,{price:number,change:number}>>({});
+  const assetsRef = useRef<any[]>([]);
   const [dbLoading, setDbLoading]   = useState(true);
   const [userId, setUserId]         = useState(null);
   const [user, setUser]             = useState(null);
@@ -2062,14 +2062,18 @@ export default function App() {
 
 
 
+  // Garder assetsRef synchronisé pour les closures
+  useEffect(() => { assetsRef.current = assets; }, [assets]);
+
   useEffect(() => {
     // Ne pas fetch tant que Supabase charge — sinon les assets sont vides
     if (dbLoading) return;
 
     const fetchPrices = async () => {
       try {
-        const cryptoSymbols = assets.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
-        const stockSymbols  = assets.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
+        const currentAssets = assetsRef.current;
+        const cryptoSymbols = currentAssets.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
+        const stockSymbols  = currentAssets.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
         const mktCrypto     = allMarket.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
         const mktStock      = allMarket.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
         const allCrypto = [...new Set([...cryptoSymbols.split(','),...mktCrypto.split(',')].filter(Boolean))].join(',');
@@ -2081,15 +2085,22 @@ export default function App() {
         const cryptoPrices = cryptoRes.ok ? await cryptoRes.json() : {};
         const stockPrices  = stockRes.ok  ? await stockRes.json()  : {};
         const allPrices    = { ...cryptoPrices, ...stockPrices };
-        console.log('[fetchPrices] reçu:', Object.entries(allPrices).map(([k,v]:any)=>`${k}=${v.price}`).join(', '));
-        console.log('[fetchPrices] assets symbols:', assets.map(a=>a.symbol).join(', '));
-        // Stocker les prix live séparément pour éviter tout conflit avec setAssets
-        const newLive: Record<string,{price:number,change:number}> = {};
-        Object.entries(allPrices).forEach(([sym, p]: [string, any]) => {
-          newLive[sym] = { price: p.price, change: p.change24h ?? 0 };
-        });
-        console.log('[fetchPrices] livePrices:', Object.entries(newLive).map(([k,v])=>`${k}=${v.price}`).join(', '));
-        setLivePrices(newLive);
+        setAssets(prev => prev.map(a => {
+          const p = allPrices[a.symbol] || allPrices[a.symbol+'.PA'] || allPrices[a.symbol+'.L'];
+          if (!p) return a;
+          // Si le prix Yahoo est en USD et qu'on affiche en EUR, convertir
+          // Si déjà en EUR (actions européennes), ne pas convertir
+          const priceNative = p.price ?? a.price;
+          const priceCurrency = p.currency ?? 'USD';
+          // On stocke toujours en USD en interne — EUR_RATE s'applique à l'affichage via useFmt
+          // Donc si le prix est déjà en EUR, on le reconvertit en USD pour la cohérence
+          const priceUSD = priceCurrency === 'EUR' ? priceNative / EUR_RATE
+                         : priceCurrency === 'GBp' ? priceNative / 100 / 1.27  // pence → USD
+                         : priceNative;
+          const purchaseRef = a.purchase?.priceOriginal ?? a.purchase?.priceUSD ?? a.purchase?.price;
+          const realChange = purchaseRef ? ((priceUSD - purchaseRef) / purchaseRef) * 100 : (p.change24h ?? a.change);
+          return { ...a, price: priceUSD, change: Math.round(realChange * 100) / 100 };
+        }));
         setAllMarket(prev => prev.map(a => {
           const p = allPrices[a.symbol]; if (!p) return a;
           return { ...a, price: p.price ?? a.price, change: p.change24h ?? a.change };
@@ -2102,16 +2113,9 @@ export default function App() {
   }, [dbLoading]);
 
   const fmt         = useFmt(currency);
-  // Prix live : livePrices[symbol] en priorité, sinon le prix Supabase
-  const livePrice = (a: any) => livePrices[a.symbol]?.price ?? livePrices[a.symbol?.replace('.PA','')]?.price ?? a.price;
-  const liveChange = (a: any) => {
-    const p = livePrices[a.symbol] ?? livePrices[a.symbol?.replace('.PA','')];
-    if (!p) return a.change;
-    const purchaseRef = a.purchase?.priceOriginal ?? a.purchase?.priceUSD ?? a.purchase?.price;
-    return purchaseRef ? ((p.price - purchaseRef) / purchaseRef) * 100 : p.change;
-  };
-  const total       = assets.reduce((s,a)=>s+a.qty*livePrice(a),0);
-  const totalChange = assets.reduce((s,a)=>s+a.qty*livePrice(a)*(liveChange(a)/100),0);
+
+  const total       = assets.reduce((s,a)=>s+a.qty*a.price,0);
+  const totalChange = assets.reduce((s,a)=>s+a.qty*a.price*(a.change/100),0);
   const totalPct    = (totalChange/(total-totalChange))*100;
   const cryptoAssets= assets.filter(a=>a.type==="crypto");
   const stockAssets = assets.filter(a=>a.type!=="crypto");
@@ -2267,7 +2271,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.3</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.4</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2315,11 +2319,11 @@ export default function App() {
                       {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
                     </div>
                     <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
-                      {assets.map(a=><div key={a.id} style={{flex:a.qty*livePrice(a),background:a.color,opacity:0.75}}/>)}
+                      {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
                     </div>
                     <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
                       {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
-                        const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*livePrice(a),0);
+                        const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
                         return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {total>0?(val/total*100).toFixed(0):0}%</span></div>;
                       })}
                       <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
@@ -2428,7 +2432,7 @@ export default function App() {
                               <div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div>
                             </div>
                             {!dragMode&&<div style={{textAlign:"right",marginRight:8}}>
-                              <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*livePrice(a),0)}</div>
+                              <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*a.price,0)}</div>
                               <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}}>
                                 <span style={{color:pos?"#4ADE80":"#F87171",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{pos?"+":"-"}{fmt(Math.abs(scaleAmt),2)}</span>
                                 <span style={{color:pos?"#3ABB60":"#D86060",fontSize:9,fontFamily:"'DM Mono',monospace",opacity:0.8}}>{pos?"▲":"▼"}{Math.abs(scalePct).toFixed(2)}%</span>
@@ -2448,7 +2452,7 @@ export default function App() {
                   <div style={{margin:"0 20px 4px",background:"#1A1714",borderRadius:14,padding:"11px 14px",border:"1px solid #F7931A20"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:7,height:7,borderRadius:4,background:"#F7931A"}}/><span style={{color:"#8B8580",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Crypto</span><span style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>· {cryptoAssets.length}</span></div>
-                      <span style={{color:"#F0EDE8",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>{fmt(cryptoAssets.reduce((s,a)=>s+a.qty*livePrice(a),0),0)}</span>
+                      <span style={{color:"#F0EDE8",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>{fmt(cryptoAssets.reduce((s,a)=>s+a.qty*a.price,0),0)}</span>
                     </div>
                   </div>
                   {cryptoAssets.map(a=>{
@@ -2464,7 +2468,7 @@ export default function App() {
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                               <div><span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</span><div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div></div>
                               <div style={{textAlign:"right",marginRight:8}}>
-                                <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*livePrice(a),0)}</div>
+                                <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*a.price,0)}</div>
                                 <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}}>
                                   <span style={{color:pos?"#4ADE80":"#F87171",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{pos?"+":"-"}{fmt(Math.abs(scaleAmt),2)}</span>
                                   <span style={{color:pos?"#3ABB60":"#D86060",fontSize:9,fontFamily:"'DM Mono',monospace",opacity:0.8}}>{pos?"▲":"▼"}{Math.abs(scalePct).toFixed(2)}%</span>
@@ -2481,7 +2485,7 @@ export default function App() {
                   <div style={{margin:"0 20px 4px",background:"#1A1714",borderRadius:14,padding:"11px 14px",border:"1px solid #A3B8C220"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div style={{display:"flex",alignItems:"center",gap:7}}><div style={{width:7,height:7,borderRadius:4,background:"#A3B8C2"}}/><span style={{color:"#8B8580",fontSize:10,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Actions & ETF</span><span style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>· {stockAssets.length}</span></div>
-                      <span style={{color:"#F0EDE8",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>{fmt(stockAssets.reduce((s,a)=>s+a.qty*livePrice(a),0),0)}</span>
+                      <span style={{color:"#F0EDE8",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>{fmt(stockAssets.reduce((s,a)=>s+a.qty*a.price,0),0)}</span>
                     </div>
                   </div>
                   {stockAssets.map(a=>{
@@ -2504,7 +2508,7 @@ export default function App() {
                                 <div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div>
                               </div>
                               <div style={{textAlign:"right",marginRight:8}}>
-                                <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*livePrice(a),0)}</div>
+                                <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*a.price,0)}</div>
                                 <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}}>
                                   <span style={{color:pos?"#4ADE80":"#F87171",fontSize:10,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{pos?"+":"-"}{fmt(Math.abs(scaleAmt),2)}</span>
                                   <span style={{color:pos?"#3ABB60":"#D86060",fontSize:9,fontFamily:"'DM Mono',monospace",opacity:0.8}}>{pos?"▲":"▼"}{Math.abs(scalePct).toFixed(2)}%</span>
@@ -2550,7 +2554,7 @@ export default function App() {
                         <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
                       </div>
                       {!dragMktMode&&<div style={{textAlign:"right"}}>
-                        <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:14}}>{fmt(livePrice(a),2)}</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:14}}>{fmt(a.price,2)}</div>
                         <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
                       </div>}
                     </div>
