@@ -2043,7 +2043,7 @@ export default function App() {
 
   const saveAssetToDB = async (asset) => {
     if (!userId) return;
-    const row = { id:asset.id, user_id:userId, portfolio_id:activePortfolioId, symbol:asset.symbol, name:asset.name, type:asset.type, color:asset.color, current_price:0, price_change_24h:0, // prix toujours depuis Yahoo au chargement qty:asset.qty, purchase_data:asset.purchase??null };
+    const row = { id:asset.id, user_id:userId, portfolio_id:activePortfolioId, symbol:asset.symbol, name:asset.name, type:asset.type, color:asset.color, current_price:0, price_change_24h:0, qty:asset.qty, purchase_data:asset.purchase??null };
     const { error } = await supabase.from("assets").upsert(row, { onConflict: "id" });
     if (error) console.error("saveAsset:", error);
   };
