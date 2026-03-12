@@ -2082,14 +2082,18 @@ export default function App() {
         const allPrices    = { ...cryptoPrices, ...stockPrices };
         console.log('[fetchPrices] reçu:', Object.entries(allPrices).map(([k,v]:any)=>`${k}=${v.price}`).join(', '));
         console.log('[fetchPrices] assets symbols:', assets.map(a=>a.symbol).join(', '));
-        setAssets(prev => prev.map(a => {
-          // Cherche le prix avec le symbole exact ou avec suffixe .PA/.L/.DE etc
-          const p = allPrices[a.symbol] || allPrices[a.symbol+'.PA'] || allPrices[a.symbol+'.L']; if (!p) return a;
-          const newPrice = p.price ?? a.price;
-          const purchaseRef = a.purchase?.priceOriginal ?? a.purchase?.priceUSD ?? a.purchase?.price;
-          const realChange = purchaseRef ? ((newPrice - purchaseRef) / purchaseRef) * 100 : (p.change24h ?? a.change);
-          return { ...a, price: newPrice, change: Math.round(realChange * 100) / 100 };
-        }));
+        setAssets(prev => {
+          const updated = prev.map(a => {
+            const p = allPrices[a.symbol] || allPrices[a.symbol+'.PA'] || allPrices[a.symbol+'.L'];
+            if (!p) return a;
+            const newPrice = p.price ?? a.price;
+            const purchaseRef = a.purchase?.priceOriginal ?? a.purchase?.priceUSD ?? a.purchase?.price;
+            const realChange = purchaseRef ? ((newPrice - purchaseRef) / purchaseRef) * 100 : (p.change24h ?? a.change);
+            return { ...a, price: newPrice, change: Math.round(realChange * 100) / 100 };
+          });
+          console.log('[fetchPrices] après update:', updated.map(a=>`${a.symbol}=${a.price}`).join(', '));
+          return updated;
+        });
         setAllMarket(prev => prev.map(a => {
           const p = allPrices[a.symbol]; if (!p) return a;
           return { ...a, price: p.price ?? a.price, change: p.change24h ?? a.change };
@@ -2259,7 +2263,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.1</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.2</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
