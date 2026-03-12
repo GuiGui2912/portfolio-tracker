@@ -1029,7 +1029,7 @@ function AccIcon({ type, color }) {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.7"/><path d="M2 10h20" stroke={color} strokeWidth="1.7"/><path d="M6 15h4" stroke={color} strokeWidth="1.7" strokeLinecap="round"/></svg>;
 }
 
-function BankTab({ userId, connectTrigger = 0 }) {
+function BankTab({ userId, connectTrigger = 0, onRequestConnect, onConnectClose }) {
   const fmtEur = (v, dec=2) => Number(v||0).toLocaleString("fr-FR", {minimumFractionDigits:dec, maximumFractionDigits:dec}) + " €";
   const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("fr-FR", {day:"2-digit", month:"short"}); } catch { return d||""; } };
 
@@ -1058,7 +1058,7 @@ function BankTab({ userId, connectTrigger = 0 }) {
 
   // Réagir au trigger externe (bouton + Connecter en bas de l'app)
   useEffect(() => {
-    if (connectTrigger > 0) { setShowConnect(true); loadAspsps(); }
+    if (connectTrigger > 0) { if(onRequestConnect) onRequestConnect(); else setShowConnect(true); loadAspsps(); }
   }, [connectTrigger]);
 
   // Charger les données bancaires depuis l'API (sessions stockées en localStorage)
@@ -1609,6 +1609,31 @@ export default function App() {
   const [newPortfolioName, setNewPortfolioName]   = useState("");
   const [editingPortfolioId, setEditingPortfolioId] = useState(null);
   const [bankConnectTrigger, setBankConnectTrigger] = useState(0);
+  const [showBankConnectModal, setShowBankConnectModal] = useState(false);
+  const [aspspsApp, setAspspsApp]     = useState([]);
+  const [aspspSearchApp, setAspspSearchApp] = useState("");
+  const [connectingApp, setConnectingApp]   = useState(false);
+  const loadAspspsApp = async () => {
+    if (aspspsApp.length > 0) return;
+    try {
+      const r = await fetch("/api/banking?action=aspsps&country=FR");
+      const d = await r.json();
+      setAspspsApp(d.aspsps || []);
+    } catch {}
+  };
+  const connectBankApp = async (aspspName: string) => {
+    setConnectingApp(true);
+    try {
+      const r = await fetch(`/api/banking?action=start_auth&aspsp_name=${encodeURIComponent(aspspName)}&country=FR`);
+      const d = await r.json();
+      if (d.url) {
+        localStorage.setItem("eb_bank_name", aspspName);
+        window.location.href = d.url;
+      }
+    } catch(e: any) {
+      setConnectingApp(false);
+    }
+  };
   const [editingPortfolioName, setEditingPortfolioName] = useState("");
   const [portfolioName, setPortfolioName]     = useState("Mon Portefeuille");
   const [profileName, setProfileName]         = useState("");
@@ -2252,7 +2277,7 @@ export default function App() {
                     </div>
                     <div style={{display:"flex",flexDirection:"column"}}>
                       <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                      <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.0</div>
+                      <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.1</div>
                     </div>
                   </div>
                   <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2526,7 +2551,7 @@ export default function App() {
           )}
 
           {/* ── BANQUE ── */}
-          {pageIdx===2 && <BankTab userId={userId} connectTrigger={bankConnectTrigger}/>}
+          {pageIdx===2 && <BankTab userId={userId} connectTrigger={bankConnectTrigger} onRequestConnect={()=>{setShowBankConnectModal(true);loadAspspsApp();}}/>}
 
               </div>
             </div>
@@ -2534,6 +2559,19 @@ export default function App() {
           })}
           </div>
         </div>
+
+        {/* Modal connexion banque — rendu au niveau racine pour échapper au slide */}
+        {showBankConnectModal && (
+          <BankConnectModal
+            aspsps={aspspsApp}
+            aspspSearch={aspspSearchApp}
+            setAspspSearch={setAspspSearchApp}
+            connecting={connectingApp}
+            onClose={()=>setShowBankConnectModal(false)}
+            onSelect={(name)=>{setShowBankConnectModal(false);connectBankApp(name);}}
+            spinStyle=""
+          />
+        )}
 
         {/* Ghost drag ACTIFS */}
         {assetGhostItem && (
