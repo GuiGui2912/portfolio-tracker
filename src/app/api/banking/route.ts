@@ -68,13 +68,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ aspsps: list });
     }
 
-    // Lister les sessions existantes de l'app (comptes déjà liés)
-    if (action === "list_sessions") {
-      const data = await ebFetch(`/sessions`, token);
-      console.log("[EB] sessions list:", JSON.stringify(data).slice(0, 500));
-      return NextResponse.json(data);
-    }
-
     if (action === "start_auth") {
       const aspsp_name = searchParams.get("aspsp_name");
       const country = searchParams.get("country") || "FR";
