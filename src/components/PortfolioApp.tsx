@@ -1937,8 +1937,8 @@ export default function App() {
       if (data && data.length > 0) {
         const loaded = data.map(row => ({
           id: row.id, symbol: row.symbol, name: row.name, type: row.type,
-          qty: Number(row.qty), price: 0, change: 0, color: row.color,
-          dividends: [], histories: buildHistories(0),
+          qty: Number(row.qty), price: Number(row.current_price)||0, change: Number(row.price_change_24h??0), color: row.color,
+          dividends: [], histories: buildHistories(Number(row.current_price)||0),
           purchase: row.purchase_data ?? null,
         }));
         setAssets(loaded);
@@ -1968,8 +1968,8 @@ export default function App() {
         if (data && data.length > 0) {
           const loaded = data.map(row => ({
             id:row.id, symbol:row.symbol, name:row.name, type:row.type,
-            qty:Number(row.qty), price:0, change:0, color:row.color,
-            dividends:[], histories:buildHistories(0),
+            qty:Number(row.qty), price:Number(row.current_price)||0, change:Number(row.price_change_24h??0), color:row.color,
+            dividends:[], histories:buildHistories(Number(row.current_price)||0),
             purchase:row.purchase_data??null,
           }));
           setAssets(loaded); setChartAsset(loaded[0]);
@@ -2000,8 +2000,8 @@ export default function App() {
     if (data && data.length > 0) {
       const loaded = data.map(row => ({
         id:row.id, symbol:row.symbol, name:row.name, type:row.type,
-        qty:Number(row.qty), price:0, change:0,
-        color:row.color, dividends:[], histories:buildHistories(0),
+        qty:Number(row.qty), price:Number(row.current_price)||0, change:Number(row.price_change_24h??0),
+        color:row.color, dividends:[], histories:buildHistories(Number(row.current_price)||0),
         purchase:row.purchase_data??null,
       }));
       setAssets(loaded); setChartAsset(loaded[0]);
@@ -2043,7 +2043,7 @@ export default function App() {
 
   const saveAssetToDB = async (asset) => {
     if (!userId) return;
-    const row = { id:asset.id, user_id:userId, portfolio_id:activePortfolioId, symbol:asset.symbol, name:asset.name, type:asset.type, color:asset.color, current_price:0, price_change_24h:0, qty:asset.qty, purchase_data:asset.purchase??null };
+    const row = { id:asset.id, user_id:userId, portfolio_id:activePortfolioId, symbol:asset.symbol, name:asset.name, type:asset.type, color:asset.color, current_price:asset.price, price_change_24h:asset.change, qty:asset.qty, purchase_data:asset.purchase??null };
     const { error } = await supabase.from("assets").upsert(row, { onConflict: "id" });
     if (error) console.error("saveAsset:", error);
   };
@@ -2080,6 +2080,7 @@ export default function App() {
         const cryptoPrices = cryptoRes.ok ? await cryptoRes.json() : {};
         const stockPrices  = stockRes.ok  ? await stockRes.json()  : {};
         const allPrices    = { ...cryptoPrices, ...stockPrices };
+        console.log('[fetchPrices] reçu:', Object.entries(allPrices).map(([k,v]:any)=>`${k}=${v.price}`).join(', '));
         setAssets(prev => prev.map(a => {
           const p = allPrices[a.symbol]; if (!p) return a;
           const newPrice = p.price ?? a.price;
@@ -2256,7 +2257,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.9</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
