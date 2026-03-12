@@ -1549,18 +1549,29 @@ function BankConnectModal({aspsps, aspspSearch, setAspspSearch, connecting, onCl
 export default function App() {
   const [tab, setTab]               = useState(0);
   const slideRef = useRef<HTMLDivElement>(null);
+  const headerSlideRef = useRef<HTMLDivElement>(null);
   const swipeActive = useRef(false);
-  const tabRef = useRef(0); // mirror de tab pour les closures touch
+  const tabRef = useRef(0);
 
   const getW = () => slideRef.current?.parentElement?.offsetWidth || window.innerWidth;
+
+  const animateHeader = (progress: number, transition: string) => {
+    const el = headerSlideRef.current;
+    if (!el) return;
+    const w = getW();
+    el.style.transition = transition;
+    el.style.transform = `translateX(${-progress * w}px)`;
+  };
 
   const goToTab = (next: number, animated = true) => {
     tabRef.current = next;
     setTab(next);
     if (!slideRef.current) return;
     const w = getW();
-    slideRef.current.style.transition = animated ? "transform 0.28s cubic-bezier(0.4,0,0.2,1)" : "none";
+    const tr = animated ? "transform 0.28s cubic-bezier(0.4,0,0.2,1)" : "none";
+    slideRef.current.style.transition = tr;
     slideRef.current.style.transform = `translateX(${-next * w}px)`;
+    animateHeader(next, tr);
   };
 
   const onSwipeStart = (e: React.TouchEvent) => {
@@ -1579,6 +1590,7 @@ export default function App() {
     if ((tabRef.current === 0 && dx > 0) || (tabRef.current === 2 && dx < 0)) offset = dx * 0.2;
     slideRef.current.style.transition = "none";
     slideRef.current.style.transform = `translateX(${base + offset}px)`;
+    animateHeader(tabRef.current - offset / w, "none");
   };
 
   const onSwipeEnd = (e: React.TouchEvent) => {
@@ -1594,9 +1606,11 @@ export default function App() {
   useEffect(() => {
     tabRef.current = tab;
     if (!slideRef.current) return;
+    const tr = "transform 0.28s cubic-bezier(0.4,0,0.2,1)";
     const w = getW();
-    slideRef.current.style.transition = "transform 0.28s cubic-bezier(0.4,0,0.2,1)";
+    slideRef.current.style.transition = tr;
     slideRef.current.style.transform = `translateX(${-tab * w}px)`;
+    animateHeader(tab, tr);
   }, [tab]);
   const [assets, setAssets]         = useState([]);
   const [dbLoading, setDbLoading]   = useState(true);
@@ -2267,90 +2281,95 @@ export default function App() {
             </div>
           </div>
 
-          {/* Carte Valeur Totale — onglet Actifs uniquement */}
-          {tab===0 && (
-            <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
-              <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
-                <div>
-                  <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
-                </div>
-                <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
-                  {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
-                </div>
-              </div>
-              <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
-                {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
-              </div>
-              <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
-                {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
-              </div>
-              <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
-                {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
-                  const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
-                  return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {total>0?(val/total*100).toFixed(0):0}%</span></div>;
-                })}
-                <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
-                  <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
-                  <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Partie variable du header : carte total + toolbars
+              → conteneur 300% de large qui slide en sync avec le contenu */}
+          <div style={{overflow:"hidden",position:"relative"}}>
+            <div ref={headerSlideRef} style={{display:"flex",width:"300%",willChange:"transform"}}>
 
-          {/* Toolbar Actifs */}
-          {tab===0 && (
-            <div style={{padding:"8px 20px 6px",background:"#151210"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
-                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                    {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                    ))}
+              {/* Colonne 0 — Actifs : carte total + toolbar */}
+              <div style={{width:"33.333%",flexShrink:0}}>
+                <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
+                  <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
+                    <div>
+                      <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
+                      <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
+                    </div>
+                    <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
+                      {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
+                    </div>
+                  </div>
+                  <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
+                    {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
+                  </div>
+                  <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
+                    {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
+                  </div>
+                  <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
+                    {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
+                      const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
+                      return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {total>0?(val/total*100).toFixed(0):0}%</span></div>;
+                    })}
+                    <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
+                      <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
+                      <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
+                    </div>
                   </div>
                 </div>
-                <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>setDragMode(d=>!d)} style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
-                  </button>
-                  <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
-                  </button>
-                </div>
-              </div>
-              <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
-                {TIME_SCALES.map(ts=>{
-                  const active=listScale===ts.label;
-                  return <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:active?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>;
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Toolbar Marchés */}
-          {tab===1 && (
-            <div style={{padding:"8px 20px 10px",background:"#151210"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
-                  <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                    {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                    ))}
+                <div style={{padding:"8px 20px 6px",background:"#151210"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
+                      <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                        {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
+                          <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>setDragMode(d=>!d)} style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
+                      </button>
+                      <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                      </button>
+                    </div>
                   </div>
-                  <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
-                  <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
+                  <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
+                    {TIME_SCALES.map(ts=>{
+                      const active=listScale===ts.label;
+                      return <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:active?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>;
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
 
-        </div>{/* fin header fixe */}
+              {/* Colonne 1 — Marchés : toolbar */}
+              <div style={{width:"33.333%",flexShrink:0}}>
+                <div style={{padding:"8px 20px 10px",background:"#151210"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
+                      <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                        {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
+                          <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
+                        ))}
+                      </div>
+                      <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
+                      <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Colonne 2 — Banque : pas de toolbar */}
+              <div style={{width:"33.333%",flexShrink:0}}/>
+
+            </div>
+          </div>
 
         {/* ═══════════════════════════════════════════
             ZONE SLIDE — 3 colonnes, seul le contenu
