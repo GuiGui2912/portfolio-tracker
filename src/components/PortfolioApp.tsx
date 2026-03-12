@@ -1029,7 +1029,7 @@ function AccIcon({ type, color }) {
   return <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="14" rx="2" stroke={color} strokeWidth="1.7"/><path d="M2 10h20" stroke={color} strokeWidth="1.7"/><path d="M6 15h4" stroke={color} strokeWidth="1.7" strokeLinecap="round"/></svg>;
 }
 
-function BankTab({ userId, connectTrigger = 0, onRequestConnect, onConnectClose }) {
+function BankTab({ userId, connectTrigger = 0 }) {
   const fmtEur = (v, dec=2) => Number(v||0).toLocaleString("fr-FR", {minimumFractionDigits:dec, maximumFractionDigits:dec}) + " €";
   const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("fr-FR", {day:"2-digit", month:"short"}); } catch { return d||""; } };
 
@@ -1058,7 +1058,7 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect, onConnectClose 
 
   // Réagir au trigger externe (bouton + Connecter en bas de l'app)
   useEffect(() => {
-    if (connectTrigger > 0) { if(onRequestConnect) onRequestConnect(); else setShowConnect(true); loadAspsps(); }
+    if (connectTrigger > 0) { setShowConnect(true); loadAspsps(); }
   }, [connectTrigger]);
 
   // Charger les données bancaires depuis l'API (sessions stockées en localStorage)
@@ -1609,31 +1609,6 @@ export default function App() {
   const [newPortfolioName, setNewPortfolioName]   = useState("");
   const [editingPortfolioId, setEditingPortfolioId] = useState(null);
   const [bankConnectTrigger, setBankConnectTrigger] = useState(0);
-  const [showBankConnectModal, setShowBankConnectModal] = useState(false);
-  const [aspspsApp, setAspspsApp]     = useState([]);
-  const [aspspSearchApp, setAspspSearchApp] = useState("");
-  const [connectingApp, setConnectingApp]   = useState(false);
-  const loadAspspsApp = async () => {
-    if (aspspsApp.length > 0) return;
-    try {
-      const r = await fetch("/api/banking?action=aspsps&country=FR");
-      const d = await r.json();
-      setAspspsApp(d.aspsps || []);
-    } catch {}
-  };
-  const connectBankApp = async (aspspName: string) => {
-    setConnectingApp(true);
-    try {
-      const r = await fetch(`/api/banking?action=start_auth&aspsp_name=${encodeURIComponent(aspspName)}&country=FR`);
-      const d = await r.json();
-      if (d.url) {
-        localStorage.setItem("eb_bank_name", aspspName);
-        window.location.href = d.url;
-      }
-    } catch(e: any) {
-      setConnectingApp(false);
-    }
-  };
   const [editingPortfolioName, setEditingPortfolioName] = useState("");
   const [portfolioName, setPortfolioName]     = useState("Mon Portefeuille");
   const [profileName, setProfileName]         = useState("");
@@ -2247,7 +2222,8 @@ export default function App() {
       `}</style>
       <div style={{width:"100%",maxWidth:430,background:"#151210",borderRadius:0,overflow:"hidden",height:"100vh",position:"relative",display:"flex",flexDirection:"column"}}>
 
-        {/* ── BARRE AVATAR FIXE — ne slide pas ── */}
+        {/* 3 pages complètes qui slidenet */}
+        {/* ── BARRE AVATAR FIXE ── */}
         <div style={{flexShrink:0,background:"#151210"}}>
           <div style={{padding:"12px 20px 0",paddingTop:"calc(12px + env(safe-area-inset-top, 0px))",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -2259,7 +2235,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.3</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2270,106 +2246,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── HEADER VARIABLE FIXE — carte total + toolbars, ne slide pas ── */}
-        <div style={{flexShrink:0,background:"#151210",position:"relative"}}>
-
-          {/* Panneau 0 : carte total + toolbar actifs */}
-          <div style={{
-            position: tab===0 ? "relative" : "absolute",
-            top:0, left:0, right:0,
-            opacity: tab===0 ? 1 : 0,
-            pointerEvents: tab===0 ? "auto" : "none",
-            transition:"opacity 0.2s ease",
-          }}>
-            <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
-              <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
-                <div>
-                  <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
-                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
-                </div>
-                <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
-                  {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
-                </div>
-              </div>
-              <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
-                {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
-              </div>
-              <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
-                {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
-              </div>
-              <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
-                {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
-                  const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
-                  return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {total>0?(val/total*100).toFixed(0):0}%</span></div>;
-                })}
-                <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
-                  <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
-                  <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
-                </div>
-              </div>
-            </div>
-            <div style={{padding:"8px 20px 6px",background:"#151210"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
-                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                    {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>setDragMode(d=>!d)} style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
-                  </button>
-                  <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
-                  </button>
-                </div>
-              </div>
-              <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
-                {TIME_SCALES.map(ts=>{
-                  const active=listScale===ts.label;
-                  return <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:active?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>;
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Panneau 1 : toolbar marchés */}
-          <div style={{
-            position: tab===1 ? "relative" : "absolute",
-            top:0, left:0, right:0,
-            opacity: tab===1 ? 1 : 0,
-            pointerEvents: tab===1 ? "auto" : "none",
-            transition:"opacity 0.2s ease",
-          }}>
-            <div style={{padding:"8px 20px 10px",background:"#151210"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
-                  <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                    {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                    ))}
-                  </div>
-                  <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
-                  <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Panneau 2 : banque — rien (hauteur 0) */}
-          <div style={{position:"absolute",top:0,left:0,right:0,pointerEvents:"none"}}/>
-
-        </div>
-
-        {/* 3 pages complètes qui slidenet */}
         <div style={{flex:1,overflow:"hidden",position:"relative",minHeight:0}}>
         <div ref={slideRef} style={{
           display:"flex",
@@ -2382,12 +2258,97 @@ export default function App() {
           {[0,1,2].map(pageIdx => {
             const isActive = pageIdx === tab;
             return (
-            <div key={pageIdx} style={{width:"33.333%",height:"100%",display:"flex",flexDirection:"column",flexShrink:0,overflow:pageIdx===2?"clip":"hidden"}}
+            <div key={pageIdx} style={{width:"33.333%",height:"100%",display:"flex",flexDirection:"column",flexShrink:0,overflow:"hidden"}}
               onTouchStart={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeStart(e); }}
               onTouchMove={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeMove(e); }}
               onTouchEnd={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeEnd(e); }}>
 
+              {/* Header commun à chaque page (sans barre avatar — fixe au-dessus) */}
+              <div style={{flexShrink:0}}>
 
+                {/* Total card — uniquement sur pages 0 et 1 */}
+                {pageIdx !== 2 && (
+                  <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
+                    <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
+                      <div>
+                        <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
+                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
+                      </div>
+                      <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
+                        {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
+                      </div>
+                    </div>
+                    <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
+                      {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
+                    </div>
+                    <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
+                      {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
+                    </div>
+                    <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
+                      {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
+                        const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
+                        return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {total>0?(val/total*100).toFixed(0):0}%</span></div>;
+                      })}
+                      <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
+                        <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
+                        <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Toolbar Actifs — page 0 */}
+                {pageIdx===0 && (
+                  <div style={{padding:"8px 20px 6px",background:"#151210"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
+                        <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                          {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
+                            <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={()=>setDragMode(d=>!d)} style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
+                        </button>
+                        <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
+                      {TIME_SCALES.map(ts=>{
+                        const active=listScale===ts.label;
+                        return <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:active?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>;
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Toolbar Marchés — page 1 */}
+                {pageIdx===1 && (
+                  <div style={{padding:"8px 20px 10px",background:"#151210"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
+                        <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                          {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
+                            <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
+                          ))}
+                        </div>
+                        <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
+                        <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>{/* fin header */}
 
               {/* Contenu scrollable de chaque page */}
               <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}>
@@ -2569,7 +2530,7 @@ export default function App() {
           )}
 
           {/* ── BANQUE ── */}
-          {pageIdx===2 && <BankTab userId={userId} connectTrigger={bankConnectTrigger} onRequestConnect={()=>{setShowBankConnectModal(true);loadAspspsApp();}}/>}
+          {pageIdx===2 && <BankTab userId={userId} connectTrigger={bankConnectTrigger}/>}
 
               </div>
             </div>
@@ -2577,19 +2538,6 @@ export default function App() {
           })}
           </div>
         </div>
-
-        {/* Modal connexion banque — rendu au niveau racine pour échapper au slide */}
-        {showBankConnectModal && (
-          <BankConnectModal
-            aspsps={aspspsApp}
-            aspspSearch={aspspSearchApp}
-            setAspspSearch={setAspspSearchApp}
-            connecting={connectingApp}
-            onClose={()=>setShowBankConnectModal(false)}
-            onSelect={(name)=>{setShowBankConnectModal(false);connectBankApp(name);}}
-            spinStyle=""
-          />
-        )}
 
         {/* Ghost drag ACTIFS */}
         {assetGhostItem && (
