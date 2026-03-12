@@ -2240,136 +2240,130 @@ export default function App() {
       `}</style>
       <div style={{width:"100%",maxWidth:430,background:"#151210",borderRadius:0,overflow:"hidden",height:"100vh",position:"relative",display:"flex",flexDirection:"column"}}>
 
-        {/* 3 pages complètes qui slidenet */}
-        <div style={{flex:1,overflow:"hidden",position:"relative",minHeight:0}}>
-        <div ref={slideRef} style={{
-          display:"flex",
-          width:"300%",
-          height:"100%",
-          willChange:"transform",
-        }}>
+        {/* ═══════════════════════════════════════════
+            HEADER FIXE — commun à tous les onglets,
+            hors du slide pour éviter tout décalage
+        ═══════════════════════════════════════════ */}
+        <div style={{flexShrink:0}}>
 
-          {/* ── PAGE helper: header commun ── */}
-          {[0,1,2].map(pageIdx => {
-            const isActive = pageIdx === tab;
-            return (
-            <div key={pageIdx} style={{width:"33.333%",height:"100%",display:"flex",flexDirection:"column",flexShrink:0,overflow:"hidden"}}
-              onTouchStart={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeStart(e); }}
-              onTouchMove={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeMove(e); }}
-              onTouchEnd={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeEnd(e); }}>
+          {/* Ligne avatar + nom portefeuille + devise */}
+          <div style={{padding:"12px 20px 0",paddingTop:"calc(12px + env(safe-area-inset-top, 0px))",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{position:"relative"}}>
+                <div data-profile-menu onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
+                  {user?.email?.[0]?.toUpperCase()??"A"}
+                </div>
+                <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
+              </div>
+              <div style={{display:"flex",flexDirection:"column"}}>
+                <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.6.1</div>
+              </div>
+            </div>
+            <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
+              {["USD","EUR"].map(c=>(
+                <button key={c} onClick={()=>setCurrency(c)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:currency===c?"#C8A96E":"transparent",color:currency===c?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{c}</button>
+              ))}
+            </div>
+          </div>
 
-              {/* Header commun à chaque page */}
-              <div style={{flexShrink:0}}>
-                <div style={{padding:"12px 20px 0",paddingTop:"calc(12px + env(safe-area-inset-top, 0px))",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{position:"relative"}}>
-                      <div data-profile-menu onClick={()=>setShowProfileMenu(m=>!m)} style={{width:36,height:36,borderRadius:18,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:"#111009",cursor:"pointer",userSelect:"none"}}>
-                        {user?.email?.[0]?.toUpperCase()??"A"}
-                      </div>
-                      <div className="live-dot" style={{position:"absolute",bottom:0,right:0,width:8,height:8,borderRadius:4,background:"#4ADE80",border:"2px solid #151210"}}/>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column"}}>
-                      <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                      <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.6.0</div>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
-                    {["USD","EUR"].map(c=>(
-                      <button key={c} onClick={()=>setCurrency(c)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:currency===c?"#C8A96E":"transparent",color:currency===c?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{c}</button>
+          {/* Carte Valeur Totale — onglet Actifs uniquement */}
+          {tab===0 && (
+            <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
+              <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
+                <div>
+                  <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
+                  <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
+                </div>
+                <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
+                  {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
+                </div>
+              </div>
+              <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
+                {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
+              </div>
+              <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
+                {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
+              </div>
+              <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
+                {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
+                  const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
+                  return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {total>0?(val/total*100).toFixed(0):0}%</span></div>;
+                })}
+                <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
+                  <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
+                  <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Toolbar Actifs */}
+          {tab===0 && (
+            <div style={{padding:"8px 20px 6px",background:"#151210"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
+                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                    {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
+                      <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
                     ))}
                   </div>
                 </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>setDragMode(d=>!d)} style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
+                  </button>
+                  <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
+                {TIME_SCALES.map(ts=>{
+                  const active=listScale===ts.label;
+                  return <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:active?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>;
+                })}
+              </div>
+            </div>
+          )}
 
-                {/* Total card — uniquement sur pages 0 et 1 */}
-                {pageIdx !== 2 && (
-                  <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
-                    <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
-                      <div>
-                        <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
-                      </div>
-                      <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
-                        {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
-                      </div>
-                    </div>
-                    <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
-                      {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
-                    </div>
-                    <div style={{marginTop:14,display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
-                      {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
-                    </div>
-                    <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
-                      {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
-                        const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
-                        return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {total>0?(val/total*100).toFixed(0):0}%</span></div>;
-                      })}
-                      <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
-                        <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
-                        <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
-                      </div>
-                    </div>
+          {/* Toolbar Marchés */}
+          {tab===1 && (
+            <div style={{padding:"8px 20px 10px",background:"#151210"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
+                  <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
+                    {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
+                      <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
+                    ))}
                   </div>
-                )}
+                  <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
+                  <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
+                </div>
+              </div>
+            </div>
+          )}
 
-                {/* Toolbar Actifs — page 0 */}
-                {pageIdx===0 && (
-                  <div style={{padding:"8px 20px 6px",background:"#151210"}}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <span style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>Vue :</span>
-                        <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                          {[["grouped","Regroupé"],["split","Séparé"]].map(([v,l])=>(
-                            <button key={v} onClick={()=>setViewMode(v)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:viewMode===v?"#252015":"transparent",color:viewMode===v?"#C8A96E":"#5A5550",fontSize:10,fontWeight:viewMode===v?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                          ))}
-                        </div>
-                      </div>
-                      <div style={{display:"flex",gap:6}}>
-                        <button onClick={()=>setDragMode(d=>!d)} style={{width:34,height:34,borderRadius:11,background:dragMode?"#C8A96E20":"#1A1714",border:`1px solid ${dragMode?"#C8A96E60":"#252015"}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.2s"}}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke={dragMode?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"/></svg>
-                        </button>
-                        <button className="add-btn" onClick={()=>setShowAddModal(true)} style={{width:34,height:34,borderRadius:11,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px #C8A96E30"}}>
-                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#111009" strokeWidth="2.5" strokeLinecap="round"/></svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div style={{display:"flex",gap:4,background:"#1A1714",borderRadius:13,padding:3,border:"1px solid #1E1B16"}}>
-                      {TIME_SCALES.map(ts=>{
-                        const active=listScale===ts.label;
-                        return <button key={ts.label} onClick={()=>setListScale(ts.label)} style={{flex:1,padding:"5px 0",border:active?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:active?"#C8A96E20":"transparent",color:active?"#C8A96E":"#4A4540",borderRadius:10,fontSize:10,fontWeight:active?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>;
-                      })}
-                    </div>
-                  </div>
-                )}
+        </div>{/* fin header fixe */}
 
-                {/* Toolbar Marchés — page 1 */}
-                {pageIdx===1 && (
-                  <div style={{padding:"8px 20px 10px",background:"#151210"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <div className="live-dot" style={{width:6,height:6,borderRadius:3,background:"#4ADE80"}}/>
-                        <span style={{color:"#4A4540",fontSize:11,letterSpacing:1.5,textTransform:"uppercase",fontFamily:"'DM Mono',monospace"}}>Prix en direct</span>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:1}}>
-                          {[["all","Tout"],["crypto","Crypto"],["stock","Actions"]].map(([v,l])=>(
-                            <button key={v} onClick={()=>setMktFilter(v)} style={{padding:"3px 10px",borderRadius:16,border:"none",cursor:"pointer",background:mktFilter===v?"#C8A96E":"transparent",color:mktFilter===v?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{l}</button>
-                          ))}
-                        </div>
-                        <button onClick={()=>setDragMktMode(d=>!d)} style={{background:dragMktMode?"#C8A96E20":"transparent",border:`1px solid ${dragMktMode?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"5px 9px",color:dragMktMode?"#C8A96E":"#5A5550",fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>⠿</button>
-                        <button onClick={()=>{setShowMktAdd(s=>!s);setMktAddError("");}} style={{background:"#C8A96E20",border:"1px solid #C8A96E40",borderRadius:10,padding:"5px 11px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Ajouter</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>{/* fin header */}
+        {/* ═══════════════════════════════════════════
+            ZONE SLIDE — 3 colonnes, seul le contenu
+            scrollable glisse. Header reste immobile.
+        ═══════════════════════════════════════════ */}
+        <div style={{flex:1,overflow:"hidden",position:"relative",minHeight:0}}>
+          <div ref={slideRef} style={{display:"flex",width:"300%",height:"100%",willChange:"transform"}}>
 
-              {/* Contenu scrollable de chaque page */}
-              <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}>
-
-          {/* ── ACTIFS ── */}
-          {pageIdx===0 && (
-            <div>
+            {/* ── PAGE 0 : ACTIFS ── */}
+            <div style={{width:"33.333%",height:"100%",flexShrink:0,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}
+              onTouchStart={e=>{ if(dragMode||dragMktMode) return; onSwipeStart(e); }}
+              onTouchMove={e=>{ if(dragMode||dragMktMode) return; onSwipeMove(e); }}
+              onTouchEnd={e=>{ if(dragMode||dragMktMode) return; onSwipeEnd(e); }}>
               {viewMode==="grouped" ? (
                 <div ref={assetsListRef} onTouchMove={handleAssetTouchMove} onTouchEnd={handleAssetTouchEnd}>
                 {assets.map((a,idx)=>{
@@ -2502,56 +2496,60 @@ export default function App() {
                 </>
               )}
             </div>
-          )}
 
-          {/* ── MARCHÉS ── */}
-          {pageIdx===1 && (
-            <div style={{padding:"0 20px", userSelect:"none", WebkitUserSelect:"none"}}
-              ref={mktListRef}
-              onTouchMove={handleMktTouchMove}
-              onTouchEnd={handleMktTouchEnd}>
-              {mktList.map((a,idx)=>{
-                const realIdx=allMarket.indexOf(a);
-                const dbEntry=SYMBOL_DATABASE.find(s=>s.symbol===a.symbol);
-                const displayName=(a.name&&a.name!==a.symbol)?a.name:(dbEntry?.name||a.symbol);
-                const isDragging = mktDraggingIdx === realIdx;
-                const showBarBefore = dragMktMode && mktDragOverIdx === realIdx && mktDraggingIdx !== realIdx;
-                const isLast = idx === mktList.length - 1;
-                const showBarAfter = dragMktMode && isLast && mktDragOverIdx !== null && mktDragOverIdx > realIdx && mktDraggingIdx !== realIdx;
-                return (
-                  <div key={a.symbol}>
-                    {showBarBefore && <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 0",boxShadow:"0 0 6px #C8A96E80"}}/>}
-                    <div data-mkt-item={realIdx} onTouchStart={e=>handleMktTouchStart(e,realIdx)}
-                      onTouchMove={e=>{ if(mktDragActive.current) handleMktTouchMove(e); }}
-                      onTouchEnd={e=>{ if(mktDragActive.current){e.stopPropagation();handleMktTouchEnd();} }}
-                      onTouchCancel={handleMktTouchEnd}
-                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"default",opacity:isDragging?0.25:1,transition:"opacity 0.1s",userSelect:"none",WebkitUserSelect:"none",touchAction:dragMktMode?"none":"auto"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:11}}>
-                        {dragMktMode&&<div style={{color:isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
-                        <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
-                        <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
+            {/* ── PAGE 1 : MARCHÉS ── */}
+            <div style={{width:"33.333%",height:"100%",flexShrink:0,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}
+              onTouchStart={e=>{ if(dragMktMode) return; onSwipeStart(e); }}
+              onTouchMove={e=>{ if(dragMktMode) return; onSwipeMove(e); }}
+              onTouchEnd={e=>{ if(dragMktMode) return; onSwipeEnd(e); }}>
+              <div style={{padding:"0 20px",userSelect:"none",WebkitUserSelect:"none"}}
+                ref={mktListRef}
+                onTouchMove={handleMktTouchMove}
+                onTouchEnd={handleMktTouchEnd}>
+                {mktList.map((a,idx)=>{
+                  const realIdx=allMarket.indexOf(a);
+                  const dbEntry=SYMBOL_DATABASE.find(s=>s.symbol===a.symbol);
+                  const displayName=(a.name&&a.name!==a.symbol)?a.name:(dbEntry?.name||a.symbol);
+                  const isDragging = mktDraggingIdx === realIdx;
+                  const showBarBefore = dragMktMode && mktDragOverIdx === realIdx && mktDraggingIdx !== realIdx;
+                  const isLast = idx === mktList.length - 1;
+                  const showBarAfter = dragMktMode && isLast && mktDragOverIdx !== null && mktDragOverIdx > realIdx && mktDraggingIdx !== realIdx;
+                  return (
+                    <div key={a.symbol}>
+                      {showBarBefore && <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 0",boxShadow:"0 0 6px #C8A96E80"}}/>}
+                      <div data-mkt-item={realIdx} onTouchStart={e=>handleMktTouchStart(e,realIdx)}
+                        onTouchMove={e=>{ if(mktDragActive.current) handleMktTouchMove(e); }}
+                        onTouchEnd={e=>{ if(mktDragActive.current){e.stopPropagation();handleMktTouchEnd();} }}
+                        onTouchCancel={handleMktTouchEnd}
+                        style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"default",opacity:isDragging?0.25:1,transition:"opacity 0.1s",userSelect:"none",WebkitUserSelect:"none",touchAction:dragMktMode?"none":"auto"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:11}}>
+                          {dragMktMode&&<div style={{color:isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
+                          <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
+                          <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
+                        </div>
+                        {!dragMktMode&&<div style={{textAlign:"right"}}>
+                          <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:14}}>{fmt(a.price,2)}</div>
+                          <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
+                        </div>}
                       </div>
-                      {!dragMktMode&&<div style={{textAlign:"right"}}>
-                        <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:14}}>{fmt(a.price,2)}</div>
-                        <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
-                      </div>}
+                      {showBarAfter && <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 0",boxShadow:"0 0 6px #C8A96E80"}}/>}
                     </div>
-                    {showBarAfter && <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 0",boxShadow:"0 0 6px #C8A96E80"}}/>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ── BANQUE ── */}
-          {pageIdx===2 && <BankTab userId={userId} connectTrigger={bankConnectTrigger}/>}
-
+                  );
+                })}
               </div>
             </div>
-            );
-          })}
+
+            {/* ── PAGE 2 : BANQUE ── */}
+            <div style={{width:"33.333%",height:"100%",flexShrink:0,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}
+              onTouchStart={onSwipeStart}
+              onTouchMove={onSwipeMove}
+              onTouchEnd={onSwipeEnd}>
+              <BankTab userId={userId} connectTrigger={bankConnectTrigger}/>
+            </div>
+
           </div>
         </div>
+
 
         {/* Ghost drag ACTIFS */}
         {assetGhostItem && (
