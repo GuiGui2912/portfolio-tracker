@@ -2064,6 +2064,9 @@ export default function App() {
 
 
   useEffect(() => {
+    // Ne pas fetch tant que Supabase charge — sinon les assets sont vides
+    if (dbLoading) return;
+
     const fetchPrices = async () => {
       try {
         const cryptoSymbols = assets.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
@@ -2095,7 +2098,7 @@ export default function App() {
     fetchPrices();
     const interval = setInterval(fetchPrices, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [dbLoading]);
 
   const fmt         = useFmt(currency);
   const total       = assets.reduce((s,a)=>s+a.qty*a.price,0);
@@ -2255,7 +2258,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.7</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.8</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
