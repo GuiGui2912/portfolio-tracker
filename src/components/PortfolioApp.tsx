@@ -2255,7 +2255,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.5</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2286,8 +2286,8 @@ export default function App() {
               {/* Header commun à chaque page (sans barre avatar — fixe au-dessus) */}
               <div style={{flexShrink:0}}>
 
-                {/* Total card — uniquement sur pages 0 et 1 */}
-                {pageIdx !== 2 && (
+                {/* Total card — uniquement sur page 0 (actifs) */}
+                {pageIdx === 0 && (
                   <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
                     <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
