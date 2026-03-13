@@ -16,7 +16,7 @@ const supabase = createClient(
   }
 );
 
-const EUR_RATE = 0.92;
+const EUR_RATE = 1/1.1469; // 1 USD = 0.872 EUR (taux mars 2026)
 
 const ASSET_INFO_STATIC = {
   BTC:   { sector:"Crypto",            yield:"0%",   beta:"—",   description:"Bitcoin est la première cryptomonnaie décentralisée, créée en 2009. Protocole blockchain de preuve de travail.", exchange:"Crypto",  country:"—"  },
@@ -1584,7 +1584,7 @@ export default function App() {
   }, [tab]);
   const [assets, setAssets]         = useState([]);
   const assetsRef = useRef<any[]>([]);
-  const [eurUsd, setEurUsd]           = useState(EUR_RATE > 1 ? EUR_RATE : 1/EUR_RATE); // 1 EUR = x USD
+  const [eurUsd, setEurUsd]           = useState(1.1469); // 1 EUR = x USD, mis à jour dynamiquement
   const [dbLoading, setDbLoading]   = useState(true);
   const [userId, setUserId]         = useState(null);
   const [user, setUser]             = useState(null);
@@ -2281,7 +2281,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.5</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
