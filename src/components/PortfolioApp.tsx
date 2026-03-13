@@ -1534,7 +1534,14 @@ export default function App() {
   const [tab, setTab]               = useState(() => { try { return Number(localStorage.getItem('active_tab')||0); } catch { return 0; } });
   const slideRef = useRef<HTMLDivElement>(null);
   const swipeActive = useRef(false);
-  const tabRef = useRef(0); // mirror de tab pour les closures touch
+  const tabRef = useRef(tab); // mirror de tab pour les closures touch
+
+  // Repositionner le slide sur le bon onglet sauvegardé après montage
+  useEffect(() => {
+    const saved = (() => { try { return Number(localStorage.getItem('active_tab')||0); } catch { return 0; } })();
+    if (saved > 0) setTimeout(() => goToTab(saved, false), 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getW = () => slideRef.current?.parentElement?.offsetWidth || window.innerWidth;
 
@@ -2296,7 +2303,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.7</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.8</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2682,7 +2689,7 @@ export default function App() {
         {/* Bottom Nav */}
         <div style={{flexShrink:0,background:"#111009EE",borderTop:"1px solid #1E1B16",paddingTop:10,paddingLeft:0,paddingRight:0,paddingBottom:"calc(10px + env(safe-area-inset-bottom, 0px))",display:"flex",justifyContent:"space-around",backdropFilter:"blur(24px)"}}>
           {navItems.map(({label,i,icon})=>(
-            <button key={label} onClick={()=>{setTab(i);setDetailAsset(null);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",color:tab===i?(i===2?"#4ADE80":"#C8A96E"):"#2A2720",transition:"color 0.2s",fontFamily:"'DM Sans',sans-serif",padding:"0 8px"}}>
+            <button key={label} onClick={()=>{goToTab(i);setDetailAsset(null);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",color:tab===i?(i===2?"#4ADE80":"#C8A96E"):"#2A2720",transition:"color 0.2s",fontFamily:"'DM Sans',sans-serif",padding:"0 8px"}}>
               {icon}
               <span style={{fontSize:9,fontWeight:tab===i?700:500,letterSpacing:0.3,textTransform:"uppercase"}}>{label}</span>
               {tab===i&&<div style={{width:16,height:2,borderRadius:1,background:i===2?"#4ADE80":"#C8A96E",marginTop:-2}}/>}
