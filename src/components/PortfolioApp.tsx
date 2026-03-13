@@ -1536,12 +1536,6 @@ export default function App() {
   const swipeActive = useRef(false);
   const tabRef = useRef(tab); // mirror de tab pour les closures touch
 
-  // Repositionner le slide sur le bon onglet sauvegardé après montage
-  useEffect(() => {
-    const saved = (() => { try { return Number(localStorage.getItem('active_tab')||0); } catch { return 0; } })();
-    if (saved > 0) setTimeout(() => goToTab(saved, false), 50);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const getW = () => slideRef.current?.parentElement?.offsetWidth || window.innerWidth;
 
@@ -2094,6 +2088,16 @@ export default function App() {
     // Ne pas fetch tant que Supabase charge — sinon les assets sont vides
     if (dbLoading) return;
 
+    // Repositionner sur le bon onglet une fois tout chargé
+    const saved = (() => { try { return Number(localStorage.getItem('active_tab')||0); } catch { return 0; } })();
+    if (saved > 0 && slideRef.current) {
+      const w = slideRef.current?.parentElement?.offsetWidth || window.innerWidth;
+      tabRef.current = saved;
+      setTab(saved);
+      slideRef.current.style.transition = 'none';
+      slideRef.current.style.transform = `translateX(${-saved * w}px)`;
+    }
+
     const fetchPrices = async () => {
       try {
         const currentAssets = assetsRef.current;
@@ -2303,7 +2307,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.8</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.9</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
