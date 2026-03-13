@@ -897,6 +897,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 ["Quantité", `${asset.qty} ${asset.symbol}`],
                 ["Valeur actuelle", fmt(asset.qty * asset.price, 0)],
                 ["Prix d'achat", (() => {
+                  // FIX: affichage uniquement — on utilise priceOriginal dans la devise de saisie
                   if (!asset.purchase) return fmt(asset.price, 2);
                   const px  = asset.purchase.priceOriginal ?? asset.purchase.priceUSD ?? asset.purchase.price;
                   const cur = asset.purchase.currency ?? "USD";
@@ -904,9 +905,14 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                   return isNaN(px) ? fmt(asset.price, 2) : `${px.toFixed(2)} ${sym}`;
                 })()],
                 ["P&L", (() => {
-                  const buyPx = asset.purchase?.priceOriginal ?? asset.purchase?.priceUSD ?? asset.purchase?.price;
-                  const pnl = buyPx ? (asset.price - buyPx) * asset.qty : chartAmtRaw;
-                  const pnlPct = buyPx ? ((asset.price - buyPx) / buyPx * 100) : chartPct;
+                  // FIX 2: toujours comparer USD vs USD
+                  const buyPxUSD = asset.purchase?.priceUSD ?? null;
+                  const pnl = buyPxUSD != null
+                    ? (asset.price - buyPxUSD) * asset.qty
+                    : chartAmtRaw;
+                  const pnlPct = buyPxUSD != null
+                    ? ((asset.price - buyPxUSD) / buyPxUSD * 100)
+                    : chartPct;
                   return <span style={{color:pnl>=0?"#4ADE80":"#F87171"}}>{pnl>=0?"▲ ":"▼ "}{fmt(Math.abs(pnl),2)} ({pnlPct>=0?"+":""}{pnlPct.toFixed(2)}%)</span>;
                 })()],
               ].map(([k,v])=>(
@@ -938,6 +944,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 {[...(asset.transactions||[])].reverse().map(tx=>{
                   const isBuy = tx.type==="buy";
                   const currentVal = tx.qty * asset.price;
+                  // FIX 3: costVal utilise priceUSD (déjà en USD) — correct
                   const costVal = tx.qty * tx.priceUSD;
                   const pnl = isBuy ? currentVal - costVal : null;
                   const pnlPct = isBuy && costVal>0 ? ((currentVal-costVal)/costVal*100) : null;
@@ -1047,7 +1054,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
   const [connecting, setConnecting]   = useState(false);
   const [pendingAuthId, setPendingAuthId] = useState<string|null>(null);
 
-  // Vérifier au mount si une auth ou un code est en attente
   useEffect(() => {
     const code = localStorage.getItem("eb_pending_code");
     const authId = localStorage.getItem("eb_auth_id");
@@ -1058,18 +1064,15 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
     }
   }, []);
 
-  // Réagir au trigger externe (bouton + Connecter en bas de l'app)
   useEffect(() => {
     if (connectTrigger > 0) { if(onRequestConnect) onRequestConnect(); else { setShowConnect(true); loadAspsps(); } }
   }, [connectTrigger]);
 
-  // Charger les données bancaires depuis l'API (sessions stockées en localStorage)
   const loadBankData = useCallback(async () => {
     setLoading(true); setError("");
     try {
       let sessions = [];
       try { sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]"); } catch {}
-
 
       if (sessions.length === 0) { setLoading(false); return; }
 
@@ -1079,13 +1082,10 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
           const r = await fetch(`/api/banking?action=session&session_id=${s.session_id}`);
           const d = await r.json();
           if (d.error) continue;
-          // Les comptes peuvent être dans d.accounts ou d.data ou directement d
           const accs = d.accounts || d.data || [];
-          console.log("[Session accounts]", JSON.stringify(accs).slice(0, 500));
           for (const acc of accs) {
-            // Les comptes peuvent être des strings UUID ou des objets
             const accId = typeof acc === "string" ? acc : (acc.uid || acc.id || acc.account_id || acc.resourceId);
-            const accObj = typeof acc === "string" 
+            const accObj = typeof acc === "string"
               ? { uid: accId, session_id: s.session_id, bank_name: s.bank_name || "Banque" }
               : { ...acc, uid: accId, session_id: s.session_id, bank_name: s.bank_name || "Banque" };
             allAccounts.push(accObj);
@@ -1096,13 +1096,11 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
       setAccounts(allAccounts);
       if (allAccounts.length === 0) { setLoading(false); return; }
 
-      // Charger détails, soldes et transactions en parallèle
       const [details, bals, txs] = await Promise.all([
         Promise.all(allAccounts.map(async acc => {
           try {
             const r = await fetch(`/api/banking?action=account_details&account_id=${acc.uid}`);
             const data = await r.json();
-            // Si compte invalide, marquer comme tel
             if (data?.error === "account_not_found") return { uid: acc.uid, data: null, invalid: true };
             return { uid: acc.uid, data };
           } catch { return { uid: acc.uid, data: {} }; }
@@ -1122,23 +1120,18 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
         }))
       ]);
 
-      // Filtrer les comptes invalides
       const invalidUids = new Set(details.filter(d => d.invalid).map(d => d.uid));
       if (invalidUids.size > 0) {
-        console.log("[BankTab] Comptes invalides supprimés:", [...invalidUids]);
-        // Trouver les sessions dont TOUS les comptes sont invalides → supprimer du localStorage
         const sessionIds = [...new Set(allAccounts.filter(a => invalidUids.has(a.uid)).map(a => a.session_id))];
         const validSessionIds = new Set(allAccounts.filter(a => !invalidUids.has(a.uid)).map(a => a.session_id));
         const sessionsToRemove = sessionIds.filter(id => !validSessionIds.has(id));
         if (sessionsToRemove.length > 0) {
           const kept = sessions.filter(s => !sessionsToRemove.includes(s.session_id));
           localStorage.setItem("eb_sessions", JSON.stringify(kept));
-          console.log("[BankTab] Sessions expirées supprimées:", sessionsToRemove);
         }
       }
       const validAccounts = allAccounts.filter(a => !invalidUids.has(a.uid));
 
-      // Enrichir les comptes valides avec leurs détails (nom, type, IBAN)
       const enriched = validAccounts.map(acc => {
         const d = details.find(x => x.uid === acc.uid)?.data || {};
         const bal = bals.find(x => x.uid === acc.uid)?.data || {};
@@ -1157,12 +1150,10 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
     setLoading(false);
   }, []);
 
-  // Au mount : vérifier si retour d'auth Enable Banking ou charger sessions existantes
   useEffect(() => {
-    // Lire le code depuis localStorage (plus fiable sur mobile que sessionStorage)
     const code = localStorage.getItem("eb_pending_code");
     const ts = Number(localStorage.getItem("eb_pending_ts") || 0);
-    const isRecent = Date.now() - ts < 5 * 60 * 1000; // valide 5 minutes
+    const isRecent = Date.now() - ts < 5 * 60 * 1000;
     const bankName = localStorage.getItem("eb_bank_name") || sessionStorage.getItem("eb_bank_name") || "Boursorama Banque";
 
     if (code && isRecent) {
@@ -1218,12 +1209,10 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
       const d = await r.json();
       if (d.error) throw new Error(d.error);
       if (d.url) {
-        // Stocker le nom de banque ET l'authorization_id pour vérification manuelle
         localStorage.setItem("eb_bank_name", aspspName);
         localStorage.setItem("eb_auth_id", d.authorization_id || "");
         localStorage.setItem("eb_auth_ts", Date.now().toString());
         setPendingAuthId(d.authorization_id || "");
-        // Forcer ouverture dans Chrome (pas l'app native Boursorama)
         window.open(d.url, "_blank");
         setConnecting(false);
       } else {
@@ -1232,10 +1221,8 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
     } catch(e: any) { setError("Erreur : " + e.message); setConnecting(false); }
   };
 
-  // Vérifier manuellement si l'auth est complète (pour mobile)
   const checkAuthManually = async () => {
     const bankName = localStorage.getItem("eb_bank_name") || "Boursorama Banque";
-    // Utiliser le code reçu par /banking-callback s'il existe
     const code = localStorage.getItem("eb_pending_code");
     if (code) {
       setLoading(true); setError("");
@@ -1263,7 +1250,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
       } catch(e: any) { setError("Erreur : " + e.message); setLoading(false); }
       return;
     }
-    // Pas de code — demander de refaire l'auth
     setError("Retourne sur Boursorama et valide l'autorisation d'accès, puis reviens ici.");
   };
 
@@ -1272,7 +1258,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
     setAccounts([]); setBalances({}); setTransactions({}); setSelectedAcc(null);
   };
 
-  // Calculs solde — gère tous les formats possibles de l'API Enable Banking
   const getBalance = (uid) => {
     const raw = balances[uid];
     if (!raw) return 0;
@@ -1287,7 +1272,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
     return 0;
   };
 
-  // Grouper les comptes par banque
   const accountsByBank = accounts.reduce((acc, a) => {
     const key = a.bank_name || "Banque";
     if (!acc[key]) acc[key] = [];
@@ -1295,10 +1279,8 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
     return acc;
   }, {} as Record<string, any[]>);
 
-  // Panel détail banque sélectionnée
   const [selectedBank, setSelectedBank] = useState<string|null>(null);
 
-  // Déconnecter une banque spécifique
   const disconnectBank = (bankName: string) => {
     try {
       const bankSids = (accountsByBank[bankName] || []).map(a => a.session_id);
@@ -1311,7 +1293,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
     setSelectedBank(null);
   };
 
-  // Nom lisible du compte
   const getAccountLabel = (acc) => {
     if (acc.details) return acc.details;
     if (acc.name) return acc.name;
@@ -1336,8 +1317,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
   if (accounts.length === 0) return (
     <div style={{padding:"0 20px 120px"}}>
       <style>{spinStyle}</style>
-
-      {/* Bannière auth en attente */}
       {pendingAuthId && (
         <div style={{background:"#1A2A1A",borderRadius:16,padding:"16px 18px",border:"1px solid #4ADE8040",marginBottom:16}}>
           <div style={{color:"#4ADE80",fontSize:13,fontWeight:600,marginBottom:6}}>✅ Authentification en cours</div>
@@ -1362,7 +1341,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
     </div>
   );
 
-  // Transactions de la banque sélectionnée dans le panel
   const selectedBankAccounts = selectedBank ? (accountsByBank[selectedBank] || []) : [];
   const selectedBankTxs = selectedBankAccounts
     .flatMap(acc => (transactions[acc.uid]?.transactions?.booked || []))
@@ -1371,16 +1349,12 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
   return (
     <div style={{paddingBottom:120}}>
       <style>{spinStyle}</style>
-
-      {/* ── Total bancaire ── */}
       <div style={{margin:"12px 20px 18px",background:"linear-gradient(135deg,#0E1A14,#122018)",borderRadius:22,padding:"20px 22px",border:"1px solid #1E3A28"}}>
         <div style={{color:"#3A6A50",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:6}}>Total bancaire</div>
         <div style={{fontFamily:"'DM Mono',monospace",fontSize:32,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>
           {accounts.reduce((s,a)=>s+getBalance(a.uid),0).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
         </div>
       </div>
-
-      {/* ── Cartes banques ── */}
       {Object.entries(accountsByBank).map(([bankName, bankAccounts]) => {
         const bankTotal = bankAccounts.reduce((s,a)=>s+getBalance(a.uid),0);
         return (
@@ -1411,17 +1385,12 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
           </div>
         );
       })}
-
       {error && <div style={{margin:"8px 20px",color:"#F87171",fontSize:12,padding:"10px 14px",background:"#F8717115",borderRadius:10}}>{error}</div>}
-
-      {/* Modal connexion banque */}
       {showConnect && (
         <BankConnectModal aspsps={aspsps} aspspSearch={aspspSearch} setAspspSearch={setAspspSearch}
           connecting={connecting} onClose={()=>setShowConnect(false)}
           onSelect={(name)=>{setShowConnect(false);connectBank(name);}} spinStyle={spinStyle}/>
       )}
-
-      {/* ── Panel détail banque (bottom sheet) ── */}
       {selectedBank && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setSelectedBank(null)}>
           <div style={{background:"#111009",borderRadius:"28px 28px 0 0",width:"100%",maxWidth:430,maxHeight:"85vh",display:"flex",flexDirection:"column",paddingBottom:"calc(24px + env(safe-area-inset-bottom,0px))"}} onClick={e=>e.stopPropagation()}>
@@ -1433,7 +1402,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
               </div>
             </div>
             <div style={{overflowY:"auto",flex:1,padding:"14px 20px"}}>
-              {/* Comptes */}
               {selectedBankAccounts.map(acc => (
                 <div key={acc.uid} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:"1px solid #1A1A15"}}>
                   <div>
@@ -1447,7 +1415,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
                   </div>
                 </div>
               ))}
-              {/* Transactions */}
               {selectedBankTxs.length > 0 && (
                 <div style={{marginTop:16}}>
                   <div style={{color:"#5A5550",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>
@@ -1479,7 +1446,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
                   Aucune transaction disponible
                 </div>
               )}
-              {/* Bouton déconnecter cette banque — rouge, en bas */}
               <button onClick={()=>disconnectBank(selectedBank)}
                 style={{width:"100%",marginTop:24,background:"#F8717112",border:"1px solid #F8717150",borderRadius:14,padding:"13px",color:"#F87171",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                 Déconnecter {selectedBank}
@@ -1492,7 +1458,6 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
   );
 }
 
-// ── Modal choix banque (composant séparé) ──
 function BankConnectModal({aspsps, aspspSearch, setAspspSearch, connecting, onClose, onSelect, spinStyle}: any) {
   const filtered = aspsps.filter(a => a.name?.toLowerCase().includes((aspspSearch||"").toLowerCase()));
   return (
@@ -1534,7 +1499,7 @@ export default function App() {
   const [tab, setTab]               = useState(() => { try { return Number(localStorage.getItem('active_tab')||0); } catch { return 0; } });
   const slideRef = useRef<HTMLDivElement>(null);
   const swipeActive = useRef(false);
-  const tabRef = useRef(tab); // mirror de tab pour les closures touch
+  const tabRef = useRef(tab);
 
 
   const getW = () => slideRef.current?.parentElement?.offsetWidth || window.innerWidth;
@@ -1550,7 +1515,7 @@ export default function App() {
   };
 
   const swipeStartY = useRef(0);
-  const swipeBlocked = useRef(false); // bloqué car mouvement vertical
+  const swipeBlocked = useRef(false);
 
   const onSwipeStart = (e: React.TouchEvent) => {
     swipeStartX.current = e.touches[0].clientX;
@@ -1566,7 +1531,6 @@ export default function App() {
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
 
-    // Si le mouvement est plus vertical qu'horizontal, bloquer le swipe
     if (absDx < 10 && absDy < 10) return;
     if (absDy > absDx * 0.8) { swipeBlocked.current = true; return; }
 
@@ -1600,7 +1564,7 @@ export default function App() {
   }, [tab]);
   const [assets, setAssets]         = useState([]);
   const assetsRef = useRef<any[]>([]);
-  const [eurUsd, setEurUsd]           = useState(1.1469); // 1 EUR = x USD, mis à jour dynamiquement
+  const [eurUsd, setEurUsd]           = useState(1.1469);
   const [dbLoading, setDbLoading]   = useState(true);
   const [userId, setUserId]         = useState(null);
   const [user, setUser]             = useState(null);
@@ -1656,7 +1620,6 @@ export default function App() {
   const [editProfileName, setEditProfileName]     = useState("");
   const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
-  // ── Drag actifs (tout en refs pour éviter les problèmes de closure) ──
   const [assetDraggingIdx, setAssetDraggingIdx] = useState(null);
   const [assetDragOverIdx, setAssetDragOverIdx] = useState(null);
   const [assetGhostPos, setAssetGhostPos] = useState({x:0,y:0});
@@ -1666,7 +1629,6 @@ export default function App() {
   const assetDragTo      = useRef(null);
   const assetLongTimer   = useRef(null);
   const assetsListRef    = useRef(null);
-  // ── Drag marchés ──
   const [mktDraggingIdx, setMktDraggingIdx] = useState(null);
   const [mktDragOverIdx, setMktDragOverIdx] = useState(null);
   const [mktGhostPos, setMktGhostPos] = useState({x:0, y:0});
@@ -1676,19 +1638,16 @@ export default function App() {
   const mktDragTo        = useRef(null);
   const mktLongTimer     = useRef(null);
   const mktListRef       = useRef(null);
-  // ── Drag HTML5 (PC) ──
   const dragItem         = useRef(null);
   const dragOverItem     = useRef(null);
   const dragMktItem      = useRef(null);
   const dragMktOverItem  = useRef(null);
   const swipeStartX      = useRef(0);
 
-  // ── Helper commun : trouve l'index d'insertion selon position Y du doigt ──
   const getInsertIdx = (containerRef, clientY, dataAttr, listLength) => {
     const container = containerRef.current;
     if (!container) return listLength - 1;
     const items = container.querySelectorAll(`[${dataAttr}]`);
-    // Trouver l'item le plus proche du doigt
     let closestIdx = listLength - 1;
     let closestDist = Infinity;
     for (let i = 0; i < items.length; i++) {
@@ -1697,8 +1656,6 @@ export default function App() {
       const dist = Math.abs(clientY - mid);
       if (dist < closestDist) {
         closestDist = dist;
-        // Si le doigt est dans la moitié haute → insérer avant (idx i)
-        // Si le doigt est dans la moitié basse → insérer après (idx i+1)
         closestIdx = clientY < mid
           ? parseInt(items[i].getAttribute(dataAttr))
           : (i < items.length - 1 ? parseInt(items[i+1].getAttribute(dataAttr)) : listLength - 1);
@@ -1707,7 +1664,6 @@ export default function App() {
     return closestIdx;
   };
 
-  // ── Drag ACTIFS ──
   const handleDragSort = () => {
     if (dragItem.current === null || dragOverItem.current === null) return;
     const arr = [...assets];
@@ -1758,7 +1714,6 @@ export default function App() {
     setAssetGhostItem(null);
   };
 
-  // ── Drag MARCHÉS ──
   const handleDragMktSort = () => {
     if (dragMktItem.current === null || dragMktOverItem.current === null) return;
     const arr = [...allMarket];
@@ -1853,27 +1808,20 @@ export default function App() {
     setMktAddLoading(false);
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ── Supabase : charger profil + portefeuilles (MIGRATION localStorage → Supabase)
-  // ═══════════════════════════════════════════════════════════════════════════
   const loadUserData = async (uid) => {
-    // Toutes les requêtes en parallèle
     const [profileRes, portfoliosRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', uid).single(),
       supabase.from('portfolios').select('id, name').eq('user_id', uid).order('created_at', { ascending: true }),
     ]);
 
-    // Profil - robuste même si colonnes manquantes
     if (profileRes.data) {
       setProfileName(profileRes.data.display_name || profileRes.data.name || '');
       if (profileRes.data.session_duration) setSessionDuration(profileRes.data.session_duration);
     } else if (!profileRes.error || profileRes.error.code === 'PGRST116') {
-      // Pas de profil → essayer de créer (silencieux si ça rate)
       supabase.from('profiles').insert({ id: uid }).then(() => {});
       setProfileName('');
     }
 
-    // Portefeuilles
     const portfoliosData = portfoliosRes.data;
     if (portfoliosData && portfoliosData.length > 0) {
       setPortfolios(portfoliosData);
@@ -1891,12 +1839,10 @@ export default function App() {
   };
 
   const saveProfileNameToDB = async (name, uid) => {
-    // Essayer avec display_name d'abord, sinon juste upsert sans la colonne
     try {
       const { error } = await supabase.from('profiles')
         .upsert({ id: uid, display_name: name });
       if (error) {
-        // Colonne display_name peut ne pas exister, on ignore silencieusement
         console.warn('saveProfileName (display_name manquant?):', error.message);
       }
     } catch(e) { console.error('saveProfileName:', e); }
@@ -1934,10 +1880,8 @@ export default function App() {
     } catch(e) { console.error('deletePortfolio:', e); }
   };
 
-  // ── Switch portefeuille ──
   const switchPortfolio = async (portfolioId, portfolioName) => {
     if (activePortfolioId === portfolioId) return;
-    // Récupérer le vrai userId depuis Supabase session (pas le state React qui peut être stale)
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     const uid = currentUser?.id ?? userId;
     if (!uid) { console.error("switchPortfolio: pas de userId"); return; }
@@ -1946,13 +1890,11 @@ export default function App() {
     setAssets([]);
     setChartAsset(null);
     try {
-      console.log("switchPortfolio: uid=", uid, "portfolioId=", portfolioId);
       const { data, error } = await supabase
         .from("assets").select("*")
         .eq("user_id", uid)
         .eq("portfolio_id", portfolioId)
         .order("created_at", { ascending: true });
-      console.log("switchPortfolio: data=", data, "error=", error);
       if (error) { console.error("switchPortfolio error:", error); return; }
       if (data && data.length > 0) {
         const loaded = data.map(row => ({
@@ -1967,9 +1909,7 @@ export default function App() {
     } catch(e) { console.error("switchPortfolio:", e); }
   };
 
-  // ── Chargement initial ──
   useEffect(() => {
-    // Si on revient d'une auth Enable Banking, basculer sur l'onglet Banque
     const pendingCode = localStorage.getItem("eb_pending_code");
     const pendingTs = Number(localStorage.getItem("eb_pending_ts") || 0);
     if (pendingCode && Date.now() - pendingTs < 5 * 60 * 1000) setTab(2);
@@ -2000,14 +1940,11 @@ export default function App() {
     init();
   }, []);
 
-  // ── Auth ──
   const handleLogin = async () => {
     setAuthLoading(true); setAuthError("");
     const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
     if (error) { setAuthError(error.message); setAuthLoading(false); return; }
-    // Forcer la persistance de session
     if (rememberMe) {
-      // Forcer le refresh du token pour maximiser la durée de session
       await supabase.auth.refreshSession();
     }
     const { data: { user: u } } = await supabase.auth.getUser();
@@ -2027,7 +1964,6 @@ export default function App() {
       setAssets(loaded); setChartAsset(loaded[0]);
     }
     setDbLoading(false); setAuthLoading(false);
-    // Appliquer la durée de session si "rester connecté" n'est pas "toujours"
     if (!rememberMe || sessionDuration !== "always") {
       const durations = {"1h":3600,"6h":21600,"12h":43200,"24h":86400};
       const secs = rememberMe ? durations[sessionDuration] : durations["1h"];
@@ -2074,21 +2010,15 @@ export default function App() {
     if (error) console.error("deleteAsset:", error);
   };
 
-  // Persister la watchlist marchés
   useEffect(() => {
     try { localStorage.setItem("market_watchlist", JSON.stringify(allMarket)); } catch(e) {}
   }, [allMarket]);
 
-
-
-  // Garder assetsRef synchronisé pour les closures
   useEffect(() => { assetsRef.current = assets; }, [assets]);
 
   useEffect(() => {
-    // Ne pas fetch tant que Supabase charge — sinon les assets sont vides
     if (dbLoading) return;
 
-    // Repositionner sur le bon onglet une fois tout chargé
     const saved = (() => { try { return Number(localStorage.getItem('active_tab')||0); } catch { return 0; } })();
     if (saved > 0 && slideRef.current) {
       const w = slideRef.current?.parentElement?.offsetWidth || window.innerWidth;
@@ -2114,7 +2044,7 @@ export default function App() {
         const cryptoPrices = cryptoRes.ok ? await cryptoRes.json() : {};
         const stockPrices  = stockRes.ok  ? await stockRes.json()  : {};
         const allPrices    = { ...cryptoPrices, ...stockPrices };
-        // Mettre à jour le taux EUR/USD dynamique
+
         const firstPrice = Object.values(allPrices)[0] as any;
         const currentEurUsd = firstPrice?.eurUsd ?? eurUsd;
         if (firstPrice?.eurUsd) setEurUsd(firstPrice.eurUsd);
@@ -2124,12 +2054,16 @@ export default function App() {
           if (!p) return a;
           const priceNative = p.price ?? a.price;
           const priceCurrency = p.currency ?? 'USD';
-          // On stocke en USD — useFmt convertit à l'affichage
           const priceUSD = priceCurrency === 'EUR' ? priceNative * currentEurUsd
                          : priceCurrency === 'GBp' ? priceNative / 100 * 1.27
                          : priceNative;
-          const purchaseRef = a.purchase?.priceOriginal ?? a.purchase?.priceUSD ?? a.purchase?.price;
-          const realChange = purchaseRef ? ((priceUSD - purchaseRef) / purchaseRef) * 100 : (p.change24h ?? a.change);
+
+          // FIX 1: utiliser exclusivement priceUSD pour le calcul — toujours USD vs USD
+          const purchaseRefUSD = a.purchase?.priceUSD ?? null;
+          const realChange = purchaseRefUSD != null
+            ? ((priceUSD - purchaseRefUSD) / purchaseRefUSD) * 100
+            : (p.change24h ?? a.change);
+
           return { ...a, price: priceUSD, change: Math.round(realChange * 100) / 100 };
         }));
         setAllMarket(prev => prev.map(a => {
@@ -2148,7 +2082,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [dbLoading]);
 
-  const fmt         = useFmt(currency, 1/eurUsd); // taux dynamique
+  const fmt         = useFmt(currency, 1/eurUsd);
 
   const total       = assets.reduce((s,a)=>s+a.qty*a.price,0);
   const totalChange = assets.reduce((s,a)=>s+a.qty*a.price*(a.change/100),0);
@@ -2168,8 +2102,11 @@ export default function App() {
       const data = await res.json();
       const p    = data[newAsset.symbol];
       if (p && p.price) {
-        const purchaseRef = newAsset.purchase?.priceOriginal ?? newAsset.purchase?.priceUSD ?? newAsset.purchase?.price;
-        const realChange = purchaseRef ? ((p.price - purchaseRef) / purchaseRef) * 100 : (p.change24h ?? 0);
+        // FIX 4: utiliser priceUSD du purchase pour le calcul — toujours USD vs USD
+        const purchaseRefUSD = newAsset.purchase?.priceUSD ?? null;
+        const realChange = purchaseRefUSD != null
+          ? ((p.price - purchaseRefUSD) / purchaseRefUSD) * 100
+          : (p.change24h ?? 0);
         const updatedAsset = { ...newAsset, price: p.price, change: Math.round(realChange * 100) / 100, histories: buildHistories(p.price) };
         setAssets(prev => prev.map(a => a.id === newAsset.id ? updatedAsset : a));
         await saveAssetToDB(updatedAsset);
@@ -2213,7 +2150,6 @@ export default function App() {
     { label:"Banque",  i:2, icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="8" width="20" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M2 12h20" stroke="currentColor" strokeWidth="1.8"/><path d="M6 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 5L12 2 8 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg> },
   ];
 
-  // ── Écran login ──
   if (!dbLoading && !user) {
     const isLogin = authMode === "login";
     return (
@@ -2294,8 +2230,6 @@ export default function App() {
       `}</style>
       <div style={{width:"100%",maxWidth:430,background:"#151210",borderRadius:0,overflow:"hidden",height:"100vh",position:"relative",display:"flex",flexDirection:"column"}}>
 
-        {/* 3 pages complètes qui slidenet */}
-        {/* ── BARRE AVATAR FIXE ── */}
         <div style={{flexShrink:0,background:"#151210"}}>
           <div style={{padding:"12px 20px 0",paddingTop:"calc(12px + env(safe-area-inset-top, 0px))",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -2307,7 +2241,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.9</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2326,7 +2260,6 @@ export default function App() {
           willChange:"transform",
         }}>
 
-          {/* ── PAGE helper: header commun ── */}
           {[0,1,2].map(pageIdx => {
             const isActive = pageIdx === tab;
             return (
@@ -2335,10 +2268,8 @@ export default function App() {
               onTouchMove={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeMove(e); }}
               onTouchEnd={e=>{ if(pageIdx===0&&(dragMode||dragMktMode)) return; if(pageIdx===1&&dragMktMode) return; onSwipeEnd(e); }}>
 
-              {/* Header commun à chaque page (sans barre avatar — fixe au-dessus) */}
               <div style={{flexShrink:0}}>
 
-                {/* Total card — uniquement sur page 0 (actifs) */}
                 {pageIdx === 0 && (
                   <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 14px",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
                     <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
@@ -2370,7 +2301,6 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Toolbar Actifs — page 0 */}
                 {pageIdx===0 && (
                   <div style={{padding:"8px 20px 6px",background:"#151210"}}>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
@@ -2400,7 +2330,6 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Toolbar Marchés — page 1 */}
                 {pageIdx===1 && (
                   <div style={{padding:"8px 20px 10px",background:"#151210"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -2420,21 +2349,19 @@ export default function App() {
                     </div>
                   </div>
                 )}
-              </div>{/* fin header */}
+              </div>
 
-              {/* Contenu scrollable de chaque page */}
               <div style={{flex:1,overflowY:"auto",paddingBottom:80,WebkitOverflowScrolling:"touch"}}>
 
-          {/* ── ACTIFS ── */}
           {pageIdx===0 && (
             <div>
               {viewMode==="grouped" ? (
                 <div ref={assetsListRef} onTouchMove={handleAssetTouchMove} onTouchEnd={handleAssetTouchEnd}>
                 {assets.map((a,idx)=>{
                   const scaleData=a.histories?.[listScale]||[a.price];
-                  const buyPrice=a.purchase?.price;
-                  const scalePct=buyPrice?((a.price-buyPrice)/buyPrice*100):((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
-                  const scaleAmt=buyPrice?(a.price-buyPrice)*a.qty:(scaleData[scaleData.length-1]-scaleData[0])*a.qty;
+                  // Pour la liste : utiliser a.change qui est déjà calculé en USD/USD dans fetchPrices
+                  const scalePct = a.change;
+                  const scaleAmt = a.qty * a.price * (scalePct / 100);
                   const pos=scalePct>=0; const iconSize=44,chartW=68,chartH=28,fontSize=15;
                   return (
                     <div key={a.id}>
@@ -2492,9 +2419,9 @@ export default function App() {
                     </div>
                   </div>
                   {cryptoAssets.map(a=>{
-                    const scaleData=a.histories?.[listScale]||[a.price]; const buyPrice=a.purchase?.price;
-                    const scalePct=buyPrice?((a.price-buyPrice)/buyPrice*100):((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
-                    const scaleAmt=buyPrice?(a.price-buyPrice)*a.qty:(scaleData[scaleData.length-1]-scaleData[0])*a.qty;
+                    const scaleData=a.histories?.[listScale]||[a.price];
+                    const scalePct = a.change;
+                    const scaleAmt = a.qty * a.price * (scalePct / 100);
                     const pos=scalePct>=0; const iconSize=40,chartW=60,chartH=24,fontSize=14;
                     return (
                       <div key={a.id} className="asset-row" onClick={()=>setDetailAsset(a)} style={{padding:"12px 20px",borderBottom:"1px solid #191612"}}>
@@ -2525,9 +2452,9 @@ export default function App() {
                     </div>
                   </div>
                   {stockAssets.map(a=>{
-                    const scaleData=a.histories?.[listScale]||[a.price]; const buyPrice=a.purchase?.price;
-                    const scalePct=buyPrice?((a.price-buyPrice)/buyPrice*100):((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0]*100);
-                    const scaleAmt=buyPrice?(a.price-buyPrice)*a.qty:(scaleData[scaleData.length-1]-scaleData[0])*a.qty;
+                    const scaleData=a.histories?.[listScale]||[a.price];
+                    const scalePct = a.change;
+                    const scaleAmt = a.qty * a.price * (scalePct / 100);
                     const pos=scalePct>=0; const iconSize=40,chartW=60,chartH=24,fontSize=14;
                     return (
                       <div key={a.id} className="asset-row" onClick={()=>setDetailAsset(a)} style={{padding:"12px 20px",borderBottom:"1px solid #191612"}}>
@@ -2562,7 +2489,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── MARCHÉS ── */}
           {pageIdx===1 && (
             <div style={{padding:"0 20px", userSelect:"none", WebkitUserSelect:"none"}}
               ref={mktListRef}
@@ -2601,7 +2527,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ── BANQUE ── */}
           {pageIdx===2 && <BankTab userId={userId} connectTrigger={bankConnectTrigger} onRequestConnect={()=>{setShowBankModal(true);loadAspspsRoot();}}/>}
 
               </div>
@@ -2611,7 +2536,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* BankConnectModal — niveau racine, hors slide */}
         {showBankModal && (
           <BankConnectModal
             aspsps={aspspsRoot}
@@ -2624,7 +2548,6 @@ export default function App() {
           />
         )}
 
-        {/* Ghost drag ACTIFS */}
         {assetGhostItem && (
           <div style={{position:"fixed",left:assetGhostPos.x-175,top:assetGhostPos.y-30,width:350,pointerEvents:"none",zIndex:9999,background:"#1E1B16",border:"1px solid #C8A96E60",borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:11,boxShadow:"0 8px 32px #000c",opacity:0.95,transform:"scale(1.04)"}}>
             <div style={{color:"#C8A96E",fontSize:16,flexShrink:0}}>⠿</div>
@@ -2636,7 +2559,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Ghost drag element - suit le doigt */}
         {mktGhostItem && (
           <div style={{
             position:"fixed",
@@ -2665,7 +2587,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Panneau ajout marché fixe */}
         {showMktAdd && tab===1 && (
           <div style={{flexShrink:0,background:"#151210",borderTop:"1px solid #2A2520",padding:"12px 20px",zIndex:10}}>
             <div style={{color:"#6A6560",fontSize:10,marginBottom:8,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Ajouter un symbole</div>
@@ -2680,7 +2601,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Bouton + Connecter une banque (onglet Banque uniquement) */}
         {tab === 2 && (
           <div style={{flexShrink:0,padding:"8px 20px",background:"#111009EE",borderTop:"1px solid #1E1B16",backdropFilter:"blur(24px)"}}>
             <button onClick={()=>{ setBankConnectTrigger(t => t+1); }}
@@ -2690,7 +2610,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Bottom Nav */}
         <div style={{flexShrink:0,background:"#111009EE",borderTop:"1px solid #1E1B16",paddingTop:10,paddingLeft:0,paddingRight:0,paddingBottom:"calc(10px + env(safe-area-inset-bottom, 0px))",display:"flex",justifyContent:"space-around",backdropFilter:"blur(24px)"}}>
           {navItems.map(({label,i,icon})=>(
             <button key={label} onClick={()=>{goToTab(i);setDetailAsset(null);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",color:tab===i?(i===2?"#4ADE80":"#C8A96E"):"#2A2720",transition:"color 0.2s",fontFamily:"'DM Sans',sans-serif",padding:"0 8px"}}>
@@ -2702,13 +2621,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── Menu Profil (bottom sheet) ── */}
       {showProfileMenu && (
         <div style={{position:"fixed",inset:0,zIndex:1000,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowProfileMenu(false)}>
           <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"0 0 calc(16px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",boxShadow:"0 -8px 32px #000d",maxHeight:"85vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
-            {/* Poignée */}
             <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"12px auto 0",flexShrink:0}}/>
-            {/* Header user */}
             <div style={{padding:"16px 20px 14px",borderBottom:"1px solid #252015",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
               <div style={{width:44,height:44,borderRadius:22,background:"linear-gradient(135deg,#C8A96E,#8B6914)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700,color:"#111009",flexShrink:0}}>
                 {profileName?profileName[0].toUpperCase():user?.email?.[0]?.toUpperCase()}
@@ -2718,7 +2634,6 @@ export default function App() {
                 <div style={{color:"#4A4540",fontSize:11,marginTop:2}}>{user?.email}</div>
               </div>
             </div>
-            {/* Liste portefeuilles scrollable */}
             <div style={{overflowY:"auto",flex:1,padding:"12px 12px 4px"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,padding:"0 4px"}}>
                 <div style={{color:"#6A6560",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Portefeuilles</div>
@@ -2759,7 +2674,6 @@ export default function App() {
                 </div>
               ))}
             </div>
-            {/* Bouton Paramètres */}
             <div data-profile-menu style={{padding:"8px 12px 0",borderTop:"1px solid #252015",flexShrink:0}}>
               <button data-profile-menu onClick={e=>{e.stopPropagation();e.preventDefault();setShowSettings(true);setShowProfileMenu(false);}}
                 style={{width:"100%",background:"#1E1B16",border:"1px solid #2A2520",borderRadius:12,padding:"14px 16px",color:"#F0EDE8",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:10,fontFamily:"'DM Sans',sans-serif"}}>
@@ -2770,7 +2684,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Profile Edit Modal */}
       {showProfileEdit && (
         <div style={{position:"fixed",inset:0,zIndex:2000,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowProfileEdit(false)}>
           <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"24px 20px 40px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
@@ -2791,7 +2704,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Paramètres */}
       {showSettings && (
         <div style={{position:"fixed",inset:0,zIndex:2000,background:"#000a",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowSettings(false)}>
           <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"0 0 calc(24px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",maxHeight:"90vh",display:"flex",flexDirection:"column"}} onClick={e=>e.stopPropagation()}>
@@ -2802,7 +2714,6 @@ export default function App() {
 
             <div style={{overflowY:"auto",flex:1,padding:"20px"}}>
 
-              {/* Modifier le profil */}
               <div style={{marginBottom:24}}>
                 <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Profil</div>
                 <button onClick={()=>{setEditProfileName(profileName);setShowSettings(false);setTimeout(()=>setShowProfileEdit(true),100);}}
@@ -2815,7 +2726,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Durée de session */}
               <div style={{marginBottom:24}}>
                 <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Durée de connexion</div>
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -2835,7 +2745,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Déconnexion */}
               <div>
                 <div style={{color:"#6A6560",fontSize:10,marginBottom:12,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Compte</div>
                 <button onClick={()=>{setShowSettings(false);handleLogout();}}
