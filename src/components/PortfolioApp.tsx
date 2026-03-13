@@ -358,8 +358,10 @@ const SYMBOL_DATABASE = [
   { symbol:"ESE.PA",name:"BNP Paribas S&P 500 (Paris)",type:"etf"},
 ];
 
-function useFmt(currency) {
-  const rate = currency === "EUR" ? EUR_RATE : 1;
+function useFmt(currency, dynamicRate?: number) {
+  // dynamicRate = USD→EUR (ex: 1/1.1469 = 0.872)
+  // Si pas fourni, fallback sur EUR_RATE hardcodé
+  const rate = currency === "EUR" ? (dynamicRate ?? EUR_RATE) : 1;
   const sym  = currency === "EUR" ? "€" : "$";
   return (v, dec=0) => {
     const val = (v * rate).toLocaleString("fr-FR", { maximumFractionDigits:dec, minimumFractionDigits:dec>0?dec:0 });
@@ -1582,6 +1584,7 @@ export default function App() {
   }, [tab]);
   const [assets, setAssets]         = useState([]);
   const assetsRef = useRef<any[]>([]);
+  const [eurUsd, setEurUsd]           = useState(EUR_RATE > 1 ? EUR_RATE : 1/EUR_RATE); // 1 EUR = x USD
   const [dbLoading, setDbLoading]   = useState(true);
   const [userId, setUserId]         = useState(null);
   const [user, setUser]             = useState(null);
@@ -2085,17 +2088,19 @@ export default function App() {
         const cryptoPrices = cryptoRes.ok ? await cryptoRes.json() : {};
         const stockPrices  = stockRes.ok  ? await stockRes.json()  : {};
         const allPrices    = { ...cryptoPrices, ...stockPrices };
+        // Mettre à jour le taux EUR/USD dynamique
+        const firstPrice = Object.values(allPrices)[0] as any;
+        const currentEurUsd = firstPrice?.eurUsd ?? eurUsd;
+        if (firstPrice?.eurUsd) setEurUsd(firstPrice.eurUsd);
+
         setAssets(prev => prev.map(a => {
           const p = allPrices[a.symbol] || allPrices[a.symbol+'.PA'] || allPrices[a.symbol+'.L'];
           if (!p) return a;
-          // Si le prix Yahoo est en USD et qu'on affiche en EUR, convertir
-          // Si déjà en EUR (actions européennes), ne pas convertir
           const priceNative = p.price ?? a.price;
           const priceCurrency = p.currency ?? 'USD';
-          // On stocke toujours en USD en interne — EUR_RATE s'applique à l'affichage via useFmt
-          // Donc si le prix est déjà en EUR, on le reconvertit en USD pour la cohérence
-          const priceUSD = priceCurrency === 'EUR' ? priceNative / EUR_RATE
-                         : priceCurrency === 'GBp' ? priceNative / 100 / 1.27  // pence → USD
+          // On stocke en USD — useFmt convertit à l'affichage
+          const priceUSD = priceCurrency === 'EUR' ? priceNative * currentEurUsd
+                         : priceCurrency === 'GBp' ? priceNative / 100 * 1.27
                          : priceNative;
           const purchaseRef = a.purchase?.priceOriginal ?? a.purchase?.priceUSD ?? a.purchase?.price;
           const realChange = purchaseRef ? ((priceUSD - purchaseRef) / purchaseRef) * 100 : (p.change24h ?? a.change);
@@ -2105,8 +2110,8 @@ export default function App() {
           const p = allPrices[a.symbol]; if (!p) return a;
           const priceNative = p.price ?? a.price;
           const priceCurrency = p.currency ?? 'USD';
-          const priceUSD = priceCurrency === 'EUR' ? priceNative / EUR_RATE
-                         : priceCurrency === 'GBp' ? priceNative / 100 / 1.27
+          const priceUSD = priceCurrency === 'EUR' ? priceNative * currentEurUsd
+                         : priceCurrency === 'GBp' ? priceNative / 100 * 1.27
                          : priceNative;
           return { ...a, price: priceUSD, change: p.change24h ?? a.change };
         }));
@@ -2117,7 +2122,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, [dbLoading]);
 
-  const fmt         = useFmt(currency);
+  const fmt         = useFmt(currency, 1/eurUsd); // taux dynamique
 
   const total       = assets.reduce((s,a)=>s+a.qty*a.price,0);
   const totalChange = assets.reduce((s,a)=>s+a.qty*a.price*(a.change/100),0);
@@ -2276,7 +2281,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.3</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.4</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
