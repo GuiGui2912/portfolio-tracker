@@ -1547,14 +1547,27 @@ export default function App() {
     slideRef.current.style.transform = `translateX(${-next * w}px)`;
   };
 
+  const swipeStartY = useRef(0);
+  const swipeBlocked = useRef(false); // bloqué car mouvement vertical
+
   const onSwipeStart = (e: React.TouchEvent) => {
     swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
     swipeActive.current = false;
+    swipeBlocked.current = false;
   };
 
   const onSwipeMove = (e: React.TouchEvent) => {
+    if (swipeBlocked.current) return;
     const dx = e.touches[0].clientX - swipeStartX.current;
-    if (Math.abs(dx) < 6) return;
+    const dy = e.touches[0].clientY - swipeStartY.current;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    // Si le mouvement est plus vertical qu'horizontal, bloquer le swipe
+    if (absDx < 10 && absDy < 10) return;
+    if (absDy > absDx * 0.8) { swipeBlocked.current = true; return; }
+
     swipeActive.current = true;
     if (!slideRef.current) return;
     const w = getW();
@@ -1568,6 +1581,7 @@ export default function App() {
   const onSwipeEnd = (e: React.TouchEvent) => {
     if (!swipeActive.current) return;
     swipeActive.current = false;
+    swipeBlocked.current = false;
     const dx = e.changedTouches[0].clientX - swipeStartX.current;
     const threshold = getW() * 0.10;
     if (dx < -threshold && tabRef.current < 2) goToTab(tabRef.current + 1);
@@ -2281,7 +2295,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.6</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
