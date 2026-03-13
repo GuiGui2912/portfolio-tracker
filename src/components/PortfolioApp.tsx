@@ -1531,7 +1531,7 @@ function BankConnectModal({aspsps, aspspSearch, setAspspSearch, connecting, onCl
 }
 
 export default function App() {
-  const [tab, setTab]               = useState(0);
+  const [tab, setTab]               = useState(() => { try { return Number(localStorage.getItem('active_tab')||0); } catch { return 0; } });
   const slideRef = useRef<HTMLDivElement>(null);
   const swipeActive = useRef(false);
   const tabRef = useRef(0); // mirror de tab pour les closures touch
@@ -1541,6 +1541,7 @@ export default function App() {
   const goToTab = (next: number, animated = true) => {
     tabRef.current = next;
     setTab(next);
+    try { localStorage.setItem('active_tab', String(next)); } catch(e) {}
     if (!slideRef.current) return;
     const w = getW();
     slideRef.current.style.transition = animated ? "transform 0.28s cubic-bezier(0.4,0,0.2,1)" : "none";
@@ -2295,7 +2296,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.7.7</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
