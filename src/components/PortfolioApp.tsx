@@ -2111,23 +2111,37 @@ export default function App() {
   const mktList     = mktFilter==="all" ? allMarket : allMarket.filter(a=>a.type===mktFilter);
 
   const handleAddAsset = async (newAsset) => {
-    setAssets(prev => [...prev, newAsset]);
-    if (!chartAsset) setChartAsset(newAsset);
-    await saveAssetToDB(newAsset);
+    // Convertir le purchase initial en première transaction
+    const initialTx = newAsset.purchase ? {
+      id: Date.now(),
+      type: "buy",
+      date: newAsset.purchase.date ?? new Date().toISOString().slice(0,10),
+      time: newAsset.purchase.time ?? "",
+      qty: newAsset.purchase.qty ?? newAsset.qty,
+      priceUSD: newAsset.purchase.priceUSD,
+      priceOriginal: newAsset.purchase.priceOriginal,
+      currency: newAsset.purchase.currency ?? "USD",
+      priceMode: newAsset.purchase.priceMode ?? "unit",
+    } : null;
+    const assetWithTx = initialTx
+      ? { ...newAsset, transactions: [initialTx] }
+      : { ...newAsset, transactions: [] };
+    setAssets(prev => [...prev, assetWithTx]);
+    if (!chartAsset) setChartAsset(assetWithTx);
+    await saveAssetToDB(assetWithTx);
     try {
-      const isCrypto = newAsset.type === 'crypto';
-      const endpoint = isCrypto ? `/api/prices/crypto?symbols=${newAsset.symbol}` : `/api/prices/stocks?symbols=${newAsset.symbol}`;
+      const isCrypto = assetWithTx.type === 'crypto';
+      const endpoint = isCrypto ? `/api/prices/crypto?symbols=${assetWithTx.symbol}` : `/api/prices/stocks?symbols=${assetWithTx.symbol}`;
       const res  = await fetch(endpoint);
       const data = await res.json();
-      const p    = data[newAsset.symbol];
+      const p    = data[assetWithTx.symbol];
       if (p && p.price) {
-        // FIX 4: utiliser priceUSD du purchase pour le calcul — toujours USD vs USD
-        const purchaseRefUSD = newAsset.purchase?.priceUSD ?? null;
+        const purchaseRefUSD = assetWithTx.purchase?.priceUSD ?? null;
         const realChange = purchaseRefUSD != null
           ? ((p.price - purchaseRefUSD) / purchaseRefUSD) * 100
           : (p.change24h ?? 0);
-        const updatedAsset = { ...newAsset, price: p.price, change: Math.round(realChange * 100) / 100, histories: buildHistories(p.price) };
-        setAssets(prev => prev.map(a => a.id === newAsset.id ? updatedAsset : a));
+        const updatedAsset = { ...assetWithTx, price: p.price, change: Math.round(realChange * 100) / 100, histories: buildHistories(p.price) };
+        setAssets(prev => prev.map(a => a.id === assetWithTx.id ? updatedAsset : a));
         await saveAssetToDB(updatedAsset);
       }
     } catch(e) { console.error('Fetch prix nouvel actif:', e); }
@@ -2270,7 +2284,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.7</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
