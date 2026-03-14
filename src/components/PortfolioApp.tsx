@@ -806,7 +806,7 @@ function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
   );
 }
 
-function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddTransaction, onDeleteTransaction }) {
+function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddTransaction, onDeleteTransaction, marketMode = false }) {
   const [divModal, setDivModal] = useState(false);
   const [txModal, setTxModal] = useState(false);
   const [scale, setScale] = useState("1M");
@@ -890,7 +890,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
             <div style={{color:"#5A5550",fontSize:9,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>À propos</div>
             <div style={{color:"#8A8480",fontSize:12,lineHeight:1.7}}>{info.description}</div>
           </div>
-          <div style={{margin:"12px 20px 0",background:"linear-gradient(135deg,#1E1A12,#252015)",borderRadius:14,padding:"12px 14px",border:"1px solid #3A3018"}}>
+          {!marketMode && <div style={{margin:"12px 20px 0",background:"linear-gradient(135deg,#1E1A12,#252015)",borderRadius:14,padding:"12px 14px",border:"1px solid #3A3018"}}>
             <div style={{color:"#6A5A30",fontSize:9,marginBottom:10,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>Ma position</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {[
@@ -922,9 +922,9 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 </div>
               ))}
             </div>
-          </div>
+          </div>}
           {/* ── Transactions ── */}
-          <div style={{margin:"12px 20px 0"}}>
+          {!marketMode && <div style={{margin:"12px 20px 0"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
               <div>
                 <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Transactions</div>
@@ -981,9 +981,9 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 })}
               </div>
             )}
-          </div>
+          </div>}
 
-          {!isCrypto && (
+          {!marketMode && !isCrypto && (
             <div style={{margin:"12px 20px 0"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                 <div>
@@ -1019,11 +1019,11 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
               )}
             </div>
           )}
-          <div style={{padding:"14px 20px 0"}}>
+          {!marketMode && <div style={{padding:"14px 20px 0"}}>
             <button onClick={()=>{onDelete(asset.id);onClose();}} style={{width:"100%",background:"transparent",border:"1px solid #3A1A1A",borderRadius:14,padding:"12px",color:"#F87171",fontSize:13,fontWeight:600,cursor:"pointer"}}>
               Supprimer cet actif
             </button>
-          </div>
+          </div>}
         </div>
       </div>
       {divModal && <AddDividendModal asset={asset} onClose={()=>setDivModal(false)} onAdd={(div)=>{onAddDividend(asset.id,div);setDivModal(false);}}/>}
@@ -1581,6 +1581,7 @@ export default function App() {
   const [expandedAcc, setExpandedAcc] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [detailAsset, setDetailAsset]   = useState(null);
+  const [marketDetailAsset, setMarketDetailAsset] = useState(null);
   const [listScale, setListScale]       = useState("1M");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -2241,7 +2242,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.1</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.2</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2509,7 +2510,7 @@ export default function App() {
                       onTouchMove={e=>{ if(mktDragActive.current) handleMktTouchMove(e); }}
                       onTouchEnd={e=>{ if(mktDragActive.current){e.stopPropagation();handleMktTouchEnd();} }}
                       onTouchCancel={handleMktTouchEnd}
-                      onClick={()=>{ if(dragMktMode) return; const owned=assets.find(asset=>asset.symbol===a.symbol); if(owned) setDetailAsset(owned); }}
+                      onClick={()=>{ if(dragMktMode) return; const owned=assets.find(asset=>asset.symbol===a.symbol); if(owned){setDetailAsset(owned);}else{setMarketDetailAsset({...a, qty:0, dividends:[], histories:buildHistories(a.price), transactions:[]});} }}
                       style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"pointer",opacity:isDragging?0.25:1,transition:"opacity 0.1s",userSelect:"none",WebkitUserSelect:"none",touchAction:dragMktMode?"none":"auto"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
                         {dragMktMode&&<div style={{color:isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
@@ -2759,6 +2760,7 @@ export default function App() {
       )}
 
       {showAddModal&&<AddAssetModal onClose={()=>setShowAddModal(false)} onAdd={handleAddAsset}/>}
+      {marketDetailAsset&&<AssetDetailSheet asset={marketDetailAsset} fmt={fmt} onClose={()=>setMarketDetailAsset(null)} onAddDividend={()=>{}} onDelete={()=>{}} onAddTransaction={()=>{}} onDeleteTransaction={()=>{}} marketMode={true}/>}
       {syncedDetailAsset&&<AssetDetailSheet asset={syncedDetailAsset} fmt={fmt} onClose={()=>setDetailAsset(null)} onAddDividend={handleAddDividend} onDelete={handleDeleteAsset} onAddTransaction={handleAddTransaction} onDeleteTransaction={handleDeleteTransaction}/>}
     </div>
   );
