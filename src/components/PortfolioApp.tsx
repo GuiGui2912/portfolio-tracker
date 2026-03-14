@@ -2241,7 +2241,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.1</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -2509,7 +2509,8 @@ export default function App() {
                       onTouchMove={e=>{ if(mktDragActive.current) handleMktTouchMove(e); }}
                       onTouchEnd={e=>{ if(mktDragActive.current){e.stopPropagation();handleMktTouchEnd();} }}
                       onTouchCancel={handleMktTouchEnd}
-                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"default",opacity:isDragging?0.25:1,transition:"opacity 0.1s",userSelect:"none",WebkitUserSelect:"none",touchAction:dragMktMode?"none":"auto"}}>
+                      onClick={()=>{ if(dragMktMode) return; const owned=assets.find(asset=>asset.symbol===a.symbol); if(owned) setDetailAsset(owned); }}
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"pointer",opacity:isDragging?0.25:1,transition:"opacity 0.1s",userSelect:"none",WebkitUserSelect:"none",touchAction:dragMktMode?"none":"auto"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
                         {dragMktMode&&<div style={{color:isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
                         <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
