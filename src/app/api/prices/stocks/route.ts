@@ -28,73 +28,104 @@ function fmtCap(n: number | undefined): string {
   return n.toLocaleString();
 }
 
-async function getStockPrice(symbol: string): Promise<{
-  price: number; change24h: number; currency: string;
-  extra: {
-    marketCap?: string; pe?: string; eps?: string;
-    high52w?: number; low52w?: number; volume?: string; avgVolume?: string;
-    dividendRate?: string; dividendYield?: string; exDividendDate?: string;
-    nextEarningsDate?: string; fiftyDayAvg?: string; twoHundredDayAvg?: string;
-  }
-} | null> {
-  const urls = [
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`,
-    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`,
-  ];
+function fmtVol(n: number | undefined): string {
+  if (!n) return '—';
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + ' M';
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + ' K';
+  return n.toLocaleString();
+}
 
-  for (const url of urls) {
+function fmtDate(ts: number | undefined): string {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+const HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  'Accept': 'application/json',
+  'Referer': 'https://finance.yahoo.com',
+};
+
+async function getStockPrice(symbol: string): Promise<{
+  price: number; change24h: number; currency: string; extra: Record<string, any>;
+} | null> {
+
+  // 1. Prix via chart
+  let price = 0, change24h = 0, currency = 'USD';
+  for (const host of ['query1', 'query2']) {
     try {
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'application/json',
-          'Referer': 'https://finance.yahoo.com',
-        },
-        cache: 'no-store',
-      });
+      const res = await fetch(
+        `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`,
+        { headers: HEADERS, cache: 'no-store' }
+      );
       if (!res.ok) continue;
       const data = await res.json();
       const meta = data?.chart?.result?.[0]?.meta;
       if (!meta) continue;
-
-      const price     = meta.regularMarketPrice ?? meta.previousClose;
-      const prevClose = meta.chartPreviousClose ?? meta.previousClose;
-      const change24h = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
-      const currency  = meta.currency ?? 'USD';
-
-      // Données enrichies depuis meta Yahoo
-      const extra = {
-        marketCap:        fmtCap(meta.marketCap),
-        pe:               meta.trailingPE        ? meta.trailingPE.toFixed(2)        : '—',
-        eps:              meta.epsTrailingTwelveMonths ? meta.epsTrailingTwelveMonths.toFixed(2) : '—',
-        high52w:          meta.fiftyTwoWeekHigh  ? Math.round(meta.fiftyTwoWeekHigh * 100) / 100  : undefined,
-        low52w:           meta.fiftyTwoWeekLow   ? Math.round(meta.fiftyTwoWeekLow  * 100) / 100  : undefined,
-        volume:           meta.regularMarketVolume
-                            ? (meta.regularMarketVolume >= 1e6
-                                ? (meta.regularMarketVolume / 1e6).toFixed(2) + ' M'
-                                : meta.regularMarketVolume.toLocaleString())
-                            : '—',
-        avgVolume:        meta.averageDailyVolume10Day
-                            ? (meta.averageDailyVolume10Day >= 1e6
-                                ? (meta.averageDailyVolume10Day / 1e6).toFixed(2) + ' M'
-                                : meta.averageDailyVolume10Day.toLocaleString())
-                            : '—',
-        dividendRate:     meta.dividendRate      ? meta.dividendRate.toFixed(2) + ' ' + currency : '—',
-        dividendYield:    meta.dividendYield     ? (meta.dividendYield * 100).toFixed(2) + '%'   : '—',
-        exDividendDate:   meta.exDividendDate
-                            ? new Date(meta.exDividendDate * 1000).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' })
-                            : '—',
-        fiftyDayAvg:      meta.fiftyDayAverage   ? meta.fiftyDayAverage.toFixed(2)   : '—',
-        twoHundredDayAvg: meta.twoHundredDayAverage ? meta.twoHundredDayAverage.toFixed(2) : '—',
-      };
-
-      console.log(`[Stocks] ${symbol} → ${price} ${currency} (${change24h.toFixed(2)}%)`);
-      return { price: Math.round(price * 100) / 100, change24h: Math.round(change24h * 100) / 100, currency, extra };
-    } catch (e: any) {
-      console.warn(`[Stocks] ${symbol} erreur:`, e.message);
-    }
+      price      = meta.regularMarketPrice ?? meta.previousClose ?? 0;
+      const prev = meta.chartPreviousClose ?? meta.previousClose ?? price;
+      change24h  = prev ? ((price - prev) / prev) * 100 : 0;
+      currency   = meta.currency ?? 'USD';
+      break;
+    } catch {}
   }
-  return null;
+  if (!price) return null;
+
+  // 2. Données fondamentales via quoteSummary
+  let extra: Record<string, any> = {};
+  try {
+    const modules = 'price,summaryDetail,defaultKeyStatistics,calendarEvents';
+    for (const host of ['query1', 'query2']) {
+      const url = `https://${host}.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=${modules}&corsDomain=finance.yahoo.com&formatted=false`;
+      const res = await fetch(url, { headers: { ...HEADERS, 'Accept-Language': 'en-US,en;q=0.9' }, cache: 'no-store' });
+      if (!res.ok) continue;
+      const json = await res.json();
+      const r    = json?.quoteSummary?.result?.[0];
+      if (!r) continue;
+
+      const sd = r.summaryDetail    ?? {};
+      const ks = r.defaultKeyStatistics ?? {};
+      const p2 = r.price            ?? {};
+      const ce = r.calendarEvents   ?? {};
+
+      const getRaw = (obj: any) => typeof obj === 'object' && obj !== null ? (obj.raw ?? obj) : obj;
+
+      extra = {
+        marketCap:        fmtCap(getRaw(p2.marketCap) ?? getRaw(sd.marketCap)),
+        pe:               getRaw(p2.trailingPE) ?? getRaw(sd.trailingPE)
+                            ? Number(getRaw(p2.trailingPE) ?? getRaw(sd.trailingPE)).toFixed(2) : '—',
+        eps:              getRaw(ks.trailingEps)
+                            ? Number(getRaw(ks.trailingEps)).toFixed(2) + ' ' + currency : '—',
+        high52w:          getRaw(sd.fiftyTwoWeekHigh)  ? Number(getRaw(sd.fiftyTwoWeekHigh))  : undefined,
+        low52w:           getRaw(sd.fiftyTwoWeekLow)   ? Number(getRaw(sd.fiftyTwoWeekLow))   : undefined,
+        volume:           fmtVol(getRaw(p2.regularMarketVolume) ?? getRaw(sd.volume)),
+        avgVolume:        fmtVol(getRaw(sd.averageVolume) ?? getRaw(sd.averageVolume10days)),
+        dividendRate:     getRaw(sd.dividendRate)
+                            ? Number(getRaw(sd.dividendRate)).toFixed(2) + ' ' + currency : '—',
+        dividendYield:    getRaw(sd.dividendYield)
+                            ? (Number(getRaw(sd.dividendYield)) * 100).toFixed(2) + '%' : '—',
+        exDividendDate:   fmtDate(getRaw(sd.exDividendDate)),
+        payDividendDate:  fmtDate(getRaw(ce.dividendDate)),
+        nextEarningsDate: fmtDate(getRaw(ce.earnings?.earningsDate?.[0])),
+        fiftyDayAvg:      getRaw(sd.fiftyDayAverage)       ? Number(getRaw(sd.fiftyDayAverage)).toFixed(2)       : undefined,
+        twoHundredDayAvg: getRaw(sd.twoHundredDayAverage)  ? Number(getRaw(sd.twoHundredDayAverage)).toFixed(2)  : undefined,
+        beta:             getRaw(sd.beta) ?? getRaw(ks.beta)
+                            ? Number(getRaw(sd.beta) ?? getRaw(ks.beta)).toFixed(2) : undefined,
+        currency,
+      };
+      console.log(`[Stocks] ${symbol} quoteSummary OK — cap=${extra.marketCap} pe=${extra.pe} div=${extra.dividendYield}`);
+      break;
+    }
+  } catch (e: any) {
+    console.warn(`[Stocks] ${symbol} quoteSummary erreur:`, e.message);
+  }
+
+  return {
+    price:     Math.round(price     * 100) / 100,
+    change24h: Math.round(change24h * 100) / 100,
+    currency,
+    extra,
+  };
 }
 
 export async function GET(request: Request) {
@@ -103,7 +134,7 @@ export async function GET(request: Request) {
   if (!symbols.length) return Response.json({ error: 'No symbols' }, { status: 400 });
 
   const eurUsd = await getEurUsdRate();
-  const now = Date.now();
+  const now    = Date.now();
   const result: Record<string, any> = {};
 
   await Promise.all(symbols.map(async (symbol) => {
