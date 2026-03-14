@@ -892,36 +892,50 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
           </div>
           {!marketMode && <div style={{margin:"12px 20px 0",background:"linear-gradient(135deg,#1E1A12,#252015)",borderRadius:14,padding:"12px 14px",border:"1px solid #3A3018"}}>
             <div style={{color:"#6A5A30",fontSize:9,marginBottom:10,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>Ma position</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              {[
-                ["Quantité", `${asset.qty} ${asset.symbol}`],
-                ["Valeur actuelle", fmt(asset.qty * asset.price, 0)],
-                ["Prix d'achat", (() => {
-                  // FIX: affichage uniquement — on utilise priceOriginal dans la devise de saisie
-                  if (!asset.purchase) return fmt(asset.price, 2);
-                  const px  = asset.purchase.priceOriginal ?? asset.purchase.priceUSD ?? asset.purchase.price;
-                  const cur = asset.purchase.currency ?? "USD";
-                  const sym = cur === "EUR" ? "€" : cur === "GBP" ? "£" : "$";
-                  return isNaN(px) ? fmt(asset.price, 2) : `${px.toFixed(2)} ${sym}`;
-                })()],
-                ["P&L", (() => {
-                  // FIX 2: toujours comparer USD vs USD
-                  const buyPxUSD = asset.purchase?.priceUSD ?? null;
-                  const pnl = buyPxUSD != null
-                    ? (asset.price - buyPxUSD) * asset.qty
-                    : chartAmtRaw;
-                  const pnlPct = buyPxUSD != null
-                    ? ((asset.price - buyPxUSD) / buyPxUSD * 100)
-                    : chartPct;
-                  return <span style={{color:pnl>=0?"#4ADE80":"#F87171"}}>{pnl>=0?"▲ ":"▼ "}{fmt(Math.abs(pnl),2)} ({pnlPct>=0?"+":""}{pnlPct.toFixed(2)}%)</span>;
-                })()],
-              ].map(([k,v])=>(
-                <div key={k}>
-                  <div style={{color:"#5A4A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                  <div style={{color:"#F0EDE8",fontWeight:700,fontSize:14,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+            {(() => {
+              const txs = asset.transactions||[];
+              const buyTxs = txs.filter(t=>t.type==="buy");
+              const hasTxs = buyTxs.length > 0;
+              const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
+              const totalCost = buyTxs.reduce((s,t)=>s+t.qty*t.priceUSD, 0);
+              const avgBuyUSD = hasTxs && totalQty > 0 ? totalCost / totalQty : (asset.purchase?.priceUSD ?? null);
+              const currentVal = totalQty * asset.price;
+              const pnl = avgBuyUSD != null ? (asset.price - avgBuyUSD) * totalQty : null;
+              const pnlPct = avgBuyUSD != null && avgBuyUSD > 0 ? ((asset.price - avgBuyUSD) / avgBuyUSD * 100) : null;
+              // Prix d'achat affiché en devise originale
+              const displayBuyPx = (() => {
+                if (!hasTxs && !asset.purchase) return fmt(asset.price,2);
+                if (hasTxs) {
+                  const cur = buyTxs[0]?.currency ?? "USD";
+                  const sym = cur==="EUR"?"€":cur==="GBP"?"£":"$";
+                  const fxRate = cur==="EUR"?(1/EUR_RATE):cur==="GBP"?1/1.27:1;
+                  const avgOrig = avgBuyUSD != null ? avgBuyUSD * fxRate : null;
+                  return avgOrig != null ? `${avgOrig.toFixed(2)} ${sym}` : "—";
+                }
+                const px = asset.purchase?.priceOriginal ?? asset.purchase?.priceUSD;
+                const cur = asset.purchase?.currency ?? "USD";
+                const sym = cur==="EUR"?"€":cur==="GBP"?"£":"$";
+                return isNaN(px) ? "—" : `${px.toFixed(2)} ${sym}`;
+              })();
+              return (
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  {[
+                    ["Quantité totale", `${Math.round(totalQty*1e6)/1e6} ${asset.symbol}`],
+                    ["Valeur actuelle", fmt(currentVal, 0)],
+                    ["Prix moyen d'achat", displayBuyPx],
+                    ["P&L total", pnl != null
+                      ? <span style={{color:pnl>=0?"#4ADE80":"#F87171"}}>{pnl>=0?"▲ ":"▼ "}{fmt(Math.abs(pnl),2)} ({pnlPct>=0?"+":""}{pnlPct.toFixed(2)}%)</span>
+                      : <span style={{color:"#5A5550"}}>—</span>
+                    ],
+                  ].map(([k,v])=>(
+                    <div key={k}>
+                      <div style={{color:"#5A4A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                      <div style={{color:"#F0EDE8",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>}
           {/* ── Transactions ── */}
           {!marketMode && <div style={{margin:"12px 20px 0"}}>
@@ -1903,6 +1917,7 @@ export default function App() {
           qty: Number(row.qty), price: Number(row.current_price)||0, change: Number(row.price_change_24h??0), color: row.color,
           dividends: [], histories: buildHistories(Number(row.current_price)||0),
           purchase: row.purchase_data ?? null,
+          transactions: row.purchase_data?.transactions ?? [],
         }));
         setAssets(loaded);
         setChartAsset(loaded[0]);
@@ -1932,6 +1947,7 @@ export default function App() {
             qty:Number(row.qty), price:Number(row.current_price)||0, change:Number(row.price_change_24h??0), color:row.color,
             dividends:[], histories:buildHistories(Number(row.current_price)||0),
             purchase:row.purchase_data??null,
+            transactions:row.purchase_data?.transactions??[],
           }));
           setAssets(loaded); setChartAsset(loaded[0]);
         }
@@ -1961,6 +1977,7 @@ export default function App() {
         qty:Number(row.qty), price:Number(row.current_price)||0, change:Number(row.price_change_24h??0),
         color:row.color, dividends:[], histories:buildHistories(Number(row.current_price)||0),
         purchase:row.purchase_data??null,
+        transactions:row.purchase_data?.transactions??[],
       }));
       setAssets(loaded); setChartAsset(loaded[0]);
     }
@@ -2000,7 +2017,8 @@ export default function App() {
 
   const saveAssetToDB = async (asset) => {
     if (!userId) return;
-    const row = { id:asset.id, user_id:userId, portfolio_id:activePortfolioId, symbol:asset.symbol, name:asset.name, type:asset.type, color:asset.color, current_price:asset.price, price_change_24h:asset.change, qty:asset.qty, purchase_data:asset.purchase??null };
+    const purchaseData = asset.purchase ? { ...asset.purchase, transactions: asset.transactions||[] } : (asset.transactions?.length ? { transactions: asset.transactions } : null);
+    const row = { id:asset.id, user_id:userId, portfolio_id:activePortfolioId, symbol:asset.symbol, name:asset.name, type:asset.type, color:asset.color, current_price:asset.price, price_change_24h:asset.change, qty:asset.qty, purchase_data: purchaseData };
     const { error } = await supabase.from("assets").upsert(row, { onConflict: "id" });
     if (error) console.error("saveAsset:", error);
   };
@@ -2126,21 +2144,31 @@ export default function App() {
   };
 
   const handleAddTransaction = (assetId, tx) => {
-    setAssets(prev=>prev.map(a=>{
-      if(a.id!==assetId) return a;
-      const txs = [...(a.transactions||[]), tx];
-      const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
-      return {...a, transactions: txs, qty: Math.max(0, Math.round(totalQty*1e8)/1e8)};
-    }));
+    setAssets(prev => {
+      const next = prev.map(a => {
+        if(a.id!==assetId) return a;
+        const txs = [...(a.transactions||[]), tx];
+        const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
+        return {...a, transactions: txs, qty: Math.max(0, Math.round(totalQty*1e8)/1e8)};
+      });
+      const updated = next.find(a=>a.id===assetId);
+      if(updated) saveAssetToDB(updated);
+      return next;
+    });
   };
 
   const handleDeleteTransaction = (assetId, txId) => {
-    setAssets(prev=>prev.map(a=>{
-      if(a.id!==assetId) return a;
-      const txs = (a.transactions||[]).filter(t=>t.id!==txId);
-      const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
-      return {...a, transactions: txs, qty: Math.max(0, Math.round(totalQty*1e8)/1e8)};
-    }));
+    setAssets(prev => {
+      const next = prev.map(a => {
+        if(a.id!==assetId) return a;
+        const txs = (a.transactions||[]).filter(t=>t.id!==txId);
+        const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
+        return {...a, transactions: txs, qty: Math.max(0, Math.round(totalQty*1e8)/1e8)};
+      });
+      const updated = next.find(a=>a.id===assetId);
+      if(updated) saveAssetToDB(updated);
+      return next;
+    });
   };
 
   const syncedDetailAsset = detailAsset ? assets.find(a=>a.id===detailAsset.id)||detailAsset : null;
@@ -2242,7 +2270,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.3</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
