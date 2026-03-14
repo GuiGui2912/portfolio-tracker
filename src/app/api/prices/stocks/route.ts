@@ -30,21 +30,55 @@ function fmtCap(n: number | undefined): string {
 
 function fmtVol(n: number | undefined): string {
   if (!n) return '—';
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + ' Md';
   if (n >= 1e6) return (n / 1e6).toFixed(2) + ' M';
   if (n >= 1e3) return (n / 1e3).toFixed(0) + ' K';
   return n.toLocaleString();
 }
 
 function fmtDate(ts: number | undefined): string {
-  if (!ts) return '—';
+  if (!ts || ts <= 0) return '—';
   return new Date(ts * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  'Accept': 'application/json',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
   'Referer': 'https://finance.yahoo.com',
+  'Origin': 'https://finance.yahoo.com',
 };
+
+async function fetchWithCrumb(symbol: string): Promise<any> {
+  // Étape 1 : récupérer un cookie valide + crumb
+  try {
+    const cookieRes = await fetch('https://fc.yahoo.com', { headers: HEADERS, cache: 'no-store' });
+    const cookieHeader = cookieRes.headers.get('set-cookie') || '';
+    const cookie = cookieHeader.split(';')[0];
+
+    const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+      headers: { ...HEADERS, 'Cookie': cookie },
+      cache: 'no-store',
+    });
+    const crumb = await crumbRes.text();
+
+    const modules = 'summaryDetail,defaultKeyStatistics,price,calendarEvents';
+    const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
+    const res = await fetch(url, {
+      headers: { ...HEADERS, 'Cookie': cookie },
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      console.warn(`[quoteSummary] ${symbol} HTTP ${res.status}`);
+      return null;
+    }
+    const json = await res.json();
+    return json?.quoteSummary?.result?.[0] ?? null;
+  } catch (e: any) {
+    console.warn(`[quoteSummary] ${symbol} erreur crumb:`, e.message);
+    return null;
+  }
+}
 
 async function getStockPrice(symbol: string): Promise<{
   price: number; change24h: number; currency: string; extra: Record<string, any>;
@@ -71,53 +105,57 @@ async function getStockPrice(symbol: string): Promise<{
   }
   if (!price) return null;
 
-  // 2. Données fondamentales via quoteSummary
+  // 2. Données fondamentales avec crumb
   let extra: Record<string, any> = {};
-  try {
-    const modules = 'price,summaryDetail,defaultKeyStatistics,calendarEvents';
-    for (const host of ['query1', 'query2']) {
-      const url = `https://${host}.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=${modules}&corsDomain=finance.yahoo.com&formatted=false`;
-      const res = await fetch(url, { headers: { ...HEADERS, 'Accept-Language': 'en-US,en;q=0.9' }, cache: 'no-store' });
-      if (!res.ok) continue;
-      const json = await res.json();
-      const r    = json?.quoteSummary?.result?.[0];
-      if (!r) continue;
+  const r = await fetchWithCrumb(symbol);
+  if (r) {
+    const getRaw = (obj: any): any => {
+      if (obj === null || obj === undefined) return undefined;
+      if (typeof obj === 'object' && 'raw' in obj) return obj.raw;
+      return obj;
+    };
 
-      const sd = r.summaryDetail    ?? {};
-      const ks = r.defaultKeyStatistics ?? {};
-      const p2 = r.price            ?? {};
-      const ce = r.calendarEvents   ?? {};
+    const sd = r.summaryDetail        ?? {};
+    const ks = r.defaultKeyStatistics ?? {};
+    const p2 = r.price                ?? {};
+    const ce = r.calendarEvents       ?? {};
 
-      const getRaw = (obj: any) => typeof obj === 'object' && obj !== null ? (obj.raw ?? obj) : obj;
+    const cap      = getRaw(p2.marketCap)      ?? getRaw(sd.marketCap);
+    const pe       = getRaw(p2.trailingPE)     ?? getRaw(sd.trailingPE);
+    const eps      = getRaw(ks.trailingEps);
+    const divRate  = getRaw(sd.dividendRate);
+    const divYield = getRaw(sd.dividendYield);
+    const exDiv    = getRaw(sd.exDividendDate);
+    const payDiv   = getRaw(ce.dividendDate);
+    const hi52     = getRaw(sd.fiftyTwoWeekHigh);
+    const lo52     = getRaw(sd.fiftyTwoWeekLow);
+    const avg50    = getRaw(sd.fiftyDayAverage);
+    const avg200   = getRaw(sd.twoHundredDayAverage);
+    const vol      = getRaw(p2.regularMarketVolume) ?? getRaw(sd.volume);
+    const avgVol   = getRaw(sd.averageVolume)       ?? getRaw(sd.averageVolume10days);
+    const beta     = getRaw(sd.beta)               ?? getRaw(ks.beta);
+    const earn     = ce.earnings?.earningsDate?.[0];
+    const nextEarn = getRaw(earn);
 
-      extra = {
-        marketCap:        fmtCap(getRaw(p2.marketCap) ?? getRaw(sd.marketCap)),
-        pe:               getRaw(p2.trailingPE) ?? getRaw(sd.trailingPE)
-                            ? Number(getRaw(p2.trailingPE) ?? getRaw(sd.trailingPE)).toFixed(2) : '—',
-        eps:              getRaw(ks.trailingEps)
-                            ? Number(getRaw(ks.trailingEps)).toFixed(2) + ' ' + currency : '—',
-        high52w:          getRaw(sd.fiftyTwoWeekHigh)  ? Number(getRaw(sd.fiftyTwoWeekHigh))  : undefined,
-        low52w:           getRaw(sd.fiftyTwoWeekLow)   ? Number(getRaw(sd.fiftyTwoWeekLow))   : undefined,
-        volume:           fmtVol(getRaw(p2.regularMarketVolume) ?? getRaw(sd.volume)),
-        avgVolume:        fmtVol(getRaw(sd.averageVolume) ?? getRaw(sd.averageVolume10days)),
-        dividendRate:     getRaw(sd.dividendRate)
-                            ? Number(getRaw(sd.dividendRate)).toFixed(2) + ' ' + currency : '—',
-        dividendYield:    getRaw(sd.dividendYield)
-                            ? (Number(getRaw(sd.dividendYield)) * 100).toFixed(2) + '%' : '—',
-        exDividendDate:   fmtDate(getRaw(sd.exDividendDate)),
-        payDividendDate:  fmtDate(getRaw(ce.dividendDate)),
-        nextEarningsDate: fmtDate(getRaw(ce.earnings?.earningsDate?.[0])),
-        fiftyDayAvg:      getRaw(sd.fiftyDayAverage)       ? Number(getRaw(sd.fiftyDayAverage)).toFixed(2)       : undefined,
-        twoHundredDayAvg: getRaw(sd.twoHundredDayAverage)  ? Number(getRaw(sd.twoHundredDayAverage)).toFixed(2)  : undefined,
-        beta:             getRaw(sd.beta) ?? getRaw(ks.beta)
-                            ? Number(getRaw(sd.beta) ?? getRaw(ks.beta)).toFixed(2) : undefined,
-        currency,
-      };
-      console.log(`[Stocks] ${symbol} quoteSummary OK — cap=${extra.marketCap} pe=${extra.pe} div=${extra.dividendYield}`);
-      break;
-    }
-  } catch (e: any) {
-    console.warn(`[Stocks] ${symbol} quoteSummary erreur:`, e.message);
+    extra = {
+      marketCap:        fmtCap(cap),
+      pe:               pe    ? Number(pe).toFixed(2)   : '—',
+      eps:              eps   ? Number(eps).toFixed(2) + ' ' + currency : '—',
+      high52w:          hi52  ? Number(hi52)  : undefined,
+      low52w:           lo52  ? Number(lo52)  : undefined,
+      volume:           fmtVol(vol),
+      avgVolume:        fmtVol(avgVol),
+      dividendRate:     divRate  ? Number(divRate).toFixed(2)  + ' ' + currency : '—',
+      dividendYield:    divYield ? (Number(divYield) * 100).toFixed(2) + '%'    : '—',
+      exDividendDate:   fmtDate(exDiv),
+      payDividendDate:  fmtDate(payDiv),
+      nextEarningsDate: fmtDate(nextEarn),
+      fiftyDayAvg:      avg50  ? Number(avg50).toFixed(2)  : undefined,
+      twoHundredDayAvg: avg200 ? Number(avg200).toFixed(2) : undefined,
+      beta:             beta   ? Number(beta).toFixed(2)   : undefined,
+      currency,
+    };
+    console.log(`[Stocks] ${symbol} OK — cap=${extra.marketCap} pe=${extra.pe} div=${extra.dividendYield}`);
   }
 
   return {
