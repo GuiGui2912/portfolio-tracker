@@ -36,9 +36,22 @@ function fmtVol(n: number | undefined): string {
   return n.toLocaleString();
 }
 
-function fmtDate(ts: number | undefined): string {
-  if (!ts || ts <= 0) return '—';
-  return new Date(ts * 1000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+function fmtDate(ts: number | string | undefined): string {
+  if (!ts) return '—';
+  // Si c'est une string ISO ou formatée
+  if (typeof ts === 'string') {
+    if (ts === '—' || ts === '') return '—';
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  // Timestamp Unix (secondes)
+  if (ts <= 0) return '—';
+  // Yahoo retourne parfois des timestamps en millisecondes (> 1e10)
+  const ms = ts > 1e10 ? ts : ts * 1000;
+  const d = new Date(ms);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 const HEADERS = {
