@@ -934,10 +934,12 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const displayBuyPx = (() => {
     if (!buyTxs.length && !asset.purchase) return "—";
     if (buyTxs.length > 0) {
-      // Pondérer correctement la devise : utiliser la première transaction comme référence
       const cur = buyTxs[0]?.currency ?? "USD";
-      const fxRate = cur==="EUR" ? (1/EUR_RATE) : cur==="GBP" ? 1/1.27 : 1;
-      const avgOrig = avgBuyUSD != null ? avgBuyUSD * fxRate : null;
+      // avgBuyUSD est en USD → convertir vers la devise originale
+      // USD → EUR : multiplier par EUR_RATE (≈0.872)
+      // USD → GBP : diviser par 1.27
+      const toOrig = cur==="EUR" ? EUR_RATE : cur==="GBP" ? (1/1.27) : 1;
+      const avgOrig = avgBuyUSD != null ? avgBuyUSD * toOrig : null;
       const sym = cur==="EUR"?"€":cur==="GBP"?"£":"$";
       return avgOrig != null ? `${avgOrig.toFixed(2)} ${sym}` : "—";
     }
@@ -947,8 +949,22 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
     return (!px || isNaN(px)) ? "—" : `${Number(px).toFixed(2)} ${sym}`;
   })();
 
-  // Graphique
-  const chartData  = asset.histories?.[scale] || [asset.price];
+  const [realHistories, setRealHistories] = useState(asset.histories || {});
+
+  useEffect(() => {
+    // Charger les vraies données historiques pour les cryptos
+    if (asset.type === 'crypto') {
+      fetch(`/api/prices/crypto?symbols=${asset.symbol}&history=true`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          const h = d?.[asset.symbol]?.history;
+          if (h && Object.keys(h).length > 0) setRealHistories(h);
+        })
+        .catch(() => {});
+    }
+  }, [asset.symbol]);
+
+  const chartData  = (realHistories?.[scale] || asset.histories?.[scale] || [asset.price]);
   const chartFirst = chartData[0];
   const chartLast  = chartData[chartData.length - 1];
   const chartPct   = ((chartLast - chartFirst) / chartFirst * 100);
@@ -1050,10 +1066,10 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
 
           {/* Graphique */}
           <div style={{margin:"14px 20px 0"}}>
-            <div style={{background:"#111009",borderRadius:16,padding:"10px 0 0",border:`1px solid ${asset.color}18`}}>
-              <div style={{display:"flex",alignItems:"stretch"}}>
-                {/* SVG courbe */}
-                <svg width={chartW} height={H} viewBox={`0 0 ${chartW} ${H}`} style={{display:"block",flex:"none"}}>
+            <div style={{background:"#111009",borderRadius:16,padding:"10px 6px 0",border:`1px solid ${asset.color}18`}}>
+              <div style={{display:"flex",alignItems:"stretch",gap:0}}>
+                {/* SVG courbe — prend tout l'espace disponible */}
+                <svg width="100%" height={H} viewBox={`0 0 ${chartW} ${H}`} preserveAspectRatio="none" style={{display:"block",flex:1,minWidth:0}}>
                   <defs>
                     <linearGradient id={`ds${uid}`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={asset.color} stopOpacity={chartPos?"0.35":"0.12"}/>
@@ -1061,7 +1077,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                     </linearGradient>
                   </defs>
                   {priceLabels.map((pl,i)=>(
-                    <line key={i} x1={0} y1={pl.y} x2={chartW} y2={pl.y} stroke="#ffffff06" strokeWidth="1"/>
+                    <line key={i} x1={0} y1={pl.y} x2={chartW} y2={pl.y} stroke="#ffffff08" strokeWidth="1"/>
                   ))}
                   <polygon points={`${pts} ${chartW},${H} 0,${H}`} fill={`url(#ds${uid})`}/>
                   <polyline points={pts} fill="none" stroke={asset.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1070,17 +1086,17 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                     return <><circle cx={chartW} cy={lastY} r="4" fill={asset.color}/><circle cx={chartW} cy={lastY} r="7" fill={asset.color} opacity="0.2"/></>;
                   })()}
                 </svg>
-                {/* Axe prix (droite) */}
-                <div style={{width:PRICE_AXIS_W,position:"relative",flexShrink:0}}>
+                {/* Axe prix (droite) — largeur fixe */}
+                <div style={{width:PRICE_AXIS_W,flexShrink:0,position:"relative",height:H}}>
                   {priceLabels.map((pl,i)=>(
-                    <div key={i} style={{position:"absolute",right:6,top:pl.y-7,color:"#4A4540",fontSize:8,fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}>{fmt(pl.value,0)}</div>
+                    <div key={i} style={{position:"absolute",left:4,top:pl.y-6,color:"#5A5550",fontSize:8,fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}>{fmt(pl.value,0)}</div>
                   ))}
                 </div>
               </div>
-              {/* Axe temps (bas) */}
-              <div style={{position:"relative",height:18,margin:"2px 0 4px"}}>
+              {/* Axe temps (bas) — en % de la largeur du SVG */}
+              <div style={{position:"relative",height:20,marginTop:2,marginRight:PRICE_AXIS_W}}>
                 {timeLabels.map((tl,i)=>(
-                  <div key={i} style={{position:"absolute",left:tl.x,transform:"translateX(-50%)",color:"#4A4540",fontSize:8,fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}>{tl.label}</div>
+                  <div key={i} style={{position:"absolute",left:`${(tl.x/chartW)*100}%`,transform:"translateX(-50%)",color:"#5A5550",fontSize:8,fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}>{tl.label}</div>
                 ))}
               </div>
             </div>
@@ -2677,7 +2693,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.7</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.8</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
