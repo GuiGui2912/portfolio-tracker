@@ -999,13 +999,15 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const chartPos   = chartPct >= 0;
   const chartAmtRaw = (chartLast - chartFirst) * asset.qty;
 
+  // min/max d'abord pour calculer PAD_RIGHT adaptatif
+  const min = Math.min(...chartData), max = Math.max(...chartData), range = max - min || 1;
+
   // Dimensions graphique — PAD_RIGHT adaptatif selon longueur des prix
   const samplePrice = fmt(max, 0);
-  const PAD_RIGHT = samplePrice.length > 7 ? 56 : 42;
+  const PAD_RIGHT = samplePrice.replace(/\s/g,'').length > 7 ? 58 : 44;
   const SVG_W = 310, SVG_H = 130, PAD_BOTTOM = 22, PAD_TOP = 8, PAD_LEFT = 4;
   const plotW = SVG_W - PAD_RIGHT - PAD_LEFT;
   const plotH = SVG_H - PAD_BOTTOM - PAD_TOP;
-  const min = Math.min(...chartData), max = Math.max(...chartData), range = max - min || 1;
   const toX = (i: number) => PAD_LEFT + (i / (chartData.length - 1)) * plotW;
   const toY = (v: number) => PAD_TOP + plotH - ((v - min) / range) * plotH;
   const pts = chartData.map((v,i) => `${toX(i)},${toY(v)}`).join(" ");
@@ -2772,7 +2774,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.1</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
