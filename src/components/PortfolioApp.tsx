@@ -949,55 +949,83 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
     return (!px || isNaN(px)) ? "—" : `${Number(px).toFixed(2)} ${sym}`;
   })();
 
-  const [realHistories, setRealHistories] = useState(asset.histories || {});
+  const [realHistories, setRealHistories] = useState<Record<string,number[]>>(asset.histories || {});
 
   useEffect(() => {
-    // Charger les vraies données historiques pour les cryptos
-    if (asset.type === 'crypto') {
-      fetch(`/api/prices/crypto?symbols=${asset.symbol}&history=true`)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
+    const fetchHistory = async () => {
+      try {
+        if (asset.type === 'crypto') {
+          const r = await fetch(`/api/prices/crypto?symbols=${asset.symbol}&history=true`);
+          if (!r.ok) return;
+          const d = await r.json();
           const h = d?.[asset.symbol]?.history;
           if (h && Object.keys(h).length > 0) setRealHistories(h);
-        })
-        .catch(() => {});
-    }
-  }, [asset.symbol]);
+        } else {
+          // Actions : fetcher l'historique depuis Yahoo Finance chart avec différentes périodes
+          const periodMap: Record<string,{range:string,interval:string}> = {
+            '1S': {range:'7d',   interval:'1d'},
+            '1M': {range:'1mo',  interval:'1d'},
+            '3M': {range:'3mo',  interval:'1d'},
+            '6M': {range:'6mo',  interval:'1wk'},
+            '1A': {range:'1y',   interval:'1wk'},
+            'MAX':{range:'5y',   interval:'1mo'},
+          };
+          const histories: Record<string,number[]> = {};
+          await Promise.all(Object.entries(periodMap).map(async ([label, {range, interval}]) => {
+            try {
+              for (const host of ['query1','query2']) {
+                const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.symbol)}?range=${range}&interval=${interval}`;
+                const res = await fetch(`/api/yahoo-history?symbol=${encodeURIComponent(asset.symbol)}&range=${range}&interval=${interval}`);
+                if (!res.ok) continue;
+                const data = await res.json();
+                if (data?.prices?.length > 1) {
+                  histories[label] = data.prices;
+                  break;
+                }
+              }
+            } catch {}
+          }));
+          if (Object.keys(histories).length > 0) setRealHistories(prev => ({...prev, ...histories}));
+        }
+      } catch {}
+    };
+    fetchHistory();
+  }, [asset.symbol, asset.type]);
 
-  const chartData  = (realHistories?.[scale] || asset.histories?.[scale] || [asset.price]);
+  const chartData = (realHistories?.[scale]?.length > 1 ? realHistories[scale] : asset.histories?.[scale] || [asset.price]);
   const chartFirst = chartData[0];
   const chartLast  = chartData[chartData.length - 1];
   const chartPct   = ((chartLast - chartFirst) / chartFirst * 100);
   const chartPos   = chartPct >= 0;
   const chartAmtRaw = (chartLast - chartFirst) * asset.qty;
-  const W = 310, H = 120, PRICE_AXIS_W = 44;
-  const chartW = W - PRICE_AXIS_W;
+
+  // Dimensions graphique — tout dans le SVG
+  const SVG_W = 310, SVG_H = 120, PAD_RIGHT = 46, PAD_BOTTOM = 20, PAD_TOP = 8;
+  const plotW = SVG_W - PAD_RIGHT;
+  const plotH = SVG_H - PAD_BOTTOM - PAD_TOP;
   const min = Math.min(...chartData), max = Math.max(...chartData), range = max - min || 1;
-  const pts = chartData.map((v,i) => {
-    const x = (i / (chartData.length - 1)) * chartW;
-    const y = H - ((v - min) / range) * (H - 14) - 7;
-    return `${x},${y}`;
-  }).join(" ");
+  const toX = (i: number) => (i / (chartData.length - 1)) * plotW;
+  const toY = (v: number) => PAD_TOP + plotH - ((v - min) / range) * plotH;
+  const pts = chartData.map((v,i) => `${toX(i)},${toY(v)}`).join(" ");
   const uid = (asset.color + scale).replace(/[#.\s]/g, "x");
-  // Étiquettes de temps
+
+  // Étiquettes temps (axe bas)
   const timeLabels = (() => {
     const n = chartData.length;
     if (n < 2) return [];
     const indices = [0, Math.floor(n/4), Math.floor(n/2), Math.floor(3*n/4), n-1];
     const now = new Date();
     const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
-    return indices.map(i => {
-      const d = new Date(now);
-      d.setDate(d.getDate() - Math.round((n - 1 - i) / (n - 1) * days));
-      const label = i===n-1 ? "Auj." : d.toLocaleDateString("fr-FR", { day:"2-digit", month:"short" });
-      const x = (i / (n - 1)) * chartW;
-      return { label, x };
-    });
+    return indices.map(i => ({
+      label: i===n-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((n-1-i)/(n-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
+      x: toX(i),
+    }));
   })();
-  // Étiquettes de prix (axe droit)
-  const priceLabels = [0.85, 0.5, 0.15].map(p => ({
+
+  // Étiquettes prix (axe droit, dans SVG)
+  const priceLabels = [0.15, 0.5, 0.85].map(p => ({
     value: min + range * (1 - p),
-    y: H - (1 - p) * (H - 14) - 7,
+    y: PAD_TOP + plotH * p,
   }));
 
   // Swipe to close
@@ -1066,39 +1094,38 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
 
           {/* Graphique */}
           <div style={{margin:"14px 20px 0"}}>
-            <div style={{background:"#111009",borderRadius:16,padding:"10px 6px 0",border:`1px solid ${asset.color}18`}}>
-              <div style={{display:"flex",alignItems:"stretch",gap:0}}>
-                {/* SVG courbe — prend tout l'espace disponible */}
-                <svg width="100%" height={H} viewBox={`0 0 ${chartW} ${H}`} preserveAspectRatio="none" style={{display:"block",flex:1,minWidth:0}}>
-                  <defs>
-                    <linearGradient id={`ds${uid}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={asset.color} stopOpacity={chartPos?"0.35":"0.12"}/>
-                      <stop offset="100%" stopColor={asset.color} stopOpacity="0"/>
-                    </linearGradient>
-                  </defs>
-                  {priceLabels.map((pl,i)=>(
-                    <line key={i} x1={0} y1={pl.y} x2={chartW} y2={pl.y} stroke="#ffffff08" strokeWidth="1"/>
-                  ))}
-                  <polygon points={`${pts} ${chartW},${H} 0,${H}`} fill={`url(#ds${uid})`}/>
-                  <polyline points={pts} fill="none" stroke={asset.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  {(()=>{
-                    const lastY = H - ((chartLast - min) / range) * (H - 14) - 7;
-                    return <><circle cx={chartW} cy={lastY} r="4" fill={asset.color}/><circle cx={chartW} cy={lastY} r="7" fill={asset.color} opacity="0.2"/></>;
-                  })()}
-                </svg>
-                {/* Axe prix (droite) — largeur fixe */}
-                <div style={{width:PRICE_AXIS_W,flexShrink:0,position:"relative",height:H}}>
-                  {priceLabels.map((pl,i)=>(
-                    <div key={i} style={{position:"absolute",left:4,top:pl.y-6,color:"#5A5550",fontSize:8,fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}>{fmt(pl.value,0)}</div>
-                  ))}
-                </div>
-              </div>
-              {/* Axe temps (bas) — en % de la largeur du SVG */}
-              <div style={{position:"relative",height:20,marginTop:2,marginRight:PRICE_AXIS_W}}>
-                {timeLabels.map((tl,i)=>(
-                  <div key={i} style={{position:"absolute",left:`${(tl.x/chartW)*100}%`,transform:"translateX(-50%)",color:"#5A5550",fontSize:8,fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}>{tl.label}</div>
+            <div style={{background:"#111009",borderRadius:16,padding:"8px 0 4px",border:`1px solid ${asset.color}18`}}>
+              <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="xMidYMid meet" style={{display:"block",overflow:"visible"}}>
+                <defs>
+                  <linearGradient id={`ds${uid}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={asset.color} stopOpacity={chartPos?"0.35":"0.12"}/>
+                    <stop offset="100%" stopColor={asset.color} stopOpacity="0"/>
+                  </linearGradient>
+                  <clipPath id={`cp${uid}`}>
+                    <rect x={0} y={PAD_TOP-2} width={plotW} height={plotH+4}/>
+                  </clipPath>
+                </defs>
+                {/* Lignes de grille */}
+                {priceLabels.map((pl,i)=>(
+                  <line key={i} x1={0} y1={pl.y} x2={plotW} y2={pl.y} stroke="#ffffff08" strokeWidth="1"/>
                 ))}
-              </div>
+                {/* Courbe + remplissage */}
+                <g clipPath={`url(#cp${uid})`}>
+                  <polygon points={`${pts} ${toX(chartData.length-1)},${SVG_H-PAD_BOTTOM} 0,${SVG_H-PAD_BOTTOM}`} fill={`url(#ds${uid})`}/>
+                  <polyline points={pts} fill="none" stroke={asset.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </g>
+                {/* Point final */}
+                <circle cx={toX(chartData.length-1)} cy={toY(chartLast)} r="4" fill={asset.color}/>
+                <circle cx={toX(chartData.length-1)} cy={toY(chartLast)} r="7" fill={asset.color} opacity="0.2"/>
+                {/* Axe prix (droite, dans le SVG) */}
+                {priceLabels.map((pl,i)=>(
+                  <text key={i} x={plotW+4} y={pl.y+4} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace">{fmt(pl.value,0)}</text>
+                ))}
+                {/* Axe temps (bas, dans le SVG) */}
+                {timeLabels.map((tl,i)=>(
+                  <text key={i} x={tl.x} y={SVG_H-3} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace" textAnchor="middle">{tl.label}</text>
+                ))}
+              </svg>
             </div>
             {/* Sélecteur échelle */}
             <div style={{display:"flex",gap:4,marginTop:8,background:"#1A1714",borderRadius:14,padding:4}}>
@@ -2693,7 +2720,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.8</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.9</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
