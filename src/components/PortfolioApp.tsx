@@ -1205,15 +1205,21 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                           <div>
                             <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3}}>
                               <span style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Ex-date</span>
-                              <div style={{position:"relative",display:"inline-flex"}} className="tooltip-wrap">
-                                <div style={{width:13,height:13,borderRadius:7,background:"#1E3A1E",border:"1px solid #3A6A30",display:"flex",alignItems:"center",justifyContent:"center",cursor:"help",flexShrink:0}}>
-                                  <span style={{color:"#4ADE80",fontSize:8,fontWeight:700,lineHeight:1}}>i</span>
-                                </div>
-                                <div className="tooltip-box" style={{position:"absolute",bottom:"calc(100% + 6px)",left:"50%",transform:"translateX(-50%)",background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:10,padding:"8px 10px",width:200,zIndex:100,pointerEvents:"none",opacity:0,transition:"opacity 0.15s"}}>
-                                  <div style={{color:"#C8EEC0",fontSize:11,lineHeight:1.5}}>Date à partir de laquelle tu dois déjà détenir l'action pour recevoir le prochain dividende. Si tu achètes ce jour-là ou après, tu ne le touches pas.</div>
-                                  <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",width:0,height:0,borderLeft:"5px solid transparent",borderRight:"5px solid transparent",borderTop:"5px solid #2A4A2A"}}/>
-                                </div>
-                              </div>
+                              {(()=>{
+                                const [show, setShow] = useState(false);
+                                return (
+                                  <div style={{position:"relative",display:"inline-flex",flexDirection:"column"}}>
+                                    <div onClick={e=>{e.stopPropagation();setShow(s=>!s);}} style={{width:14,height:14,borderRadius:7,background:"#1E3A1E",border:"1px solid #3A6A30",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
+                                      <span style={{color:"#4ADE80",fontSize:8,fontWeight:700,lineHeight:1}}>i</span>
+                                    </div>
+                                    {show && (
+                                      <div style={{position:"absolute",top:18,left:0,background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:10,padding:"10px 12px",width:220,zIndex:9999,boxShadow:"0 4px 20px #000c"}}>
+                                        <div style={{color:"#C8EEC0",fontSize:11,lineHeight:1.6}}>Date à partir de laquelle tu dois déjà détenir l'action pour recevoir le prochain dividende. Si tu achètes ce jour-là ou après, tu ne le touches pas.</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.exDividendDate||"—"}</div>
                           </div>
@@ -2499,7 +2505,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.6</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
