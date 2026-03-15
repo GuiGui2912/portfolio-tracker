@@ -999,8 +999,10 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const chartPos   = chartPct >= 0;
   const chartAmtRaw = (chartLast - chartFirst) * asset.qty;
 
-  // Dimensions graphique — tout dans le SVG
-  const SVG_W = 310, SVG_H = 130, PAD_RIGHT = 42, PAD_BOTTOM = 22, PAD_TOP = 8, PAD_LEFT = 4;
+  // Dimensions graphique — PAD_RIGHT adaptatif selon longueur des prix
+  const samplePrice = fmt(max, 0);
+  const PAD_RIGHT = samplePrice.length > 7 ? 56 : 42;
+  const SVG_W = 310, SVG_H = 130, PAD_BOTTOM = 22, PAD_TOP = 8, PAD_LEFT = 4;
   const plotW = SVG_W - PAD_RIGHT - PAD_LEFT;
   const plotH = SVG_H - PAD_BOTTOM - PAD_TOP;
   const min = Math.min(...chartData), max = Math.max(...chartData), range = max - min || 1;
@@ -1009,25 +1011,31 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const pts = chartData.map((v,i) => `${toX(i)},${toY(v)}`).join(" ");
   const uid = (asset.color + scale).replace(/[#.\s]/g, "x");
 
-  // Étiquettes temps (axe bas) — 4 points, ancrage adapté
+  // Étiquettes temps (axe bas) — espacées uniformément
   const timeLabels = (() => {
     const n = chartData.length;
     if (n < 2) return [];
     const indices = [0, Math.floor(n/3), Math.floor(2*n/3), n-1];
     const now = new Date();
     const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
-    return indices.map((i,idx) => {
-      let x = toX(i);
-      // Décaler légèrement le premier et le dernier pour éviter le débordement
-      if (idx === 0) x = Math.max(x, PAD_LEFT + 18);
-      if (idx === indices.length-1) x = Math.min(x, PAD_LEFT + plotW - 12);
-      return {
-        label: i===n-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((n-1-i)/(n-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
-        x,
-        anchor: idx===0 ? "middle" : idx===indices.length-1 ? "middle" : "middle",
-      };
-    });
+    // Espacer uniformément sur plotW au lieu de suivre les index réels
+    const totalSpan = PAD_LEFT + plotW;
+    const positions = [PAD_LEFT + 22, PAD_LEFT + plotW*0.35, PAD_LEFT + plotW*0.67, PAD_LEFT + plotW - 12];
+    return indices.map((i,idx) => ({
+      label: i===n-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((n-1-i)/(n-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
+      x: positions[idx],
+      anchor: "middle",
+    }));
   })();
+
+  // Étiquettes prix — format court pour les grands montants
+  const fmtPrice = (v: number) => {
+    const raw = fmt(v, 0);
+    // Si > 4 chiffres, utiliser format abrégé
+    const num = Math.abs(v * (currency==="EUR" ? EUR_RATE : 1));
+    if (num >= 10000) return fmt(v, 0).replace(/\s/g, '').replace('€','').replace('$','') + (currency==="EUR"?"€":"$");
+    return raw;
+  };
 
   // Étiquettes prix (axe droit) — valeurs brutes formatées sans double conversion
   // Les chartData sont en USD en interne, fmt() fait la conversion USD→EUR si besoin
@@ -1127,7 +1135,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 <circle cx={toX(chartData.length-1)} cy={toY(chartLast)} r="7" fill={asset.color} opacity="0.2"/>
                 {/* Axe prix (droite) */}
                 {priceLabels.map((pl,i)=>(
-                  <text key={i} x={PAD_LEFT+plotW+4} y={pl.y+4} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace" textAnchor="start">{fmt(pl.value,0)}</text>
+                  <text key={i} x={PAD_LEFT+plotW+4} y={pl.y+4} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace" textAnchor="start">{fmtPrice(pl.value)}</text>
                 ))}
                 {/* Axe temps (bas) */}
                 {timeLabels.map((tl,i)=>(
@@ -2764,7 +2772,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.1</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
