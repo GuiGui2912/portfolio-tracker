@@ -885,8 +885,8 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
               ["Bourse",     info.exchange],
               ["Pays",       info.country||"—"],
               ["Type",       asset.type==="etf"?"ETF":asset.type==="crypto"?"Crypto":"Action"],
-              ["Bêta",       info.beta],
-              ["Volume",     extra.volume||"—"],
+              [isCrypto?"Rang":"Bêta", isCrypto?(extra.marketCapRank||"—"):(info.beta||"—")],
+              ["Volume",     extra.volume||extra.volume24h||"—"],
             ].map(([k,v])=>(
               <div key={k} style={{background:"#1A1714",borderRadius:11,padding:"9px 11px",border:"1px solid #252015"}}>
                 <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
@@ -895,7 +895,81 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
             ))}
           </div>
 
-          {/* Capitalisation & valorisation */}
+          {/* ── CRYPTO : données fondamentales ── */}
+          {isCrypto && extra.marketCap && (
+            <div style={{margin:"10px 20px 0"}}>
+              <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>Marché</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                {[
+                  ["Capitalisation",  extra.marketCap||"—"],
+                  ["Rang",            extra.marketCapRank||"—"],
+                  ["Volume 24h",      extra.volume24h||"—"],
+                  ["Offre en circ.",  extra.circulatingSupply||"—"],
+                  ["Offre max",       extra.maxSupply||"—"],
+                  ["Catégories",      extra.categories||"—"],
+                ].map(([k,v])=>(
+                  <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
+                    <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                    <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CRYPTO : performance */}
+          {isCrypto && (extra.change7d||extra.change30d||extra.change1y) && (
+            <div style={{margin:"10px 20px 0"}}>
+              <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>Performance</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
+                {[["7 jours", extra.change7d], ["30 jours", extra.change30d], ["1 an", extra.change1y]].map(([k,v])=>{
+                  const isPos = v && !v.startsWith('-');
+                  return (
+                    <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
+                      <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                      <div style={{color:v==="—"?"#4A4540":isPos?"#4ADE80":"#F87171",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v&&v!=="—"?(isPos?"▲ ":"▼ ")+v.replace('-',''):v||"—"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* CRYPTO : ATH / ATL */}
+          {isCrypto && extra.ath && (
+            <div style={{margin:"10px 20px 0",background:"#111009",borderRadius:14,padding:"12px 14px",border:"1px solid #1E1B16"}}>
+              <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Records historiques</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div>
+                  <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>ATH</div>
+                  <div style={{color:"#4ADE80",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(extra.ath,2)}</div>
+                  <div style={{color:"#3A5530",fontSize:10,marginTop:2}}>{extra.athDate}</div>
+                </div>
+                <div>
+                  <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>ATL</div>
+                  <div style={{color:"#F87171",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(extra.atl,4)}</div>
+                  <div style={{color:"#553030",fontSize:10,marginTop:2}}>{extra.atlDate}</div>
+                </div>
+              </div>
+              {extra.ath && extra.atl && (() => {
+                const pct = Math.min(100, Math.max(0, ((asset.price - extra.atl) / (extra.ath - extra.atl)) * 100));
+                return (
+                  <div style={{marginTop:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                      <span style={{color:"#553030",fontSize:9,fontFamily:"'DM Mono',monospace"}}>ATL</span>
+                      <span style={{color:"#3A5530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>ATH</span>
+                    </div>
+                    <div style={{position:"relative",height:6,background:"#1E1B16",borderRadius:3}}>
+                      <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#F87171,#C8A96E,#4ADE80)",borderRadius:3}}/>
+                      <div style={{position:"absolute",top:-3,width:12,height:12,borderRadius:6,background:"#F0EDE8",border:"2px solid #151210",transform:"translateX(-50%)",left:`${pct}%`}}/>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Capitalisation & valorisation — ACTIONS */}
           {!isCrypto && (extra.marketCap||extra.pe||extra.eps||extra.high52w) && (
             <div style={{margin:"10px 20px 0"}}>
               <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>Valorisation</div>
@@ -903,7 +977,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 {[
                   ["Capitalisation", extra.marketCap||"—"],
                   ["PER (TTM)",      extra.pe||"—"],
-                  ["BPA (TTM)",      extra.eps ? extra.eps+" "+((extra.currency)||"$") : "—"],
+                  ["BPA (TTM)",      extra.eps||"—"],
                   ["Moy. 50j",       extra.fiftyDayAvg ? fmt(+extra.fiftyDayAvg,2) : "—"],
                   ["Moy. 200j",      extra.twoHundredDayAvg ? fmt(+extra.twoHundredDayAvg,2) : "—"],
                   ["Vol. moy.",      extra.avgVolume||"—"],
@@ -917,8 +991,68 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
             </div>
           )}
 
-          {/* 52 semaines */}
-          {(extra.high52w || extra.low52w) && (
+          {/* Market data — CRYPTO */}
+          {isCrypto && extra.marketCap && (
+            <div style={{margin:"10px 20px 0"}}>
+              <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>Market data</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                {[
+                  ["Capitalisation",  extra.marketCap||"—"],
+                  ["Vol. 24h",        extra.volume24h||"—"],
+                  ["Supply en circ.", extra.circulatingSupply||"—"],
+                  ["Supply totale",   extra.totalSupply||"—"],
+                  ["Supply max",      extra.maxSupply||"—"],
+                  ["Rang",            extra.marketCapRank||"—"],
+                ].map(([k,v])=>(
+                  <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
+                    <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                    <div style={{color:"#F0EDE8",fontWeight:600,fontSize:11,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Performance — CRYPTO */}
+          {isCrypto && (extra.change7d||extra.change30d||extra.change1y) && (
+            <div style={{margin:"10px 20px 0"}}>
+              <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>Performance</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
+                {[["7 jours",extra.change7d],["30 jours",extra.change30d],["1 an",extra.change1y]].map(([k,v])=>{
+                  const pos = v && !String(v).startsWith("-");
+                  return (
+                    <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
+                      <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                      <div style={{color:v==="—"?"#4A4540":pos?"#4ADE80":"#F87171",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v==="—"?"—":(pos?"+":"")+v}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ATH / ATL — CRYPTO */}
+          {isCrypto && extra.ath && (
+            <div style={{margin:"10px 20px 0"}}>
+              <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7}}>Records historiques</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                {[
+                  ["ATH (plus haut)", extra.ath||"—"],
+                  ["Date ATH",        extra.athDate||"—"],
+                  ["ATL (plus bas)",  extra.atl||"—"],
+                  ["Date ATL",        extra.atlDate||"—"],
+                ].map(([k,v])=>(
+                  <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
+                    <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                    <div style={{color:"#F0EDE8",fontWeight:600,fontSize:11,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 52 semaines — ACTIONS */}
+          {!isCrypto && (extra.high52w || extra.low52w) && (
             <div style={{margin:"10px 20px 0",background:"#111009",borderRadius:14,padding:"12px 14px",border:"1px solid #1E1B16"}}>
               <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Fourchette 52 semaines</div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -939,7 +1073,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
             </div>
           )}
 
-          {/* Dividendes */}
+          {/* Dividendes — ACTIONS */}
           {!isCrypto && (extra.dividendRate || extra.dividendYield || extra.exDividendDate) && (
             <div style={{margin:"10px 20px 0",background:"#0E1A0E",borderRadius:14,padding:"12px 14px",border:"1px solid #1E3A1E"}}>
               <div style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Dividende</div>
@@ -960,7 +1094,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
 
           <div style={{margin:"10px 20px 0",background:"#1A1714",borderRadius:14,padding:"12px 14px",border:"1px solid #252015"}}>
             <div style={{color:"#5A5550",fontSize:9,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>À propos</div>
-            <div style={{color:"#8A8480",fontSize:12,lineHeight:1.7}}>{info.description}</div>
+            <div style={{color:"#8A8480",fontSize:12,lineHeight:1.7}}>{extra.description || info.description}</div>
           </div>
           {!marketMode && <div style={{margin:"12px 20px 0",background:"linear-gradient(135deg,#1E1A12,#252015)",borderRadius:14,padding:"12px 14px",border:"1px solid #3A3018"}}>
             <div style={{color:"#6A5A30",fontSize:9,marginBottom:10,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>Ma position</div>
@@ -2356,7 +2490,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.3</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.4</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>

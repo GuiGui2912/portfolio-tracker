@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCryptoPrices, getCryptoHistory } from '@/lib/coingecko'
+import { getCryptoPrices, getCryptoHistory, getCryptoExtra } from '@/lib/coingecko'
 
 const CACHE_TTL_MS = 5 * 60 * 1000
 const memCache = new Map<string, { data: unknown; ts: number }>()
@@ -25,12 +25,15 @@ export async function GET(req: NextRequest) {
     const prices = await getCryptoPrices(symbols)
     const result: Record<string, unknown> = {}
 
-    for (const symbol of symbols) {
+    await Promise.all(symbols.map(async (symbol) => {
       const p = prices[symbol]
-      if (!p) continue
-      const history = withHistory ? await getCryptoHistory(symbol) : {}
-      result[symbol] = { symbol, price: p.price, change24h: p.change24h, history }
-    }
+      if (!p) return
+      const [history, extra] = await Promise.all([
+        withHistory ? getCryptoHistory(symbol) : Promise.resolve({}),
+        getCryptoExtra(symbol),
+      ])
+      result[symbol] = { symbol, price: p.price, change24h: p.change24h, history, extra }
+    }))
 
     memCache.set(cacheKey, { data: result, ts: Date.now() })
     return NextResponse.json(result)
