@@ -1190,18 +1190,37 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                     {/* ACTIONS : Dividende */}
                     {!isCrypto && (extra.dividendRate||extra.dividendYield||extra.exDividendDate) && (
                       <div style={{marginTop:12,background:"#0E1A0E",borderRadius:14,padding:"12px 14px",border:"1px solid #1E3A1E"}}>
-                        <div style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:8}}>Dividende</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
-                          {[
-                            ["Dividende/an", extra.dividendRate||"—"],
-                            ["Rendement",    extra.dividendYield||"—"],
-                            ["Ex-date",      extra.exDividendDate||"—"],
-                          ].map(([k,v])=>(
-                            <div key={k}>
-                              <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                              <div style={{color:"#4ADE80",fontWeight:700,fontSize:11,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                        <div style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Dividende</div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
+                          <div>
+                            <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Dividende/an</div>
+                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.dividendRate||"—"}</div>
+                          </div>
+                          <div>
+                            <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Rendement</div>
+                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.dividendYield||"—"}</div>
+                          </div>
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                          <div>
+                            <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3}}>
+                              <span style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Ex-date</span>
+                              <div style={{position:"relative",display:"inline-flex"}} className="tooltip-wrap">
+                                <div style={{width:13,height:13,borderRadius:7,background:"#1E3A1E",border:"1px solid #3A6A30",display:"flex",alignItems:"center",justifyContent:"center",cursor:"help",flexShrink:0}}>
+                                  <span style={{color:"#4ADE80",fontSize:8,fontWeight:700,lineHeight:1}}>i</span>
+                                </div>
+                                <div className="tooltip-box" style={{position:"absolute",bottom:"calc(100% + 6px)",left:"50%",transform:"translateX(-50%)",background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:10,padding:"8px 10px",width:200,zIndex:100,pointerEvents:"none",opacity:0,transition:"opacity 0.15s"}}>
+                                  <div style={{color:"#C8EEC0",fontSize:11,lineHeight:1.5}}>Date à partir de laquelle tu dois déjà détenir l'action pour recevoir le prochain dividende. Si tu achètes ce jour-là ou après, tu ne le touches pas.</div>
+                                  <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",width:0,height:0,borderLeft:"5px solid transparent",borderRight:"5px solid transparent",borderTop:"5px solid #2A4A2A"}}/>
+                                </div>
+                              </div>
                             </div>
-                          ))}
+                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.exDividendDate||"—"}</div>
+                          </div>
+                          <div>
+                            <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Versement</div>
+                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.payDividendDate||"—"}</div>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -2465,6 +2484,7 @@ export default function App() {
         input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.3);}
         .add-btn:hover{transform:scale(1.05);}
         .add-btn{transition:transform 0.15s,box-shadow 0.15s;}
+        .tooltip-wrap:hover .tooltip-box{opacity:1!important;pointer-events:auto!important;}
       `}</style>
       <div style={{width:"100%",maxWidth:430,background:"#151210",borderRadius:0,overflow:"hidden",height:"100vh",position:"relative",display:"flex",flexDirection:"column"}}>
 
@@ -2479,7 +2499,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.5</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
