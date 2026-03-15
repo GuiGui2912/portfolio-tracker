@@ -917,6 +917,8 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const dragStartY                    = useRef(0);
   const dragStartTime                 = useRef(0);
   const isDragging                    = useRef(false);
+  const onCloseRef                    = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   const isCrypto = asset.type === "crypto";
   const info     = getAssetInfo(asset.symbol);
@@ -1089,7 +1091,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
       if (dy > 80 || vel > 0.4) {
         el.style.transition = "transform 0.22s ease-out";
         el.style.transform  = "translateY(110%)";
-        setTimeout(onClose, 210);
+        setTimeout(() => onCloseRef.current(), 210);
       } else {
         el.style.transition = "transform 0.28s cubic-bezier(0.4,0,0.2,1)";
         el.style.transform  = "translateY(0)";
@@ -1122,7 +1124,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
       el.removeEventListener("touchend",   onEnd);
       el.removeEventListener("touchcancel",onCancel);
     };
-  }, [onClose]);
+  }, []);
 
   const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["info","Informations"]];
 
@@ -2826,7 +2828,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.5</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
