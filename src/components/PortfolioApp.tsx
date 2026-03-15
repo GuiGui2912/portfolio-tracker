@@ -1000,7 +1000,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const chartAmtRaw = (chartLast - chartFirst) * asset.qty;
 
   // Dimensions graphique — tout dans le SVG
-  const SVG_W = 310, SVG_H = 120, PAD_RIGHT = 42, PAD_BOTTOM = 18, PAD_TOP = 6, PAD_LEFT = 4;
+  const SVG_W = 310, SVG_H = 130, PAD_RIGHT = 42, PAD_BOTTOM = 22, PAD_TOP = 8, PAD_LEFT = 4;
   const plotW = SVG_W - PAD_RIGHT - PAD_LEFT;
   const plotH = SVG_H - PAD_BOTTOM - PAD_TOP;
   const min = Math.min(...chartData), max = Math.max(...chartData), range = max - min || 1;
@@ -2499,15 +2499,51 @@ export default function App() {
           const priceUSD = priceCurrency === 'EUR' ? priceNative * currentEurUsd
                          : priceCurrency === 'GBp' ? priceNative / 100 * 1.27
                          : priceNative;
-
-          // FIX 1: utiliser exclusivement priceUSD pour le calcul — toujours USD vs USD
           const purchaseRefUSD = a.purchase?.priceUSD ?? null;
           const realChange = purchaseRefUSD != null
             ? ((priceUSD - purchaseRefUSD) / purchaseRefUSD) * 100
             : (p.change24h ?? a.change);
-
           return { ...a, price: priceUSD, change: Math.round(realChange * 100) / 100, ...(p.extra ? { extra: p.extra } : {}) };
         }));
+
+        // Fetcher les historiques réels pour les mini graphiques (1M par défaut)
+        const assetsToFetch = assetsRef.current;
+        Promise.all(assetsToFetch.map(async a => {
+          try {
+            if (a.type === 'crypto') {
+              const r = await fetch(`/api/prices/crypto?symbols=${a.symbol}&history=true`);
+              if (!r.ok) return null;
+              const d = await r.json();
+              const h = d?.[a.symbol]?.history;
+              if (h && Object.keys(h).length > 0) return { id: a.id, histories: h };
+            } else {
+              const periodMap: Record<string,{range:string,interval:string}> = {
+                '1S':{range:'7d',interval:'1d'}, '1M':{range:'1mo',interval:'1d'},
+                '3M':{range:'3mo',interval:'1d'}, '6M':{range:'6mo',interval:'1wk'},
+                '1A':{range:'1y',interval:'1wk'}, 'MAX':{range:'5y',interval:'1mo'},
+              };
+              const histories: Record<string,number[]> = {};
+              await Promise.all(Object.entries(periodMap).map(async ([label, {range, interval}]) => {
+                try {
+                  const res = await fetch(`/api/yahoo-history?symbol=${encodeURIComponent(a.symbol)}&range=${range}&interval=${interval}`);
+                  if (!res.ok) return;
+                  const data = await res.json();
+                  if (data?.prices?.length > 1) histories[label] = data.prices;
+                } catch {}
+              }));
+              if (Object.keys(histories).length > 0) return { id: a.id, histories };
+            }
+          } catch {}
+          return null;
+        })).then(results => {
+          const updates = results.filter(Boolean) as {id:string,histories:Record<string,number[]>}[];
+          if (updates.length > 0) {
+            setAssets(prev => prev.map(a => {
+              const u = updates.find(x => x.id === a.id);
+              return u ? { ...a, histories: { ...a.histories, ...u.histories } } : a;
+            }));
+          }
+        });
         setAllMarket(prev => prev.map(a => {
           const p = allPrices[a.symbol]; if (!p) return a;
           const priceNative = p.price ?? a.price;
@@ -2722,7 +2758,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.8</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.9</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
