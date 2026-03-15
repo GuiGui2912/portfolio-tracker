@@ -1000,30 +1000,32 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const chartAmtRaw = (chartLast - chartFirst) * asset.qty;
 
   // Dimensions graphique — tout dans le SVG
-  const SVG_W = 310, SVG_H = 120, PAD_RIGHT = 46, PAD_BOTTOM = 20, PAD_TOP = 8;
-  const plotW = SVG_W - PAD_RIGHT;
+  const SVG_W = 310, SVG_H = 120, PAD_RIGHT = 42, PAD_BOTTOM = 18, PAD_TOP = 6, PAD_LEFT = 4;
+  const plotW = SVG_W - PAD_RIGHT - PAD_LEFT;
   const plotH = SVG_H - PAD_BOTTOM - PAD_TOP;
   const min = Math.min(...chartData), max = Math.max(...chartData), range = max - min || 1;
-  const toX = (i: number) => (i / (chartData.length - 1)) * plotW;
+  const toX = (i: number) => PAD_LEFT + (i / (chartData.length - 1)) * plotW;
   const toY = (v: number) => PAD_TOP + plotH - ((v - min) / range) * plotH;
   const pts = chartData.map((v,i) => `${toX(i)},${toY(v)}`).join(" ");
   const uid = (asset.color + scale).replace(/[#.\s]/g, "x");
 
-  // Étiquettes temps (axe bas)
+  // Étiquettes temps (axe bas) — 4 points, ancrage adapté
   const timeLabels = (() => {
     const n = chartData.length;
     if (n < 2) return [];
-    const indices = [0, Math.floor(n/4), Math.floor(n/2), Math.floor(3*n/4), n-1];
+    const indices = [0, Math.floor(n/3), Math.floor(2*n/3), n-1];
     const now = new Date();
     const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
-    return indices.map(i => ({
+    return indices.map((i,idx) => ({
       label: i===n-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((n-1-i)/(n-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
       x: toX(i),
+      anchor: idx===0 ? "start" : idx===indices.length-1 ? "end" : "middle",
     }));
   })();
 
-  // Étiquettes prix (axe droit, dans SVG)
-  const priceLabels = [0.15, 0.5, 0.85].map(p => ({
+  // Étiquettes prix (axe droit) — valeurs brutes formatées sans double conversion
+  // Les chartData sont en USD en interne, fmt() fait la conversion USD→EUR si besoin
+  const priceLabels = [0.1, 0.5, 0.9].map(p => ({
     value: min + range * (1 - p),
     y: PAD_TOP + plotH * p,
   }));
@@ -1094,36 +1096,36 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
 
           {/* Graphique */}
           <div style={{margin:"14px 20px 0"}}>
-            <div style={{background:"#111009",borderRadius:16,padding:"8px 0 4px",border:`1px solid ${asset.color}18`}}>
-              <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="xMidYMid meet" style={{display:"block",overflow:"visible"}}>
+            <div style={{background:"#111009",borderRadius:16,padding:"6px 0 4px",border:`1px solid ${asset.color}18`,overflow:"hidden"}}>
+              <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="xMidYMid meet" style={{display:"block"}}>
                 <defs>
                   <linearGradient id={`ds${uid}`} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={asset.color} stopOpacity={chartPos?"0.35":"0.12"}/>
                     <stop offset="100%" stopColor={asset.color} stopOpacity="0"/>
                   </linearGradient>
                   <clipPath id={`cp${uid}`}>
-                    <rect x={0} y={PAD_TOP-2} width={plotW} height={plotH+4}/>
+                    <rect x={PAD_LEFT-1} y={PAD_TOP-2} width={plotW+2} height={plotH+4}/>
                   </clipPath>
                 </defs>
                 {/* Lignes de grille */}
                 {priceLabels.map((pl,i)=>(
-                  <line key={i} x1={0} y1={pl.y} x2={plotW} y2={pl.y} stroke="#ffffff08" strokeWidth="1"/>
+                  <line key={i} x1={PAD_LEFT} y1={pl.y} x2={PAD_LEFT+plotW} y2={pl.y} stroke="#ffffff08" strokeWidth="1"/>
                 ))}
                 {/* Courbe + remplissage */}
                 <g clipPath={`url(#cp${uid})`}>
-                  <polygon points={`${pts} ${toX(chartData.length-1)},${SVG_H-PAD_BOTTOM} 0,${SVG_H-PAD_BOTTOM}`} fill={`url(#ds${uid})`}/>
+                  <polygon points={`${pts} ${toX(chartData.length-1)},${SVG_H-PAD_BOTTOM} ${PAD_LEFT},${SVG_H-PAD_BOTTOM}`} fill={`url(#ds${uid})`}/>
                   <polyline points={pts} fill="none" stroke={asset.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </g>
                 {/* Point final */}
                 <circle cx={toX(chartData.length-1)} cy={toY(chartLast)} r="4" fill={asset.color}/>
                 <circle cx={toX(chartData.length-1)} cy={toY(chartLast)} r="7" fill={asset.color} opacity="0.2"/>
-                {/* Axe prix (droite, dans le SVG) */}
+                {/* Axe prix (droite) */}
                 {priceLabels.map((pl,i)=>(
-                  <text key={i} x={plotW+4} y={pl.y+4} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace">{fmt(pl.value,0)}</text>
+                  <text key={i} x={PAD_LEFT+plotW+4} y={pl.y+4} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace" textAnchor="start">{fmt(pl.value,0)}</text>
                 ))}
-                {/* Axe temps (bas, dans le SVG) */}
+                {/* Axe temps (bas) */}
                 {timeLabels.map((tl,i)=>(
-                  <text key={i} x={tl.x} y={SVG_H-3} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace" textAnchor="middle">{tl.label}</text>
+                  <text key={i} x={tl.x} y={SVG_H-2} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace" textAnchor={tl.anchor}>{tl.label}</text>
                 ))}
               </svg>
             </div>
@@ -2720,7 +2722,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.9</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.8</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
