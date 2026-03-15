@@ -806,33 +806,223 @@ function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
   );
 }
 
-function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddTransaction, onDeleteTransaction, marketMode = false }) {
-  const [divModal, setDivModal] = useState(false);
-  const [txModal, setTxModal] = useState(false);
-  const [scale, setScale] = useState("1M");
+function ExDateTooltip() {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{position:"relative",display:"inline-flex"}}>
+      <div onClick={e=>{e.stopPropagation();setShow(s=>!s);}} style={{width:14,height:14,borderRadius:7,background:"#1E3A1E",border:"1px solid #3A6A30",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
+        <span style={{color:"#4ADE80",fontSize:8,fontWeight:700,lineHeight:1}}>i</span>
+      </div>
+      {show && (
+        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:18,left:0,background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:10,padding:"10px 12px",width:220,zIndex:9999,boxShadow:"0 4px 20px #000c"}}>
+          <div style={{color:"#C8EEC0",fontSize:11,lineHeight:1.6}}>Date à partir de laquelle tu dois déjà détenir l'action pour recevoir le prochain dividende. Si tu achètes ce jour-là ou après, tu ne le touches pas.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditTransactionModal({ tx, asset, fmt, onClose, onSave }) {
+  const [form, setForm] = useState({
+    type: tx.type, date: tx.date, time: tx.time||"",
+    qty: String(tx.qty), price: String(tx.priceOriginal ?? tx.priceUSD),
+    currency: tx.currency ?? "USD", priceMode: tx.priceMode ?? "unit",
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const sym = form.currency==="EUR"?"€":form.currency==="GBP"?"£":"$";
+  const unitPrice = form.priceMode==="total" && +form.qty>0 ? +form.price / +form.qty : +form.price;
+  const totalAmt  = form.priceMode==="unit" ? unitPrice * +form.qty : +form.price;
+  const fxRate    = form.currency==="EUR"?(1/EUR_RATE):form.currency==="GBP"?1/1.27:1;
+  const submit = () => {
+    const unitPriceInCur = form.priceMode==="total" ? +form.price / +form.qty : +form.price;
+    const priceUSD = unitPriceInCur * fxRate;
+    onSave({ ...tx, type:form.type, date:form.date, time:form.time, qty:+form.qty, priceOriginal:unitPriceInCur, currency:form.currency, priceUSD, priceMode:form.priceMode });
+    onClose();
+  };
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:4000,background:"#000b",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
+      <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"0 0 calc(32px + env(safe-area-inset-bottom,0px))",border:"1px solid #2A2520",boxShadow:"0 -8px 32px #000d",maxHeight:"90vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+        <div style={{width:40,height:4,borderRadius:2,background:"#3A3530",margin:"12px auto 16px"}}/>
+        <div style={{padding:"0 20px 4px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+            <div style={{color:"#F0EDE8",fontSize:17,fontWeight:700}}>Modifier la transaction</div>
+            <button onClick={onClose} style={{background:"#252015",border:"none",width:32,height:32,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          </div>
+          {/* Type */}
+          <div style={{display:"flex",gap:8,marginBottom:14}}>
+            {[["buy","Achat","#4ADE80"],["sell","Vente","#F87171"]].map(([v,l,c])=>(
+              <button key={v} onClick={()=>set("type",v)} style={{flex:1,padding:"11px",border:`1px solid ${form.type===v?c+"60":"#252015"}`,borderRadius:12,background:form.type===v?c+"15":"#0E0D0A",color:form.type===v?c:"#5A5550",fontSize:14,fontWeight:form.type===v?700:500,cursor:"pointer",transition:"all 0.2s"}}>{l}</button>
+            ))}
+          </div>
+          {/* Date + Heure */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            {[["date","Date","date"],["time","Heure","time"]].map(([k,l,t])=>(
+              <div key={k}>
+                <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{l}</div>
+                <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+              </div>
+            ))}
+          </div>
+          {/* Devise */}
+          <div style={{marginBottom:12}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Devise</div>
+            <div style={{display:"flex",gap:6}}>
+              {[["USD","$"],["EUR","€"],["GBP","£"]].map(([cur,s])=>(
+                <button key={cur} onClick={()=>set("currency",cur)} style={{flex:1,padding:"9px 0",border:`1px solid ${form.currency===cur?"#C8A96E60":"#252015"}`,borderRadius:10,background:form.currency===cur?"#C8A96E15":"#0E0D0A",color:form.currency===cur?"#C8A96E":"#5A5550",fontSize:12,fontWeight:form.currency===cur?700:500,cursor:"pointer",fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{s} {cur}</button>
+              ))}
+            </div>
+          </div>
+          {/* Type prix */}
+          <div style={{marginBottom:12}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Type de prix</div>
+            <div style={{display:"flex",gap:6}}>
+              {[["unit","Par unité"],["total","Montant total"]].map(([mode,label])=>(
+                <button key={mode} onClick={()=>set("priceMode",mode)} style={{flex:1,padding:"9px 0",border:`1px solid ${form.priceMode===mode?"#C8A96E60":"#252015"}`,borderRadius:10,background:form.priceMode===mode?"#C8A96E15":"#0E0D0A",color:form.priceMode===mode?"#C8A96E":"#5A5550",fontSize:12,fontWeight:form.priceMode===mode?700:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{label}</button>
+              ))}
+            </div>
+          </div>
+          {/* Qty + Prix */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            <div>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Quantité</div>
+              <input type="number" value={form.qty} onChange={e=>set("qty",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            </div>
+            <div>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{form.priceMode==="unit"?`Prix unit. (${form.currency})`:`Total (${form.currency})`}</div>
+              <input type="number" value={form.price} onChange={e=>set("price",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            </div>
+          </div>
+          {+form.qty>0 && +form.price>0 && (
+            <div style={{background:"#111009",borderRadius:10,padding:"10px 13px",border:"1px solid #252015",marginBottom:16,display:"flex",justifyContent:"space-between"}}>
+              <span style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace"}}>Total</span>
+              <span style={{color:"#C8A96E",fontSize:14,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{totalAmt.toFixed(2)}{sym}</span>
+            </div>
+          )}
+          <button onClick={submit} style={{width:"100%",background:form.type==="buy"?"linear-gradient(135deg,#4ADE80,#22C55E)":"linear-gradient(135deg,#F87171,#EF4444)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            Enregistrer les modifications
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddTransaction, onDeleteTransaction, onEditTransaction, marketMode = false }) {
+  const [divModal, setDivModal]       = useState(false);
+  const [txModal, setTxModal]         = useState(false);
+  const [editTx, setEditTx]           = useState(null);
+  const [scale, setScale]             = useState("1M");
+  const [detailTab, setDetailTab]     = useState(marketMode ? "info" : "position");
+  const sheetRef                      = useRef(null);
+  const dragStartY                    = useRef(0);
+  const isDragging                    = useRef(false);
+
   const isCrypto = asset.type === "crypto";
-  const info = getAssetInfo(asset.symbol);
-  const extra = asset.extra || {};
+  const info     = getAssetInfo(asset.symbol);
+  const extra    = asset.extra || {};
   const totalDivs = asset.dividends.reduce((s,d) => s+d.amount, 0);
+
+  // Calculs position agrégée
+  const txs      = asset.transactions || [];
+  const buyTxs   = txs.filter(t => t.type === "buy");
+  const totalQty = txs.reduce((s,t) => t.type==="buy" ? s+t.qty : s-t.qty, 0);
+  const totalCost = buyTxs.reduce((s,t) => s + t.qty * t.priceUSD, 0);
+  const avgBuyUSD = buyTxs.length > 0 && totalQty > 0 ? totalCost / totalQty : (asset.purchase?.priceUSD ?? null);
+  const currentVal = totalQty * asset.price;
+  const pnl     = avgBuyUSD != null ? (asset.price - avgBuyUSD) * totalQty : null;
+  const pnlPct  = avgBuyUSD != null && avgBuyUSD > 0 ? ((asset.price - avgBuyUSD) / avgBuyUSD * 100) : null;
+  const displayBuyPx = (() => {
+    if (!buyTxs.length && !asset.purchase) return "—";
+    if (buyTxs.length > 0) {
+      // Pondérer correctement la devise : utiliser la première transaction comme référence
+      const cur = buyTxs[0]?.currency ?? "USD";
+      const fxRate = cur==="EUR" ? (1/EUR_RATE) : cur==="GBP" ? 1/1.27 : 1;
+      const avgOrig = avgBuyUSD != null ? avgBuyUSD * fxRate : null;
+      const sym = cur==="EUR"?"€":cur==="GBP"?"£":"$";
+      return avgOrig != null ? `${avgOrig.toFixed(2)} ${sym}` : "—";
+    }
+    const px  = asset.purchase?.priceOriginal ?? asset.purchase?.priceUSD;
+    const cur = asset.purchase?.currency ?? "USD";
+    const sym = cur==="EUR"?"€":cur==="GBP"?"£":"$";
+    return (!px || isNaN(px)) ? "—" : `${Number(px).toFixed(2)} ${sym}`;
+  })();
+
+  // Graphique
   const chartData  = asset.histories?.[scale] || [asset.price];
   const chartFirst = chartData[0];
   const chartLast  = chartData[chartData.length - 1];
   const chartPct   = ((chartLast - chartFirst) / chartFirst * 100);
   const chartPos   = chartPct >= 0;
   const chartAmtRaw = (chartLast - chartFirst) * asset.qty;
-  const w = 310, h = 110;
+  const W = 310, H = 120, PRICE_AXIS_W = 44;
+  const chartW = W - PRICE_AXIS_W;
   const min = Math.min(...chartData), max = Math.max(...chartData), range = max - min || 1;
   const pts = chartData.map((v,i) => {
-    const x = (i / (chartData.length - 1)) * w;
-    const y = h - ((v - min) / range) * (h - 10) - 5;
+    const x = (i / (chartData.length - 1)) * chartW;
+    const y = H - ((v - min) / range) * (H - 14) - 7;
     return `${x},${y}`;
   }).join(" ");
   const uid = (asset.color + scale).replace(/[#.\s]/g, "x");
+  // Étiquettes de temps
+  const timeLabels = (() => {
+    const n = chartData.length;
+    if (n < 2) return [];
+    const indices = [0, Math.floor(n/4), Math.floor(n/2), Math.floor(3*n/4), n-1];
+    const now = new Date();
+    const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
+    return indices.map(i => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - Math.round((n - 1 - i) / (n - 1) * days));
+      const label = i===n-1 ? "Auj." : d.toLocaleDateString("fr-FR", { day:"2-digit", month:"short" });
+      const x = (i / (n - 1)) * chartW;
+      return { label, x };
+    });
+  })();
+  // Étiquettes de prix (axe droit)
+  const priceLabels = [0.85, 0.5, 0.15].map(p => ({
+    value: min + range * (1 - p),
+    y: H - (1 - p) * (H - 14) - 7,
+  }));
+
+  // Swipe to close
+  const onTouchStartSheet = (e) => {
+    dragStartY.current = e.touches[0].clientY;
+    isDragging.current = false;
+  };
+  const onTouchMoveSheet = (e) => {
+    const dy = e.touches[0].clientY - dragStartY.current;
+    if (dy > 10) isDragging.current = true;
+    if (isDragging.current && sheetRef.current) {
+      sheetRef.current.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    }
+  };
+  const onTouchEndSheet = (e) => {
+    const dy = e.changedTouches[0].clientY - dragStartY.current;
+    if (dy > 120) { onClose(); return; }
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = "transform 0.25s cubic-bezier(0.4,0,0.2,1)";
+      sheetRef.current.style.transform = "translateY(0)";
+      setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = ""; }, 250);
+    }
+    isDragging.current = false;
+  };
+
+  const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["info","Informations"]];
+
   return (
     <>
-      <div style={{position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center",background:"#000000BB",backdropFilter:"blur(6px)"}}>
-        <div className="fadein" style={{width:390,background:"#151210",borderRadius:"28px 28px 0 0",border:"1px solid #2A2520",borderBottom:"none",maxHeight:"92vh",overflowY:"auto",paddingBottom:40}}>
-          <div style={{width:36,height:4,borderRadius:2,background:"#3A3530",margin:"16px auto 0"}}/>
+      <div style={{position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center",background:"#000000BB",backdropFilter:"blur(6px)"}} onClick={onClose}>
+        <div ref={sheetRef} className="fadein"
+          style={{width:390,background:"#151210",borderRadius:"28px 28px 0 0",border:"1px solid #2A2520",borderBottom:"none",maxHeight:"92vh",overflowY:"auto",paddingBottom:40,touchAction:"pan-y"}}
+          onClick={e=>e.stopPropagation()}
+          onTouchStart={onTouchStartSheet}
+          onTouchMove={onTouchMoveSheet}
+          onTouchEnd={onTouchEndSheet}
+        >
+          {/* Handle */}
+          <div style={{width:36,height:4,borderRadius:2,background:"#3A3530",margin:"16px auto 0",cursor:"grab"}}/>
+
+          {/* Header */}
           <div style={{padding:"14px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <div style={{width:46,height:46,borderRadius:15,background:`${asset.color}18`,border:`1px solid ${asset.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:asset.color,fontFamily:"'DM Mono',monospace"}}>{asset.symbol.slice(0,2)}</div>
@@ -843,10 +1033,12 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
             </div>
             <button onClick={onClose} style={{background:"#252015",border:"none",width:34,height:34,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
           </div>
+
+          {/* Prix + variation */}
           <div style={{padding:"12px 20px 0"}}>
             <div style={{fontFamily:"'DM Mono',monospace",fontSize:30,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmt(asset.price,2)}</div>
             <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4}}>
-              <div style={{background:chartPos?"#4ADE8018":"#F8717118",border:`1px solid ${chartPos?"#4ADE8035":"#F8717135"}`,borderRadius:10,padding:"4px 10px",display:"flex",alignItems:"center",gap:5}}>
+              <div style={{background:chartPos?"#4ADE8018":"#F8717118",border:`1px solid ${chartPos?"#4ADE8035":"#F8717135"}`,borderRadius:10,padding:"4px 10px"}}>
                 <span style={{color:chartPos?"#4ADE80":"#F87171",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>{chartPos?"▲":"▼"} {chartPos?"+":"-"}{fmt(Math.abs(chartAmtRaw),2)}</span>
               </div>
               <div style={{background:"#1A1714",border:"1px solid #252015",borderRadius:10,padding:"4px 10px"}}>
@@ -855,413 +1047,379 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
               <span style={{color:"#3A3530",fontSize:10,fontFamily:"'DM Mono',monospace"}}>sur {scale}</span>
             </div>
           </div>
+
+          {/* Graphique */}
           <div style={{margin:"14px 20px 0"}}>
-            <div style={{display:"flex",gap:4,marginBottom:10,background:"#1A1714",borderRadius:14,padding:4}}>
+            <div style={{background:"#111009",borderRadius:16,padding:"10px 0 0",border:`1px solid ${asset.color}18`}}>
+              <div style={{display:"flex",alignItems:"stretch"}}>
+                {/* SVG courbe */}
+                <svg width={chartW} height={H} viewBox={`0 0 ${chartW} ${H}`} style={{display:"block",flex:"none"}}>
+                  <defs>
+                    <linearGradient id={`ds${uid}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={asset.color} stopOpacity={chartPos?"0.35":"0.12"}/>
+                      <stop offset="100%" stopColor={asset.color} stopOpacity="0"/>
+                    </linearGradient>
+                  </defs>
+                  {priceLabels.map((pl,i)=>(
+                    <line key={i} x1={0} y1={pl.y} x2={chartW} y2={pl.y} stroke="#ffffff06" strokeWidth="1"/>
+                  ))}
+                  <polygon points={`${pts} ${chartW},${H} 0,${H}`} fill={`url(#ds${uid})`}/>
+                  <polyline points={pts} fill="none" stroke={asset.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  {(()=>{
+                    const lastY = H - ((chartLast - min) / range) * (H - 14) - 7;
+                    return <><circle cx={chartW} cy={lastY} r="4" fill={asset.color}/><circle cx={chartW} cy={lastY} r="7" fill={asset.color} opacity="0.2"/></>;
+                  })()}
+                </svg>
+                {/* Axe prix (droite) */}
+                <div style={{width:PRICE_AXIS_W,position:"relative",flexShrink:0}}>
+                  {priceLabels.map((pl,i)=>(
+                    <div key={i} style={{position:"absolute",right:6,top:pl.y-7,color:"#4A4540",fontSize:8,fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}>{fmt(pl.value,0)}</div>
+                  ))}
+                </div>
+              </div>
+              {/* Axe temps (bas) */}
+              <div style={{position:"relative",height:18,margin:"2px 0 4px"}}>
+                {timeLabels.map((tl,i)=>(
+                  <div key={i} style={{position:"absolute",left:tl.x,transform:"translateX(-50%)",color:"#4A4540",fontSize:8,fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}>{tl.label}</div>
+                ))}
+              </div>
+            </div>
+            {/* Sélecteur échelle */}
+            <div style={{display:"flex",gap:4,marginTop:8,background:"#1A1714",borderRadius:14,padding:4}}>
               {TIME_SCALES.map(ts=>(
                 <button key={ts.label} onClick={()=>setScale(ts.label)} style={{flex:1,padding:"6px 0",border:scale===ts.label?`1px solid ${asset.color}35`:"1px solid transparent",cursor:"pointer",background:scale===ts.label?`${asset.color}20`:"transparent",color:scale===ts.label?asset.color:"#4A4540",borderRadius:10,fontSize:10,fontWeight:scale===ts.label?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{ts.label}</button>
               ))}
             </div>
-            <div style={{background:"#111009",borderRadius:16,padding:"12px 6px 8px",border:`1px solid ${asset.color}18`}}>
-              <svg width="100%" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{display:"block"}}>
-                <defs>
-                  <linearGradient id={`ds${uid}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={asset.color} stopOpacity={chartPos?"0.4":"0.15"}/>
-                    <stop offset="100%" stopColor={asset.color} stopOpacity="0"/>
-                  </linearGradient>
-                </defs>
-                {[0.25,0.5,0.75].map(p=><line key={p} x1={0} y1={h*p} x2={w} y2={h*p} stroke="#ffffff05" strokeWidth="1"/>)}
-                <polygon points={`${pts} ${w},${h} 0,${h}`} fill={`url(#ds${uid})`}/>
-                <polyline points={pts} fill="none" stroke={asset.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                {(()=>{ const lastX=w, lastY=h-((chartLast-min)/range)*(h-10)-5; return <><circle cx={lastX} cy={lastY} r="4" fill={asset.color}/><circle cx={lastX} cy={lastY} r="7" fill={asset.color} opacity="0.2"/></>; })()}
-              </svg>
-              <div style={{display:"flex",justifyContent:"space-between",padding:"3px 8px 0",fontFamily:"'DM Mono',monospace",color:"#3A3530",fontSize:9}}>
-                <span>{fmt(min,0)}</span><span>{fmt(max,0)}</span>
-              </div>
-            </div>
           </div>
 
-          {/* ── ONGLETS ── */}
-          {(() => {
-            const [detailTab, setDetailTab] = useState(marketMode ? "info" : "position");
-            const tabs = marketMode
-              ? [["info","Informations"]]
-              : [["position","Ma position"],["info","Informations"]];
-            return (
-              <>
-                {/* Sélecteur d'onglets */}
-                <div style={{display:"flex",gap:4,margin:"14px 20px 0",background:"#1A1714",borderRadius:14,padding:4,border:"1px solid #1E1B16"}}>
-                  {tabs.map(([id,label])=>(
-                    <button key={id} onClick={()=>setDetailTab(id)} style={{flex:1,padding:"9px 0",border:detailTab===id?`1px solid ${asset.color}40`:"1px solid transparent",cursor:"pointer",background:detailTab===id?`${asset.color}18`:"transparent",color:detailTab===id?asset.color:"#4A4540",borderRadius:10,fontSize:12,fontWeight:detailTab===id?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{label}</button>
+          {/* Onglets */}
+          <div style={{display:"flex",gap:4,margin:"14px 20px 0",background:"#1A1714",borderRadius:14,padding:4,border:"1px solid #1E1B16"}}>
+            {tabs.map(([id,label])=>(
+              <button key={id} onClick={()=>setDetailTab(id)} style={{flex:1,padding:"9px 0",border:detailTab===id?`1px solid ${asset.color}40`:"1px solid transparent",cursor:"pointer",background:detailTab===id?`${asset.color}18`:"transparent",color:detailTab===id?asset.color:"#4A4540",borderRadius:10,fontSize:12,fontWeight:detailTab===id?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>{label}</button>
+            ))}
+          </div>
+
+          {/* ═══ ONGLET MA POSITION ═══ */}
+          {detailTab==="position" && (
+            <div style={{padding:"0 0 8px"}}>
+              {/* Résumé */}
+              <div style={{margin:"12px 20px 0",background:"linear-gradient(135deg,#1E1A12,#252015)",borderRadius:14,padding:"12px 14px",border:"1px solid #3A3018"}}>
+                <div style={{color:"#6A5A30",fontSize:9,marginBottom:10,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>Résumé</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  {[
+                    ["Quantité totale", `${Math.round(totalQty*1e6)/1e6} ${asset.symbol}`],
+                    ["Valeur actuelle",  fmt(currentVal, 0)],
+                    ["Prix moyen achat", displayBuyPx],
+                    ["P&L total", pnl != null
+                      ? <span style={{color:pnl>=0?"#4ADE80":"#F87171"}}>{pnl>=0?"▲ ":"▼ "}{fmt(Math.abs(pnl),2)} ({pnlPct>=0?"+":""}{pnlPct.toFixed(2)}%)</span>
+                      : <span style={{color:"#5A5550"}}>—</span>],
+                  ].map(([k,v])=>(
+                    <div key={k}>
+                      <div style={{color:"#5A4A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                      <div style={{color:"#F0EDE8",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                    </div>
                   ))}
                 </div>
+              </div>
 
-                {/* ═══ ONGLET MA POSITION ═══ */}
-                {detailTab==="position" && (
-                  <div style={{padding:"0 0 8px"}}>
-                    {/* Résumé position */}
-                    <div style={{margin:"12px 20px 0",background:"linear-gradient(135deg,#1E1A12,#252015)",borderRadius:14,padding:"12px 14px",border:"1px solid #3A3018"}}>
-                      <div style={{color:"#6A5A30",fontSize:9,marginBottom:10,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>Résumé</div>
-                      {(() => {
-                        const txs = asset.transactions||[];
-                        const buyTxs = txs.filter(t=>t.type==="buy");
-                        const hasTxs = buyTxs.length > 0;
-                        const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
-                        const totalCost = buyTxs.reduce((s,t)=>s+t.qty*t.priceUSD, 0);
-                        const avgBuyUSD = hasTxs && totalQty > 0 ? totalCost / totalQty : (asset.purchase?.priceUSD ?? null);
-                        const currentVal = totalQty * asset.price;
-                        const pnl = avgBuyUSD != null ? (asset.price - avgBuyUSD) * totalQty : null;
-                        const pnlPct = avgBuyUSD != null && avgBuyUSD > 0 ? ((asset.price - avgBuyUSD) / avgBuyUSD * 100) : null;
-                        const displayBuyPx = (() => {
-                          if (!hasTxs && !asset.purchase) return fmt(asset.price,2);
-                          if (hasTxs) {
-                            const cur = buyTxs[0]?.currency ?? "USD";
-                            const sym = cur==="EUR"?"€":cur==="GBP"?"£":"$";
-                            const fxRate = cur==="EUR"?(1/EUR_RATE):cur==="GBP"?1/1.27:1;
-                            const avgOrig = avgBuyUSD != null ? avgBuyUSD * fxRate : null;
-                            return avgOrig != null ? `${avgOrig.toFixed(2)} ${sym}` : "—";
-                          }
-                          const px = asset.purchase?.priceOriginal ?? asset.purchase?.priceUSD;
-                          const cur = asset.purchase?.currency ?? "USD";
-                          const sym2 = cur==="EUR"?"€":cur==="GBP"?"£":"$";
-                          return isNaN(px) ? "—" : `${px.toFixed(2)} ${sym2}`;
-                        })();
-                        return (
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {/* Transactions */}
+              <div style={{margin:"12px 20px 0"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <div>
+                    <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Transactions</div>
+                    <div style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>{txs.length} opération{txs.length!==1?"s":""}</div>
+                  </div>
+                  <button onClick={()=>setTxModal(true)} style={{background:"#1A1A2A",border:"1px solid #2A2A4A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#A3B8C2",fontSize:12,fontWeight:600}}>
+                    <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
+                  </button>
+                </div>
+                {txs.length===0 ? (
+                  <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
+                    <div style={{fontSize:22,marginBottom:5}}>📋</div>
+                    <div style={{color:"#4A4540",fontSize:12}}>Aucune transaction enregistrée</div>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {[...txs].reverse().map(tx=>{
+                      const isBuy    = tx.type==="buy";
+                      const cVal     = tx.qty * asset.price;
+                      const costVal  = tx.qty * tx.priceUSD;
+                      const txPnl    = isBuy ? cVal - costVal : null;
+                      const txPnlPct = isBuy && costVal>0 ? ((cVal-costVal)/costVal*100) : null;
+                      const sym      = tx.currency==="EUR"?"€":tx.currency==="GBP"?"£":"$";
+                      return (
+                        <div key={tx.id} style={{background:"#111009",borderRadius:14,padding:"12px 14px",border:`1px solid ${isBuy?"#4ADE8018":"#F8717118"}`}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <div style={{width:28,height:28,borderRadius:8,background:isBuy?"#4ADE8020":"#F8717120",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>{isBuy?"▲":"▼"}</div>
+                              <div>
+                                <div style={{color:isBuy?"#4ADE80":"#F87171",fontSize:12,fontWeight:700}}>{isBuy?"Achat":"Vente"}</div>
+                                <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{tx.date}{tx.time?` · ${tx.time}`:""}</div>
+                              </div>
+                            </div>
+                            <div style={{display:"flex",gap:6}}>
+                              <button onClick={()=>setEditTx(tx)} style={{background:"#1A1714",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#C8A96E",fontSize:11,cursor:"pointer"}}>✏️</button>
+                              <button onClick={()=>onDeleteTransaction(asset.id, tx.id)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
+                            </div>
+                          </div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                             {[
-                              ["Quantité totale", `${Math.round(totalQty*1e6)/1e6} ${asset.symbol}`],
-                              ["Valeur actuelle", fmt(currentVal, 0)],
-                              ["Prix moyen achat", displayBuyPx],
-                              ["P&L total", pnl != null
-                                ? <span style={{color:pnl>=0?"#4ADE80":"#F87171"}}>{pnl>=0?"▲ ":"▼ "}{fmt(Math.abs(pnl),2)} ({pnlPct>=0?"+":""}{pnlPct.toFixed(2)}%)</span>
-                                : <span style={{color:"#5A5550"}}>—</span>],
-                            ].map(([k,v])=>(
-                              <div key={k}>
-                                <div style={{color:"#5A4A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                                <div style={{color:"#F0EDE8",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                              ["Quantité",       `${tx.qty} ${asset.symbol}`],
+                              ["Prix d'achat",   `${tx.priceOriginal?.toFixed(2)}${sym}`],
+                              ["Valeur actuelle", fmt(cVal, 2)],
+                              isBuy ? ["P&L", <span style={{color:txPnl>=0?"#4ADE80":"#F87171"}}>{txPnl>=0?"▲ ":"▼ "}{fmt(Math.abs(txPnl),2)} ({txPnlPct>=0?"+":""}{txPnlPct?.toFixed(2)}%)</span>] : ["Montant", fmt(costVal,2)],
+                            ].map(([k,v],i)=>(
+                              <div key={i} style={{background:"#0E0D0A",borderRadius:8,padding:"7px 10px",border:"1px solid #1E1B16"}}>
+                                <div style={{color:"#4A4540",fontSize:9,marginBottom:2,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                                <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
                               </div>
                             ))}
                           </div>
-                        );
-                      })()}
-                    </div>
-
-                    {/* Transactions */}
-                    <div style={{margin:"12px 20px 0"}}>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                        <div>
-                          <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Transactions</div>
-                          <div style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>{(asset.transactions||[]).length} opération{(asset.transactions||[]).length!==1?"s":""}</div>
                         </div>
-                        <button onClick={()=>setTxModal(true)} style={{background:"#1A1A2A",border:"1px solid #2A2A4A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#A3B8C2",fontSize:12,fontWeight:600}}>
-                          <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
-                        </button>
-                      </div>
-                      {(!asset.transactions||asset.transactions.length===0) ? (
-                        <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
-                          <div style={{fontSize:22,marginBottom:5}}>📋</div>
-                          <div style={{color:"#4A4540",fontSize:12}}>Aucune transaction enregistrée</div>
-                        </div>
-                      ) : (
-                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                          {[...(asset.transactions||[])].reverse().map(tx=>{
-                            const isBuy = tx.type==="buy";
-                            const currentVal = tx.qty * asset.price;
-                            const costVal = tx.qty * tx.priceUSD;
-                            const pnl = isBuy ? currentVal - costVal : null;
-                            const pnlPct = isBuy && costVal>0 ? ((currentVal-costVal)/costVal*100) : null;
-                            const sym = tx.currency==="EUR"?"€":tx.currency==="GBP"?"£":"$";
-                            return (
-                              <div key={tx.id} style={{background:"#111009",borderRadius:14,padding:"12px 14px",border:`1px solid ${isBuy?"#4ADE8018":"#F8717118"}`}}>
-                                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                                    <div style={{width:28,height:28,borderRadius:8,background:isBuy?"#4ADE8020":"#F8717120",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>{isBuy?"▲":"▼"}</div>
-                                    <div>
-                                      <div style={{color:isBuy?"#4ADE80":"#F87171",fontSize:12,fontWeight:700}}>{isBuy?"Achat":"Vente"}</div>
-                                      <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{tx.date}{tx.time?` · ${tx.time}`:""}</div>
-                                    </div>
-                                  </div>
-                                  <button onClick={()=>onDeleteTransaction(asset.id, tx.id)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
-                                </div>
-                                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                                  {[
-                                    ["Quantité", `${tx.qty} ${asset.symbol}`],
-                                    ["Prix d'achat", `${tx.priceOriginal?.toFixed(2)}${sym}`],
-                                    ["Valeur actuelle", fmt(currentVal, 2)],
-                                    isBuy ? ["P&L", <span style={{color:pnl>=0?"#4ADE80":"#F87171"}}>{pnl>=0?"▲ ":"▼ "}{fmt(Math.abs(pnl),2)} ({pnlPct>=0?"+":""}{pnlPct?.toFixed(2)}%)</span>] : ["Montant", fmt(costVal,2)],
-                                  ].map(([k,v],i)=>(
-                                    <div key={i} style={{background:"#0E0D0A",borderRadius:8,padding:"7px 10px",border:"1px solid #1E1B16"}}>
-                                      <div style={{color:"#4A4540",fontSize:9,marginBottom:2,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                                      <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Dividendes reçus */}
-                    {!isCrypto && (
-                      <div style={{margin:"12px 20px 0"}}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                          <div>
-                            <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Dividendes reçus</div>
-                            <div style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>Total : {fmt(totalDivs,2)}</div>
-                          </div>
-                          <button onClick={()=>setDivModal(true)} style={{background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#4ADE80",fontSize:12,fontWeight:600}}>
-                            <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
-                          </button>
-                        </div>
-                        {asset.dividends.length===0 ? (
-                          <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
-                            <div style={{fontSize:22,marginBottom:5}}>🌱</div>
-                            <div style={{color:"#4A4540",fontSize:12}}>Aucun dividende enregistré</div>
-                          </div>
-                        ) : (
-                          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                            {[...asset.dividends].reverse().map(d=>(
-                              <div key={d.id} style={{background:"#111009",borderRadius:12,padding:"11px 13px",border:"1px solid #1E1B16",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                                  <div style={{width:30,height:30,borderRadius:9,background:"#1A2A1A",border:"1px solid #2A3A2A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>💰</div>
-                                  <div>
-                                    <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(d.amount,2)}</div>
-                                    <div style={{color:"#4A4540",fontSize:10,marginTop:1}}>{d.date}{d.perShare>0&&` · ${fmt(d.perShare,4)}/action`}</div>
-                                  </div>
-                                </div>
-                                <div style={{background:"#4ADE8015",border:"1px solid #4ADE8030",borderRadius:8,padding:"3px 9px"}}>
-                                  <span style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmt(d.amount,2)}</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Supprimer */}
-                    <div style={{padding:"14px 20px 0"}}>
-                      <button onClick={()=>{onDelete(asset.id);onClose();}} style={{width:"100%",background:"transparent",border:"1px solid #3A1A1A",borderRadius:14,padding:"12px",color:"#F87171",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                        Supprimer cet actif
-                      </button>
-                    </div>
+                      );
+                    })}
                   </div>
                 )}
+              </div>
 
-                {/* ═══ ONGLET INFORMATIONS ═══ */}
-                {detailTab==="info" && (
-                  <div style={{padding:"0 20px 8px"}}>
-                    {/* Grille principale */}
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7,marginTop:12}}>
-                      {[
-                        ["Secteur",  info.sector],
-                        ["Bourse",   info.exchange],
-                        ["Pays",     info.country||"—"],
-                        ["Type",     asset.type==="etf"?"ETF":asset.type==="crypto"?"Crypto":"Action"],
-                        [isCrypto?"Rang":"Bêta", isCrypto?(extra.marketCapRank||"—"):(extra.beta||info.beta||"—")],
-                        ["Volume",   extra.volume||extra.volume24h||"—"],
-                      ].map(([k,v])=>(
-                        <div key={k} style={{background:"#1A1714",borderRadius:11,padding:"9px 11px",border:"1px solid #252015"}}>
-                          <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                          <div style={{color:"#F0EDE8",fontWeight:600,fontSize:11,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+              {/* Dividendes reçus */}
+              {!isCrypto && (
+                <div style={{margin:"12px 20px 0"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                    <div>
+                      <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Dividendes reçus</div>
+                      <div style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>Total : {fmt(totalDivs,2)}</div>
+                    </div>
+                    <button onClick={()=>setDivModal(true)} style={{background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#4ADE80",fontSize:12,fontWeight:600}}>
+                      <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
+                    </button>
+                  </div>
+                  {asset.dividends.length===0 ? (
+                    <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
+                      <div style={{fontSize:22,marginBottom:5}}>🌱</div>
+                      <div style={{color:"#4A4540",fontSize:12}}>Aucun dividende enregistré</div>
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {[...asset.dividends].reverse().map(d=>(
+                        <div key={d.id} style={{background:"#111009",borderRadius:12,padding:"11px 13px",border:"1px solid #1E1B16",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:10}}>
+                            <div style={{width:30,height:30,borderRadius:9,background:"#1A2A1A",border:"1px solid #2A3A2A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>💰</div>
+                            <div>
+                              <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(d.amount,2)}</div>
+                              <div style={{color:"#4A4540",fontSize:10,marginTop:1}}>{d.date}{d.perShare>0&&` · ${fmt(d.perShare,4)}/action`}</div>
+                            </div>
+                          </div>
+                          <div style={{background:"#4ADE8015",border:"1px solid #4ADE8030",borderRadius:8,padding:"3px 9px"}}>
+                            <span style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmt(d.amount,2)}</span>
+                          </div>
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+              )}
 
-                    {/* CRYPTO : Marché */}
-                    {isCrypto && extra.marketCap && (
-                      <>
-                        <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7,marginTop:16}}>Marché</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-                          {[
-                            ["Capitalisation",  extra.marketCap||"—"],
-                            ["Rang",            extra.marketCapRank||"—"],
-                            ["Volume 24h",      extra.volume24h||"—"],
-                            ["Offre en circ.",  extra.circulatingSupply||"—"],
-                            ["Offre max",       extra.maxSupply||"—"],
-                            ["Catégories",      extra.categories||"—"],
-                          ].map(([k,v])=>(
-                            <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
-                              <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                              <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
+              {/* Supprimer */}
+              <div style={{padding:"14px 20px 0"}}>
+                <button onClick={()=>{onDelete(asset.id);onClose();}} style={{width:"100%",background:"transparent",border:"1px solid #3A1A1A",borderRadius:14,padding:"12px",color:"#F87171",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                  Supprimer cet actif
+                </button>
+              </div>
+            </div>
+          )}
 
-                    {/* CRYPTO : Performance */}
-                    {isCrypto && (extra.change7d||extra.change30d||extra.change1y) && (
-                      <>
-                        <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7,marginTop:16}}>Performance</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
-                          {[["7 jours", extra.change7d], ["30 jours", extra.change30d], ["1 an", extra.change1y]].map(([k,v])=>{
-                            const isPos = v && !v.startsWith('-');
-                            return (
-                              <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
-                                <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                                <div style={{color:v==="—"?"#4A4540":isPos?"#4ADE80":"#F87171",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v&&v!=="—"?(isPos?"▲ ":"▼ ")+v.replace('-',''):v||"—"}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
+          {/* ═══ ONGLET INFORMATIONS ═══ */}
+          {detailTab==="info" && (
+            <div style={{padding:"0 20px 8px"}}>
+              {/* Grille principale */}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7,marginTop:12}}>
+                {[
+                  ["Secteur",  info.sector],
+                  ["Bourse",   info.exchange],
+                  ["Pays",     info.country||"—"],
+                  ["Type",     asset.type==="etf"?"ETF":asset.type==="crypto"?"Crypto":"Action"],
+                  [isCrypto?"Rang":"Bêta", isCrypto?(extra.marketCapRank||"—"):(extra.beta||info.beta||"—")],
+                  ["Volume",   extra.volume||extra.volume24h||"—"],
+                ].map(([k,v])=>(
+                  <div key={k} style={{background:"#1A1714",borderRadius:11,padding:"9px 11px",border:"1px solid #252015"}}>
+                    <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                    <div style={{color:"#F0EDE8",fontWeight:600,fontSize:11,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                  </div>
+                ))}
+              </div>
 
-                    {/* CRYPTO : ATH / ATL */}
-                    {isCrypto && extra.ath && (
-                      <div style={{marginTop:12,background:"#111009",borderRadius:14,padding:"12px 14px",border:"1px solid #1E1B16"}}>
-                        <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Records historiques</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                          <div>
-                            <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>ATH</div>
-                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(extra.ath,2)}</div>
-                            <div style={{color:"#3A5530",fontSize:10,marginTop:2}}>{extra.athDate}</div>
-                          </div>
-                          <div>
-                            <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>ATL</div>
-                            <div style={{color:"#F87171",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(extra.atl,4)}</div>
-                            <div style={{color:"#553030",fontSize:10,marginTop:2}}>{extra.atlDate}</div>
-                          </div>
-                        </div>
-                        {extra.ath && extra.atl && (() => {
-                          const pct = Math.min(100, Math.max(0, ((asset.price - extra.atl) / (extra.ath - extra.atl)) * 100));
-                          return (
-                            <div style={{marginTop:12}}>
-                              <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                                <span style={{color:"#553030",fontSize:9,fontFamily:"'DM Mono',monospace"}}>ATL</span>
-                                <span style={{color:"#3A5530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>ATH</span>
-                              </div>
-                              <div style={{position:"relative",height:6,background:"#1E1B16",borderRadius:3}}>
-                                <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#F87171,#C8A96E,#4ADE80)",borderRadius:3}}/>
-                                <div style={{position:"absolute",top:-3,width:12,height:12,borderRadius:6,background:"#F0EDE8",border:"2px solid #151210",transform:"translateX(-50%)",left:`${pct}%`}}/>
-                              </div>
-                            </div>
-                          );
-                        })()}
+              {/* CRYPTO : Marché */}
+              {isCrypto && extra.marketCap && (
+                <>
+                  <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7,marginTop:16}}>Marché</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                    {[
+                      ["Capitalisation",  extra.marketCap||"—"],
+                      ["Rang",            extra.marketCapRank||"—"],
+                      ["Volume 24h",      extra.volume24h||"—"],
+                      ["Offre en circ.",  extra.circulatingSupply||"—"],
+                      ["Offre max",       extra.maxSupply||"—"],
+                      ["Catégories",      extra.categories||"—"],
+                    ].map(([k,v])=>(
+                      <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
+                        <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                        <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
                       </div>
-                    )}
+                    ))}
+                  </div>
+                </>
+              )}
 
-                    {/* ACTIONS : Valorisation */}
-                    {!isCrypto && (extra.marketCap||extra.pe||extra.eps) && (
-                      <>
-                        <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7,marginTop:16}}>Valorisation</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-                          {[
-                            ["Capitalisation", extra.marketCap||"—"],
-                            ["PER (TTM)",      extra.pe||"—"],
-                            ["BPA (TTM)",      extra.eps||"—"],
-                            ["Moy. 50j",       extra.fiftyDayAvg ? fmt(+extra.fiftyDayAvg,2) : "—"],
-                            ["Moy. 200j",      extra.twoHundredDayAvg ? fmt(+extra.twoHundredDayAvg,2) : "—"],
-                            ["Vol. moy.",      extra.avgVolume||"—"],
-                          ].map(([k,v])=>(
-                            <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
-                              <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                              <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
-                            </div>
-                          ))}
+              {/* CRYPTO : Performance */}
+              {isCrypto && (extra.change7d||extra.change30d||extra.change1y) && (
+                <>
+                  <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7,marginTop:16}}>Performance</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
+                    {[["7 jours", extra.change7d], ["30 jours", extra.change30d], ["1 an", extra.change1y]].map(([k,v])=>{
+                      const isPos = v && !String(v).startsWith('-');
+                      return (
+                        <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
+                          <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                          <div style={{color:v==="—"?"#4A4540":isPos?"#4ADE80":"#F87171",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v&&v!=="—"?(isPos?"▲ ":"▼ ")+String(v).replace('-',''):v||"—"}</div>
                         </div>
-                      </>
-                    )}
+                      );
+                    })}
+                  </div>
+                </>
+              )}
 
-                    {/* ACTIONS : Fourchette 52 semaines */}
-                    {!isCrypto && (extra.high52w || extra.low52w) && (
-                      <div style={{marginTop:12,background:"#111009",borderRadius:14,padding:"12px 14px",border:"1px solid #1E1B16"}}>
-                        <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Fourchette 52 semaines</div>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                          <span style={{color:"#F87171",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>{fmt(extra.low52w,2)}</span>
-                          <span style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>{fmt(extra.high52w,2)}</span>
-                        </div>
-                        {(() => {
-                          const lo=extra.low52w, hi=extra.high52w, cur=asset.price;
-                          const pct = lo && hi && hi>lo ? Math.min(100,Math.max(0,((cur-lo)/(hi-lo))*100)) : null;
-                          if (!pct) return null;
-                          return (
-                            <div style={{position:"relative",height:6,background:"#1E1B16",borderRadius:3}}>
-                              <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#F87171,#C8A96E,#4ADE80)",borderRadius:3}}/>
-                              <div style={{position:"absolute",top:-3,width:12,height:12,borderRadius:6,background:"#F0EDE8",border:"2px solid #151210",transform:"translateX(-50%)",left:`${pct}%`}}/>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-
-                    {/* ACTIONS : Dividende */}
-                    {!isCrypto && (extra.dividendRate||extra.dividendYield||extra.exDividendDate) && (
-                      <div style={{marginTop:12,background:"#0E1A0E",borderRadius:14,padding:"12px 14px",border:"1px solid #1E3A1E"}}>
-                        <div style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Dividende</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
-                          <div>
-                            <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Dividende/an</div>
-                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.dividendRate||"—"}</div>
-                          </div>
-                          <div>
-                            <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Rendement</div>
-                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.dividendYield||"—"}</div>
-                          </div>
-                        </div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-                          <div>
-                            <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3}}>
-                              <span style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Ex-date</span>
-                              {(()=>{
-                                const [show, setShow] = useState(false);
-                                return (
-                                  <div style={{position:"relative",display:"inline-flex",flexDirection:"column"}}>
-                                    <div onClick={e=>{e.stopPropagation();setShow(s=>!s);}} style={{width:14,height:14,borderRadius:7,background:"#1E3A1E",border:"1px solid #3A6A30",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
-                                      <span style={{color:"#4ADE80",fontSize:8,fontWeight:700,lineHeight:1}}>i</span>
-                                    </div>
-                                    {show && (
-                                      <div style={{position:"absolute",top:18,left:0,background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:10,padding:"10px 12px",width:220,zIndex:9999,boxShadow:"0 4px 20px #000c"}}>
-                                        <div style={{color:"#C8EEC0",fontSize:11,lineHeight:1.6}}>Date à partir de laquelle tu dois déjà détenir l'action pour recevoir le prochain dividende. Si tu achètes ce jour-là ou après, tu ne le touches pas.</div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.exDividendDate||"—"}</div>
-                          </div>
-                          <div>
-                            <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Versement</div>
-                            <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.payDividendDate||"—"}</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Prochains résultats */}
-                    {!isCrypto && extra.nextEarningsDate && extra.nextEarningsDate !== "—" && (
-                      <div style={{marginTop:12,background:"#111009",borderRadius:12,padding:"11px 14px",border:"1px solid #1E1B16",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <span style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace"}}>Prochains résultats</span>
-                        <span style={{color:"#C8A96E",fontSize:12,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{extra.nextEarningsDate}</span>
-                      </div>
-                    )}
-
-                    {/* À propos */}
-                    <div style={{marginTop:12,background:"#1A1714",borderRadius:14,padding:"12px 14px",border:"1px solid #252015"}}>
-                      <div style={{color:"#5A5550",fontSize:9,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>À propos</div>
-                      <div style={{color:"#8A8480",fontSize:12,lineHeight:1.7}}>{extra.description || info.description}</div>
+              {/* CRYPTO : ATH / ATL */}
+              {isCrypto && extra.ath && (
+                <div style={{marginTop:12,background:"#111009",borderRadius:14,padding:"12px 14px",border:"1px solid #1E1B16"}}>
+                  <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Records historiques</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                    <div>
+                      <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>ATH</div>
+                      <div style={{color:"#4ADE80",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(extra.ath,2)}</div>
+                      <div style={{color:"#3A5530",fontSize:10,marginTop:2}}>{extra.athDate}</div>
+                    </div>
+                    <div>
+                      <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>ATL</div>
+                      <div style={{color:"#F87171",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(extra.atl,4)}</div>
+                      <div style={{color:"#553030",fontSize:10,marginTop:2}}>{extra.atlDate}</div>
                     </div>
                   </div>
-                )}
-              </>
-            );
-          })()}
+                  {extra.ath && extra.atl && (() => {
+                    const pct = Math.min(100, Math.max(0, ((asset.price - extra.atl) / (extra.ath - extra.atl)) * 100));
+                    return (
+                      <div style={{marginTop:12}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                          <span style={{color:"#553030",fontSize:9,fontFamily:"'DM Mono',monospace"}}>ATL</span>
+                          <span style={{color:"#3A5530",fontSize:9,fontFamily:"'DM Mono',monospace"}}>ATH</span>
+                        </div>
+                        <div style={{position:"relative",height:6,background:"#1E1B16",borderRadius:3}}>
+                          <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#F87171,#C8A96E,#4ADE80)",borderRadius:3}}/>
+                          <div style={{position:"absolute",top:-3,width:12,height:12,borderRadius:6,background:"#F0EDE8",border:"2px solid #151210",transform:"translateX(-50%)",left:`${pct}%`}}/>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
-          {/* Performance — CRYPTO */}
-          {false && null}
-          {/* ATH / ATL — CRYPTO */}
-          {false && null}
-          {/* 52 semaines — ACTIONS */}
-          {false && null}
-          {/* Dividendes — ACTIONS */}
+              {/* ACTIONS : Valorisation */}
+              {!isCrypto && (extra.marketCap||extra.pe||extra.eps) && (
+                <>
+                  <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:7,marginTop:16}}>Valorisation</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                    {[
+                      ["Capitalisation", extra.marketCap||"—"],
+                      ["PER (TTM)",      extra.pe||"—"],
+                      ["BPA (TTM)",      extra.eps||"—"],
+                      ["Moy. 50j",       extra.fiftyDayAvg ? fmt(+extra.fiftyDayAvg,2) : "—"],
+                      ["Moy. 200j",      extra.twoHundredDayAvg ? fmt(+extra.twoHundredDayAvg,2) : "—"],
+                      ["Vol. moy.",      extra.avgVolume||"—"],
+                    ].map(([k,v])=>(
+                      <div key={k} style={{background:"#111009",borderRadius:10,padding:"9px 12px",border:"1px solid #1E1B16"}}>
+                        <div style={{color:"#4A4540",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                        <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* ACTIONS : Fourchette 52 semaines */}
+              {!isCrypto && (extra.high52w || extra.low52w) && (
+                <div style={{marginTop:12,background:"#111009",borderRadius:14,padding:"12px 14px",border:"1px solid #1E1B16"}}>
+                  <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Fourchette 52 semaines</div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <span style={{color:"#F87171",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>{fmt(extra.low52w,2)}</span>
+                    <span style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700}}>{fmt(extra.high52w,2)}</span>
+                  </div>
+                  {(() => {
+                    const lo=extra.low52w, hi=extra.high52w, cur=asset.price;
+                    const pct = lo && hi && hi>lo ? Math.min(100,Math.max(0,((cur-lo)/(hi-lo))*100)) : null;
+                    if (!pct) return null;
+                    return (
+                      <div style={{position:"relative",height:6,background:"#1E1B16",borderRadius:3}}>
+                        <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pct}%`,background:"linear-gradient(90deg,#F87171,#C8A96E,#4ADE80)",borderRadius:3}}/>
+                        <div style={{position:"absolute",top:-3,width:12,height:12,borderRadius:6,background:"#F0EDE8",border:"2px solid #151210",transform:"translateX(-50%)",left:`${pct}%`}}/>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* ACTIONS : Dividende */}
+              {!isCrypto && (extra.dividendRate||extra.dividendYield||extra.exDividendDate) && (
+                <div style={{marginTop:12,background:"#0E1A0E",borderRadius:14,padding:"12px 14px",border:"1px solid #1E3A1E"}}>
+                  <div style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:1.5,textTransform:"uppercase",marginBottom:10}}>Dividende</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:7}}>
+                    <div>
+                      <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Dividende/an</div>
+                      <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.dividendRate||"—"}</div>
+                    </div>
+                    <div>
+                      <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Rendement</div>
+                      <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.dividendYield||"—"}</div>
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                    <div>
+                      <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3}}>
+                        <span style={{color:"#3A6A30",fontSize:9,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Ex-date</span>
+                        <ExDateTooltip/>
+                      </div>
+                      <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.exDividendDate||"—"}</div>
+                    </div>
+                    <div>
+                      <div style={{color:"#3A6A30",fontSize:9,marginBottom:3,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>Versement</div>
+                      <div style={{color:"#4ADE80",fontWeight:700,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{extra.payDividendDate||"—"}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Prochains résultats */}
+              {!isCrypto && extra.nextEarningsDate && extra.nextEarningsDate !== "—" && (
+                <div style={{marginTop:12,background:"#111009",borderRadius:12,padding:"11px 14px",border:"1px solid #1E1B16",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace"}}>Prochains résultats</span>
+                  <span style={{color:"#C8A96E",fontSize:12,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{extra.nextEarningsDate}</span>
+                </div>
+              )}
+
+              {/* À propos */}
+              <div style={{marginTop:12,background:"#1A1714",borderRadius:14,padding:"12px 14px",border:"1px solid #252015"}}>
+                <div style={{color:"#5A5550",fontSize:9,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:1,textTransform:"uppercase"}}>À propos</div>
+                <div style={{color:"#8A8480",fontSize:12,lineHeight:1.7}}>{extra.description || info.description}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Stubs nettoyage */}
           {false && null}
         </div>
       </div>
       {divModal && <AddDividendModal asset={asset} onClose={()=>setDivModal(false)} onAdd={(div)=>{onAddDividend(asset.id,div);setDivModal(false);}}/>}
-      {txModal && <AddTransactionModal asset={asset} fmt={fmt} onClose={()=>setTxModal(false)} onAdd={(tx)=>{onAddTransaction(asset.id,tx);setTxModal(false);}}/>}
+      {txModal  && <AddTransactionModal asset={asset} fmt={fmt} onClose={()=>setTxModal(false)} onAdd={(tx)=>{onAddTransaction(asset.id,tx);setTxModal(false);}}/>}
+      {editTx   && <EditTransactionModal tx={editTx} asset={asset} fmt={fmt} onClose={()=>setEditTx(null)} onSave={(updated)=>{onEditTransaction(asset.id,updated);setEditTx(null);}}/>}
     </>
   );
 }
@@ -2405,6 +2563,20 @@ export default function App() {
     });
   };
 
+  const handleEditTransaction = (assetId, updatedTx) => {
+    setAssets(prev => {
+      const next = prev.map(a => {
+        if(a.id!==assetId) return a;
+        const txs = (a.transactions||[]).map(t => t.id===updatedTx.id ? updatedTx : t);
+        const totalQty = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty, 0);
+        return {...a, transactions: txs, qty: Math.max(0, Math.round(totalQty*1e8)/1e8)};
+      });
+      const updated = next.find(a=>a.id===assetId);
+      if(updated) saveAssetToDB(updated);
+      return next;
+    });
+  };
+
   const syncedDetailAsset = detailAsset ? assets.find(a=>a.id===detailAsset.id)||detailAsset : null;
 
   const navItems = [
@@ -2505,7 +2677,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.7</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
@@ -3024,7 +3196,7 @@ export default function App() {
 
       {showAddModal&&<AddAssetModal onClose={()=>setShowAddModal(false)} onAdd={handleAddAsset}/>}
       {marketDetailAsset&&<AssetDetailSheet asset={marketDetailAsset} fmt={fmt} onClose={()=>setMarketDetailAsset(null)} onAddDividend={()=>{}} onDelete={()=>{}} onAddTransaction={()=>{}} onDeleteTransaction={()=>{}} marketMode={true}/>}
-      {syncedDetailAsset&&<AssetDetailSheet asset={syncedDetailAsset} fmt={fmt} onClose={()=>setDetailAsset(null)} onAddDividend={handleAddDividend} onDelete={handleDeleteAsset} onAddTransaction={handleAddTransaction} onDeleteTransaction={handleDeleteTransaction}/>}
+      {syncedDetailAsset&&<AssetDetailSheet asset={syncedDetailAsset} fmt={fmt} onClose={()=>setDetailAsset(null)} onAddDividend={handleAddDividend} onDelete={handleDeleteAsset} onAddTransaction={handleAddTransaction} onDeleteTransaction={handleDeleteTransaction} onEditTransaction={handleEditTransaction}/>}
     </div>
   );
 }
