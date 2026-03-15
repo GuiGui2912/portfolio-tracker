@@ -1047,16 +1047,20 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const handleDragStart = (e) => {
     dragStartY.current = e.touches[0].clientY;
     isDragging.current = true;
+    if (sheetRef.current) sheetRef.current.style.transition = "none";
   };
   const handleDragMove = (e) => {
     if (!isDragging.current) return;
     const dy = Math.max(0, e.touches[0].clientY - dragStartY.current);
-    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${dy}px)`;
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = "none";
+      sheetRef.current.style.transform = `translateY(${dy}px)`;
+    }
   };
   const handleDragEnd = (e) => {
     if (!isDragging.current) return;
     isDragging.current = false;
-    const dy = e.changedTouches[0].clientY - dragStartY.current;
+    const dy = Math.max(0, e.changedTouches[0].clientY - dragStartY.current);
     if (dy > 80) {
       if (sheetRef.current) {
         sheetRef.current.style.transition = "transform 0.22s ease-out";
@@ -1086,8 +1090,8 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
             onTouchStart={handleDragStart}
             onTouchMove={handleDragMove}
             onTouchEnd={handleDragEnd}
-            style={{width:"100%",padding:"16px 0 8px",display:"flex",justifyContent:"center",cursor:"grab",touchAction:"none"}}>
-            <div style={{width:36,height:4,borderRadius:2,background:"#3A3530"}}/>
+            style={{width:"100%",padding:"14px 0 10px",display:"flex",justifyContent:"center",cursor:"grab"}}>
+            <div style={{width:40,height:5,borderRadius:3,background:"#4A4540"}}/>
           </div>
 
           {/* Header */}
@@ -2780,7 +2784,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.7</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
