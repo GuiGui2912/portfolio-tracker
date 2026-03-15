@@ -913,12 +913,11 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const [editTx, setEditTx]           = useState(null);
   const [scale, setScale]             = useState("1M");
   const [detailTab, setDetailTab]     = useState(marketMode ? "info" : "position");
-  const sheetRef                      = useRef(null);
-  const dragStartY                    = useRef(0);
-  const dragStartTime                 = useRef(0);
-  const isDragging                    = useRef(false);
-  const onCloseRef                    = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  const sheetRef       = useRef(null);
+  const dragStartY     = useRef(0);
+  const isDragging     = useRef(false);
+  const onCloseRef     = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
 
   const isCrypto = asset.type === "crypto";
   const info     = getAssetInfo(asset.symbol);
@@ -1043,88 +1042,35 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
     y: PAD_TOP + plotH * p,
   }));
 
-  // Swipe to close — appui long puis suivi doigt
-  const LONG_PRESS_MS = 350;
-  const longPressTimer = useRef<any>(null);
-  const dragLocked     = useRef(false);
 
-  useEffect(() => {
-    const el = sheetRef.current;
-    if (!el) return;
-
-    const onStart = (e: TouchEvent) => {
-      dragStartY.current    = e.touches[0].clientY;
-      dragStartTime.current = Date.now();
-      isDragging.current    = false;
-      dragLocked.current    = false;
-
-      longPressTimer.current = setTimeout(() => {
-        dragLocked.current = true;
-        if (navigator.vibrate) navigator.vibrate(25);
-        el.style.transition = "transform 0.08s";
-        el.style.transform  = "translateY(6px)";
-        setTimeout(() => { el.style.transition = "none"; el.style.transform = "translateY(0)"; }, 80);
-      }, LONG_PRESS_MS);
-    };
-
-    const onMove = (e: TouchEvent) => {
-      const dy = e.touches[0].clientY - dragStartY.current;
-      if (!dragLocked.current) {
-        if (Math.abs(dy) > 8) clearTimeout(longPressTimer.current);
-        return;
+  // Drag-to-close depuis la poignée uniquement
+  const handleDragStart = (e) => {
+    dragStartY.current = e.touches[0].clientY;
+    isDragging.current = true;
+  };
+  const handleDragMove = (e) => {
+    if (!isDragging.current) return;
+    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current);
+    if (sheetRef.current) sheetRef.current.style.transform = `translateY(${dy}px)`;
+  };
+  const handleDragEnd = (e) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    const dy = e.changedTouches[0].clientY - dragStartY.current;
+    if (dy > 80) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.22s ease-out";
+        sheetRef.current.style.transform  = "translateY(110%)";
       }
-      if (dy <= 0) return;
-      e.preventDefault();
-      isDragging.current = true;
-      el.style.transition = "none";
-      el.style.transform  = `translateY(${dy}px)`;
-      const overlay = el.parentElement as HTMLElement;
-      if (overlay) overlay.style.background = `rgba(0,0,0,${Math.max(0.15, 0.73 - dy/350)})`;
-    };
-
-    const onEnd = (e: TouchEvent) => {
-      clearTimeout(longPressTimer.current);
-      if (!isDragging.current) { dragLocked.current = false; return; }
-      const dy = e.changedTouches[0].clientY - dragStartY.current;
-      const dt = Math.max(Date.now() - dragStartTime.current, 1);
-      const vel = dy / dt;
-      if (dy > 80 || vel > 0.4) {
-        el.style.transition = "transform 0.22s ease-out";
-        el.style.transform  = "translateY(110%)";
-        setTimeout(() => onCloseRef.current(), 210);
-      } else {
-        el.style.transition = "transform 0.28s cubic-bezier(0.4,0,0.2,1)";
-        el.style.transform  = "translateY(0)";
-        const overlay = el.parentElement as HTMLElement;
-        if (overlay) overlay.style.background = "";
-        setTimeout(() => { el.style.transition = ""; }, 280);
+      setTimeout(() => onCloseRef.current(), 200);
+    } else {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.25s cubic-bezier(0.4,0,0.2,1)";
+        sheetRef.current.style.transform  = "translateY(0)";
+        setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = ""; }, 250);
       }
-      isDragging.current = false;
-      dragLocked.current = false;
-    };
-
-    const onCancel = () => {
-      clearTimeout(longPressTimer.current);
-      isDragging.current = false;
-      dragLocked.current = false;
-      el.style.transition = "transform 0.28s";
-      el.style.transform  = "translateY(0)";
-      setTimeout(() => { el.style.transition = ""; }, 280);
-    };
-
-    el.addEventListener("touchstart", onStart, { passive: true });
-    el.addEventListener("touchmove",  onMove,  { passive: false });
-    el.addEventListener("touchend",   onEnd,   { passive: true });
-    el.addEventListener("touchcancel",onCancel,{ passive: true });
-
-    return () => {
-      clearTimeout(longPressTimer.current);
-      el.removeEventListener("touchstart", onStart);
-      el.removeEventListener("touchmove",  onMove);
-      el.removeEventListener("touchend",   onEnd);
-      el.removeEventListener("touchcancel",onCancel);
-    };
-  }, []);
+    }
+  };
 
   const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["info","Informations"]];
 
@@ -1135,8 +1081,14 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
           style={{width:390,background:"#151210",borderRadius:"28px 28px 0 0",border:"1px solid #2A2520",borderBottom:"none",maxHeight:"92vh",overflowY:"auto",paddingBottom:40,touchAction:"pan-y"}}
           onClick={e=>e.stopPropagation()}
         >
-          {/* Handle */}
-          <div style={{width:36,height:4,borderRadius:2,background:"#3A3530",margin:"16px auto 0",cursor:"grab"}}/>
+          {/* Handle — zone de drag pour fermer */}
+          <div
+            onTouchStart={handleDragStart}
+            onTouchMove={handleDragMove}
+            onTouchEnd={handleDragEnd}
+            style={{width:"100%",padding:"16px 0 8px",display:"flex",justifyContent:"center",cursor:"grab",touchAction:"none"}}>
+            <div style={{width:36,height:4,borderRadius:2,background:"#3A3530"}}/>
+          </div>
 
           {/* Header */}
           <div style={{padding:"14px 20px 0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -2828,7 +2780,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.6</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
