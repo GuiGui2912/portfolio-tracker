@@ -1016,11 +1016,17 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
     const indices = [0, Math.floor(n/3), Math.floor(2*n/3), n-1];
     const now = new Date();
     const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
-    return indices.map((i,idx) => ({
-      label: i===n-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((n-1-i)/(n-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
-      x: toX(i),
-      anchor: idx===0 ? "start" : idx===indices.length-1 ? "end" : "middle",
-    }));
+    return indices.map((i,idx) => {
+      let x = toX(i);
+      // Décaler légèrement le premier et le dernier pour éviter le débordement
+      if (idx === 0) x = Math.max(x, PAD_LEFT + 18);
+      if (idx === indices.length-1) x = Math.min(x, PAD_LEFT + plotW - 12);
+      return {
+        label: i===n-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((n-1-i)/(n-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
+        x,
+        anchor: idx===0 ? "middle" : idx===indices.length-1 ? "middle" : "middle",
+      };
+    });
   })();
 
   // Étiquettes prix (axe droit) — valeurs brutes formatées sans double conversion
@@ -1125,7 +1131,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 ))}
                 {/* Axe temps (bas) */}
                 {timeLabels.map((tl,i)=>(
-                  <text key={i} x={tl.x} y={SVG_H-2} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace" textAnchor={tl.anchor}>{tl.label}</text>
+                  <text key={i} x={tl.x} y={SVG_H-6} fill="#5A5550" fontSize="9" fontFamily="'DM Mono',monospace" textAnchor={tl.anchor}>{tl.label}</text>
                 ))}
               </svg>
             </div>
@@ -2758,7 +2764,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.9</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.0</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
