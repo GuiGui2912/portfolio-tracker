@@ -1041,39 +1041,104 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
     y: PAD_TOP + plotH * p,
   }));
 
-  // Swipe to close
+  // Swipe to close — appui long pour activer, puis suivi du doigt
+  const LONG_PRESS_MS = 400;
+  const longPressTimer = useRef<any>(null);
+  const dragLocked     = useRef(false); // true = mode drag actif après appui long
+
   const onTouchStartSheet = (e) => {
-    dragStartY.current = e.touches[0].clientY;
+    dragStartY.current   = e.touches[0].clientY;
     dragStartTime.current = Date.now();
-    isDragging.current = false;
+    isDragging.current   = false;
+    dragLocked.current   = false;
+
+    // Déclencher le mode drag après appui long
+    longPressTimer.current = setTimeout(() => {
+      dragLocked.current = true;
+      if (navigator.vibrate) navigator.vibrate(30);
+      // Légère indication visuelle
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.1s";
+        sheetRef.current.style.transform  = "translateY(4px)";
+        setTimeout(() => {
+          if (sheetRef.current) {
+            sheetRef.current.style.transition = "none";
+            sheetRef.current.style.transform  = "translateY(0)";
+          }
+        }, 100);
+      }
+    }, LONG_PRESS_MS);
   };
+
   const onTouchMoveSheet = (e) => {
     const dy = e.touches[0].clientY - dragStartY.current;
-    if (dy > 8) isDragging.current = true;
-    if (isDragging.current && sheetRef.current && dy > 0) {
-      sheetRef.current.style.transition = "none";
-      sheetRef.current.style.transform = `translateY(${dy}px)`;
+
+    // Annuler l'appui long si l'utilisateur bouge trop vite (scroll)
+    if (!dragLocked.current && Math.abs(dy) > 10) {
+      clearTimeout(longPressTimer.current);
+    }
+
+    if (!dragLocked.current) return;
+
+    // Mode drag actif : suivre le doigt vers le bas uniquement
+    if (dy > 0) {
+      e.preventDefault();
+      isDragging.current = true;
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "none";
+        sheetRef.current.style.transform  = `translateY(${dy}px)`;
+        // Opacité du fond qui diminue
+        sheetRef.current.parentElement && (sheetRef.current.parentElement.style.background = `rgba(0,0,0,${Math.max(0.2, 0.73 - dy/400)})`);
+      }
     }
   };
+
   const onTouchEndSheet = (e) => {
-    const dy = e.changedTouches[0].clientY - dragStartY.current;
-    const dt = Date.now() - dragStartTime.current;
-    const velocity = dy / dt; // px/ms
-    // Fermer si : déplacement > 80px OU vitesse > 0.5px/ms (geste rapide)
-    if (dy > 80 || (dy > 30 && velocity > 0.5)) {
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = "transform 0.2s ease-out";
-        sheetRef.current.style.transform = "translateY(100%)";
-        setTimeout(onClose, 180);
-      } else { onClose(); }
+    clearTimeout(longPressTimer.current);
+
+    if (!isDragging.current) {
+      dragLocked.current = false;
       return;
     }
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = "transform 0.25s cubic-bezier(0.4,0,0.2,1)";
-      sheetRef.current.style.transform = "translateY(0)";
-      setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = ""; }, 250);
+
+    const dy = e.changedTouches[0].clientY - dragStartY.current;
+    const dt = Date.now() - dragStartTime.current;
+    const velocity = dy / Math.max(dt, 1);
+
+    if (dy > 80 || velocity > 0.5) {
+      // Fermer avec animation
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.25s ease-out";
+        sheetRef.current.style.transform  = "translateY(110%)";
+        if (sheetRef.current.parentElement)
+          sheetRef.current.parentElement.style.transition = "background 0.25s";
+        setTimeout(onClose, 220);
+      } else { onClose(); }
+    } else {
+      // Revenir en place
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.4,0,0.2,1)";
+        sheetRef.current.style.transform  = "translateY(0)";
+        if (sheetRef.current.parentElement)
+          sheetRef.current.parentElement.style.background = "";
+        setTimeout(() => {
+          if (sheetRef.current) sheetRef.current.style.transition = "";
+        }, 300);
+      }
     }
+
     isDragging.current = false;
+    dragLocked.current = false;
+  };
+
+  const onTouchCancelSheet = () => {
+    clearTimeout(longPressTimer.current);
+    isDragging.current = false;
+    dragLocked.current = false;
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = "transform 0.3s";
+      sheetRef.current.style.transform  = "translateY(0)";
+    }
   };
 
   const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["info","Informations"]];
@@ -1087,6 +1152,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
           onTouchStart={onTouchStartSheet}
           onTouchMove={onTouchMoveSheet}
           onTouchEnd={onTouchEndSheet}
+          onTouchCancel={onTouchCancelSheet}
         >
           {/* Handle */}
           <div style={{width:36,height:4,borderRadius:2,background:"#3A3530",margin:"16px auto 0",cursor:"grab"}}/>
@@ -2781,7 +2847,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.3</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
