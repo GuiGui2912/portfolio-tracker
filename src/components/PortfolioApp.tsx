@@ -1043,38 +1043,48 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   }));
 
 
-  // Drag-to-close depuis la poignée uniquement
+  // Drag-to-close depuis la poignée
   const handleDragStart = (e) => {
+    e.stopPropagation();
     dragStartY.current = e.touches[0].clientY;
     isDragging.current = true;
     if (sheetRef.current) sheetRef.current.style.transition = "none";
-  };
-  const handleDragMove = (e) => {
-    if (!isDragging.current) return;
-    const dy = Math.max(0, e.touches[0].clientY - dragStartY.current);
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = "none";
-      sheetRef.current.style.transform = `translateY(${dy}px)`;
-    }
-  };
-  const handleDragEnd = (e) => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    const dy = Math.max(0, e.changedTouches[0].clientY - dragStartY.current);
-    if (dy > 80) {
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = "transform 0.22s ease-out";
-        sheetRef.current.style.transform  = "translateY(110%)";
+
+    const onMove = (ev: TouchEvent) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (!isDragging.current) return;
+      const dy = Math.max(0, ev.touches[0].clientY - dragStartY.current);
+      if (sheetRef.current) sheetRef.current.style.transform = `translateY(${dy}px)`;
+    };
+
+    const onEnd = (ev: TouchEvent) => {
+      ev.stopPropagation();
+      isDragging.current = false;
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend",  onEnd);
+      const dy = Math.max(0, ev.changedTouches[0].clientY - dragStartY.current);
+      if (dy > 80) {
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = "transform 0.22s ease-out";
+          sheetRef.current.style.transform  = "translateY(110%)";
+        }
+        setTimeout(() => onCloseRef.current(), 210);
+      } else {
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = "transform 0.25s cubic-bezier(0.4,0,0.2,1)";
+          sheetRef.current.style.transform  = "translateY(0)";
+          setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = ""; }, 260);
+        }
       }
-      setTimeout(() => onCloseRef.current(), 200);
-    } else {
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = "transform 0.25s cubic-bezier(0.4,0,0.2,1)";
-        sheetRef.current.style.transform  = "translateY(0)";
-        setTimeout(() => { if (sheetRef.current) sheetRef.current.style.transition = ""; }, 250);
-      }
-    }
+    };
+
+    document.addEventListener("touchmove", onMove, { passive: false });
+    document.addEventListener("touchend",  onEnd,  { passive: false });
   };
+
+  const handleDragMove  = () => {};
+  const handleDragEnd   = () => {};
 
   const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["info","Informations"]];
 
@@ -2784,7 +2794,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.7</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.8</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
