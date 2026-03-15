@@ -1031,13 +1031,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   })();
 
   // Étiquettes prix — format court pour les grands montants
-  const fmtPrice = (v: number) => {
-    const raw = fmt(v, 0);
-    // Si > 4 chiffres, utiliser format abrégé
-    const num = Math.abs(v * (currency==="EUR" ? EUR_RATE : 1));
-    if (num >= 10000) return fmt(v, 0).replace(/\s/g, '').replace('€','').replace('$','') + (currency==="EUR"?"€":"$");
-    return raw;
-  };
+  const fmtPrice = (v: number) => fmt(v, 0);
 
   // Étiquettes prix (axe droit) — valeurs brutes formatées sans double conversion
   // Les chartData sont en USD en interne, fmt() fait la conversion USD→EUR si besoin
@@ -2774,7 +2768,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.1</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
