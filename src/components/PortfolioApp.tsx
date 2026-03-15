@@ -915,6 +915,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const [detailTab, setDetailTab]     = useState(marketMode ? "info" : "position");
   const sheetRef                      = useRef(null);
   const dragStartY                    = useRef(0);
+  const dragStartTime                 = useRef(0);
   const isDragging                    = useRef(false);
 
   const isCrypto = asset.type === "crypto";
@@ -1043,18 +1044,30 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   // Swipe to close
   const onTouchStartSheet = (e) => {
     dragStartY.current = e.touches[0].clientY;
+    dragStartTime.current = Date.now();
     isDragging.current = false;
   };
   const onTouchMoveSheet = (e) => {
     const dy = e.touches[0].clientY - dragStartY.current;
-    if (dy > 10) isDragging.current = true;
-    if (isDragging.current && sheetRef.current) {
-      sheetRef.current.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    if (dy > 8) isDragging.current = true;
+    if (isDragging.current && sheetRef.current && dy > 0) {
+      sheetRef.current.style.transition = "none";
+      sheetRef.current.style.transform = `translateY(${dy}px)`;
     }
   };
   const onTouchEndSheet = (e) => {
     const dy = e.changedTouches[0].clientY - dragStartY.current;
-    if (dy > 120) { onClose(); return; }
+    const dt = Date.now() - dragStartTime.current;
+    const velocity = dy / dt; // px/ms
+    // Fermer si : déplacement > 80px OU vitesse > 0.5px/ms (geste rapide)
+    if (dy > 80 || (dy > 30 && velocity > 0.5)) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.2s ease-out";
+        sheetRef.current.style.transform = "translateY(100%)";
+        setTimeout(onClose, 180);
+      } else { onClose(); }
+      return;
+    }
     if (sheetRef.current) {
       sheetRef.current.style.transition = "transform 0.25s cubic-bezier(0.4,0,0.2,1)";
       sheetRef.current.style.transform = "translateY(0)";
@@ -2768,7 +2781,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.1</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.2</div>
               </div>
             </div>
             <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
