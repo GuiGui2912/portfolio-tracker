@@ -2497,9 +2497,99 @@ export default function App() {
 
   useEffect(() => { assetsRef.current = assets; }, [assets]);
 
+
+  const allMarketRef = useRef(allMarket);
+  useEffect(() => { allMarketRef.current = allMarket; }, [allMarket]);
+
+  const fetchPrices = useCallback(async () => {
+    try {
+      const currentAssets = assetsRef.current;
+      const currentMarket = allMarketRef.current;
+      const cryptoSymbols = currentAssets.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
+      const stockSymbols  = currentAssets.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
+      const mktCrypto     = currentMarket.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
+      const mktStock      = currentMarket.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
+      const allCrypto = [...new Set([...cryptoSymbols.split(','),...mktCrypto.split(',')].filter(Boolean))].join(',');
+      const allStock  = [...new Set([...stockSymbols.split(','),...mktStock.split(',')].filter(Boolean))].join(',');
+      const [cryptoRes, stockRes] = await Promise.all([
+        allCrypto ? fetch(`/api/prices/crypto?symbols=${allCrypto}`) : Promise.resolve({ ok: false }),
+        allStock  ? fetch(`/api/prices/stocks?symbols=${allStock}`)  : Promise.resolve({ ok: false }),
+      ]);
+      const cryptoPrices = cryptoRes.ok ? await cryptoRes.json() : {};
+      const stockPrices  = stockRes.ok  ? await stockRes.json()  : {};
+      const allPrices    = { ...cryptoPrices, ...stockPrices };
+
+      const firstPrice = Object.values(allPrices)[0] as any;
+      const currentEurUsd = firstPrice?.eurUsd ?? eurUsd;
+      if (firstPrice?.eurUsd) setEurUsd(firstPrice.eurUsd);
+
+      setAssets(prev => prev.map(a => {
+        const p = allPrices[a.symbol] || allPrices[a.symbol+'.PA'] || allPrices[a.symbol+'.L'];
+        if (!p) return a;
+        const priceNative = p.price ?? a.price;
+        const priceCurrency = p.currency ?? 'USD';
+        const priceUSD = priceCurrency === 'EUR' ? priceNative * currentEurUsd
+                       : priceCurrency === 'GBp' ? priceNative / 100 * 1.27
+                       : priceNative;
+        const purchaseRefUSD = a.purchase?.priceUSD ?? null;
+        const realChange = purchaseRefUSD != null
+          ? ((priceUSD - purchaseRefUSD) / purchaseRefUSD) * 100
+          : (p.change24h ?? a.change);
+        return { ...a, price: priceUSD, change: Math.round(realChange * 100) / 100, ...(p.extra ? { extra: p.extra } : {}) };
+      }));
+
+      const assetsToFetch = assetsRef.current;
+      Promise.all(assetsToFetch.map(async a => {
+        try {
+          if (a.type === 'crypto') {
+            const r = await fetch(`/api/prices/crypto?symbols=${a.symbol}&history=true`);
+            if (!r.ok) return null;
+            const d = await r.json();
+            const h = d?.[a.symbol]?.history;
+            if (h && Object.keys(h).length > 0) return { id: a.id, histories: h };
+          } else {
+            const periodMap: Record<string,{range:string,interval:string}> = {
+              '1S':{range:'7d',interval:'1d'}, '1M':{range:'1mo',interval:'1d'},
+              '3M':{range:'3mo',interval:'1d'}, '6M':{range:'6mo',interval:'1wk'},
+              '1A':{range:'1y',interval:'1wk'}, 'MAX':{range:'5y',interval:'1mo'},
+            };
+            const histories: Record<string,number[]> = {};
+            await Promise.all(Object.entries(periodMap).map(async ([label, {range, interval}]) => {
+              try {
+                const res = await fetch(`/api/yahoo-history?symbol=${encodeURIComponent(a.symbol)}&range=${range}&interval=${interval}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data?.prices?.length > 1) histories[label] = data.prices;
+              } catch {}
+            }));
+            if (Object.keys(histories).length > 0) return { id: a.id, histories };
+          }
+        } catch {}
+        return null;
+      })).then(results => {
+        const updates = results.filter(Boolean) as {id:string,histories:Record<string,number[]>}[];
+        if (updates.length > 0) {
+          setAssets(prev => prev.map(a => {
+            const u = updates.find(x => x.id === a.id);
+            return u ? { ...a, histories: { ...a.histories, ...u.histories } } : a;
+          }));
+        }
+      });
+
+      setAllMarket(prev => prev.map(a => {
+        const p = allPrices[a.symbol]; if (!p) return a;
+        const priceNative = p.price ?? a.price;
+        const priceCurrency = p.currency ?? 'USD';
+        const priceUSD = priceCurrency === 'EUR' ? priceNative * currentEurUsd
+                       : priceCurrency === 'GBp' ? priceNative / 100 * 1.27
+                       : priceNative;
+        return { ...a, price: priceUSD, change: p.change24h ?? a.change, ...(p.extra ? { extra: p.extra } : {}) };
+      }));
+    } catch (e) { console.error('Erreur fetch prix:', e); }
+  }, []);
+
   useEffect(() => {
     if (dbLoading) return;
-
     const saved = (() => { try { return Number(localStorage.getItem('active_tab')||0); } catch { return 0; } })();
     if (saved > 0 && slideRef.current) {
       const w = slideRef.current?.parentElement?.offsetWidth || window.innerWidth;
@@ -2508,97 +2598,10 @@ export default function App() {
       slideRef.current.style.transition = 'none';
       slideRef.current.style.transform = `translateX(${-saved * w}px)`;
     }
-
-    const fetchPrices = async () => {
-      try {
-        const currentAssets = assetsRef.current;
-        const cryptoSymbols = currentAssets.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
-        const stockSymbols  = currentAssets.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
-        const mktCrypto     = allMarket.filter(a=>a.type==='crypto').map(a=>a.symbol).join(',');
-        const mktStock      = allMarket.filter(a=>a.type!=='crypto').map(a=>a.symbol).join(',');
-        const allCrypto = [...new Set([...cryptoSymbols.split(','),...mktCrypto.split(',')].filter(Boolean))].join(',');
-        const allStock  = [...new Set([...stockSymbols.split(','),...mktStock.split(',')].filter(Boolean))].join(',');
-        const [cryptoRes, stockRes] = await Promise.all([
-          allCrypto ? fetch(`/api/prices/crypto?symbols=${allCrypto}`) : Promise.resolve({ ok: false }),
-          allStock  ? fetch(`/api/prices/stocks?symbols=${allStock}`)  : Promise.resolve({ ok: false }),
-        ]);
-        const cryptoPrices = cryptoRes.ok ? await cryptoRes.json() : {};
-        const stockPrices  = stockRes.ok  ? await stockRes.json()  : {};
-        const allPrices    = { ...cryptoPrices, ...stockPrices };
-
-        const firstPrice = Object.values(allPrices)[0] as any;
-        const currentEurUsd = firstPrice?.eurUsd ?? eurUsd;
-        if (firstPrice?.eurUsd) setEurUsd(firstPrice.eurUsd);
-
-        setAssets(prev => prev.map(a => {
-          const p = allPrices[a.symbol] || allPrices[a.symbol+'.PA'] || allPrices[a.symbol+'.L'];
-          if (!p) return a;
-          const priceNative = p.price ?? a.price;
-          const priceCurrency = p.currency ?? 'USD';
-          const priceUSD = priceCurrency === 'EUR' ? priceNative * currentEurUsd
-                         : priceCurrency === 'GBp' ? priceNative / 100 * 1.27
-                         : priceNative;
-          const purchaseRefUSD = a.purchase?.priceUSD ?? null;
-          const realChange = purchaseRefUSD != null
-            ? ((priceUSD - purchaseRefUSD) / purchaseRefUSD) * 100
-            : (p.change24h ?? a.change);
-          return { ...a, price: priceUSD, change: Math.round(realChange * 100) / 100, ...(p.extra ? { extra: p.extra } : {}) };
-        }));
-
-        // Fetcher les historiques réels pour les mini graphiques (1M par défaut)
-        const assetsToFetch = assetsRef.current;
-        Promise.all(assetsToFetch.map(async a => {
-          try {
-            if (a.type === 'crypto') {
-              const r = await fetch(`/api/prices/crypto?symbols=${a.symbol}&history=true`);
-              if (!r.ok) return null;
-              const d = await r.json();
-              const h = d?.[a.symbol]?.history;
-              if (h && Object.keys(h).length > 0) return { id: a.id, histories: h };
-            } else {
-              const periodMap: Record<string,{range:string,interval:string}> = {
-                '1S':{range:'7d',interval:'1d'}, '1M':{range:'1mo',interval:'1d'},
-                '3M':{range:'3mo',interval:'1d'}, '6M':{range:'6mo',interval:'1wk'},
-                '1A':{range:'1y',interval:'1wk'}, 'MAX':{range:'5y',interval:'1mo'},
-              };
-              const histories: Record<string,number[]> = {};
-              await Promise.all(Object.entries(periodMap).map(async ([label, {range, interval}]) => {
-                try {
-                  const res = await fetch(`/api/yahoo-history?symbol=${encodeURIComponent(a.symbol)}&range=${range}&interval=${interval}`);
-                  if (!res.ok) return;
-                  const data = await res.json();
-                  if (data?.prices?.length > 1) histories[label] = data.prices;
-                } catch {}
-              }));
-              if (Object.keys(histories).length > 0) return { id: a.id, histories };
-            }
-          } catch {}
-          return null;
-        })).then(results => {
-          const updates = results.filter(Boolean) as {id:string,histories:Record<string,number[]>}[];
-          if (updates.length > 0) {
-            setAssets(prev => prev.map(a => {
-              const u = updates.find(x => x.id === a.id);
-              return u ? { ...a, histories: { ...a.histories, ...u.histories } } : a;
-            }));
-          }
-        });
-        setAllMarket(prev => prev.map(a => {
-          const p = allPrices[a.symbol]; if (!p) return a;
-          const priceNative = p.price ?? a.price;
-          const priceCurrency = p.currency ?? 'USD';
-          const priceUSD = priceCurrency === 'EUR' ? priceNative * currentEurUsd
-                         : priceCurrency === 'GBp' ? priceNative / 100 * 1.27
-                         : priceNative;
-          return { ...a, price: priceUSD, change: p.change24h ?? a.change, ...(p.extra ? { extra: p.extra } : {}) };
-        }));
-      } catch (e) { console.error('Erreur fetch prix:', e); }
-    };
-    fetchPricesRef.current = fetchPrices;
     fetchPrices().finally(() => setIsRefreshing(false));
     const interval = setInterval(fetchPrices, 60000);
     return () => clearInterval(interval);
-  }, [dbLoading, refreshTick]);
+  }, [dbLoading, fetchPrices]);
 
   const fmt         = useFmt(currency, 1/eurUsd);
 
@@ -2800,7 +2803,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.1</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.2</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
