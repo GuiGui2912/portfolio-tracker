@@ -2042,6 +2042,8 @@ export default function App() {
   const assetsRef = useRef<any[]>([]);
   const [eurUsd, setEurUsd]           = useState(1.1469);
   const [dbLoading, setDbLoading]   = useState(true);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [userId, setUserId]         = useState(null);
   const [user, setUser]             = useState(null);
   const [authMode, setAuthMode]     = useState("login");
@@ -2594,10 +2596,10 @@ export default function App() {
         }));
       } catch (e) { console.error('Erreur fetch prix:', e); }
     };
-    fetchPrices();
+    fetchPrices().finally(() => setIsRefreshing(false));
     const interval = setInterval(fetchPrices, 60000);
     return () => clearInterval(interval);
-  }, [dbLoading]);
+  }, [dbLoading, refreshTick]);
 
   const fmt         = useFmt(currency, 1/eurUsd);
 
@@ -2774,6 +2776,7 @@ export default function App() {
         ::-webkit-scrollbar{display:none;}
         .asset-row{transition:background 0.15s;cursor:pointer;}
         .asset-row:hover{background:#181410!important;}
+        @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
         .fadein{animation:fadeUp 0.3s ease both;}
         @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
@@ -2798,13 +2801,27 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.3</div>
               </div>
             </div>
-            <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
-              {["USD","EUR"].map(c=>(
-                <button key={c} onClick={()=>setCurrency(c)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:currency===c?"#C8A96E":"transparent",color:currency===c?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{c}</button>
-              ))}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{display:"flex",background:"#1A1714",borderRadius:20,padding:3,border:"1px solid #252015",gap:2}}>
+                {["USD","EUR"].map(c=>(
+                  <button key={c} onClick={()=>setCurrency(c)} style={{padding:"4px 10px",borderRadius:16,border:"none",cursor:"pointer",background:currency===c?"#C8A96E":"transparent",color:currency===c?"#111009":"#5A5550",fontSize:10,fontWeight:700,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{c}</button>
+                ))}
+              </div>
+              <button
+                onClick={()=>{ if(isRefreshing) return; setIsRefreshing(true); setRefreshTick(t=>t+1); }}
+                style={{width:32,height:32,borderRadius:10,background:"#1A1714",border:"1px solid #252015",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 0.2s",opacity:isRefreshing?0.4:1}}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8A96E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{animation:isRefreshing?"spin 1s linear infinite":"none"}}>
+                  <path d="M23 4v6h-6"/>
+                  <path d="M1 20v-6h6"/>
+                  <path d="M3.51 9a9 9 0 0114.85-3.36L23 10"/>
+                  <path d="M20.49 15a9 9 0 01-14.85 3.36L1 14"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>

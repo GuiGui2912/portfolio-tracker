@@ -8,10 +8,6 @@ const config: CapacitorConfig = {
     url: 'https://portfolio-tracker-livid-alpha.vercel.app',
     cleartext: true,
   },
-  android: {
-    allowMixedContent: true,
-    overScrollMode: 'never',
-  },
 };
 
 export default config;
