@@ -2044,6 +2044,7 @@ export default function App() {
   const [dbLoading, setDbLoading]   = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const fetchPricesRef = useRef<any>(null);
   const [userId, setUserId]         = useState(null);
   const [user, setUser]             = useState(null);
   const [authMode, setAuthMode]     = useState("login");
@@ -2593,6 +2594,7 @@ export default function App() {
         }));
       } catch (e) { console.error('Erreur fetch prix:', e); }
     };
+    fetchPricesRef.current = fetchPrices;
     fetchPrices().finally(() => setIsRefreshing(false));
     const interval = setInterval(fetchPrices, 60000);
     return () => clearInterval(interval);
@@ -2798,7 +2800,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -2808,7 +2810,7 @@ export default function App() {
                 ))}
               </div>
               <button
-                onClick={()=>{ if(isRefreshing) return; setIsRefreshing(true); setRefreshTick(t=>t+1); }}
+                onClick={()=>{ if(isRefreshing) return; setIsRefreshing(true); fetchPricesRef.current?.().finally(()=>setIsRefreshing(false)); }}
                 style={{width:32,height:32,borderRadius:10,background:"#1A1714",border:"1px solid #252015",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 0.2s",opacity:isRefreshing?0.4:1}}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8A96E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
