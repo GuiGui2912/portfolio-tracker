@@ -2154,17 +2154,16 @@ export default function App() {
 
   const handleAssetTouchStart = (e, idx, asset) => {
     if (!dragMode) return;
+    // Drag immédiat depuis la poignée — pas d'appui long
     const touch = e.touches[0];
-    assetLongTimer.current = setTimeout(() => {
-      assetDragActive.current = true;
-      assetDragFrom.current = idx;
-      assetDragTo.current = idx;
-      setAssetDraggingIdx(idx);
-      setAssetDragOverIdx(null);
-      setAssetGhostItem(asset);
-      setAssetGhostPos({x: touch.clientX, y: touch.clientY});
-      if (navigator.vibrate) navigator.vibrate(40);
-    }, 250);
+    assetDragActive.current = true;
+    assetDragFrom.current = idx;
+    assetDragTo.current = idx;
+    setAssetDraggingIdx(idx);
+    setAssetDragOverIdx(null);
+    setAssetGhostItem(asset);
+    setAssetGhostPos({x: touch.clientX, y: touch.clientY});
+    if (navigator.vibrate) navigator.vibrate(30);
   };
 
   const handleAssetTouchMove = (e) => {
@@ -2205,16 +2204,14 @@ export default function App() {
   const handleMktTouchStart = (e, realIdx) => {
     if (!dragMktMode) return;
     const touch = e.touches[0];
-    mktLongTimer.current = setTimeout(() => {
-      mktDragActive.current = true;
-      mktDragFrom.current = realIdx;
-      mktDragTo.current = realIdx;
-      setMktDraggingIdx(realIdx);
-      setMktDragOverIdx(null);
-      setMktGhostItem(allMarket[realIdx]);
-      setMktGhostPos({x: touch.clientX, y: touch.clientY});
-      if (navigator.vibrate) navigator.vibrate(40);
-    }, 250);
+    mktDragActive.current = true;
+    mktDragFrom.current = realIdx;
+    mktDragTo.current = realIdx;
+    setMktDraggingIdx(realIdx);
+    setMktDragOverIdx(null);
+    setMktGhostItem(allMarket[realIdx]);
+    setMktGhostPos({x: touch.clientX, y: touch.clientY});
+    if (navigator.vibrate) navigator.vibrate(30);
   };
 
   const handleMktTouchMove = (e) => {
@@ -2801,7 +2798,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.3</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.9.4</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -2940,7 +2937,10 @@ export default function App() {
                   return (
                     <div key={a.id}>
                       {dragMode && assetDragOverIdx === idx && assetDraggingIdx !== idx && (
-                        <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 20px",boxShadow:"0 0 6px #C8A96E80"}}/>
+                        <div style={{height:3,background:"#C8A96E",borderRadius:3,margin:"0 16px",boxShadow:"0 0 8px #C8A96EAA",position:"relative"}}>
+                          <div style={{position:"absolute",left:-4,top:-4,width:10,height:10,borderRadius:5,background:"#C8A96E",boxShadow:"0 0 6px #C8A96EAA"}}/>
+                          <div style={{position:"absolute",right:-4,top:-4,width:10,height:10,borderRadius:5,background:"#C8A96E",boxShadow:"0 0 6px #C8A96EAA"}}/>
+                        </div>
                       )}
                     <div className="asset-row"
                       data-asset-item={idx}
@@ -2949,14 +2949,26 @@ export default function App() {
                       onDragEnter={()=>{dragOverItem.current=idx; setAssetDragOverIdx(idx!==dragItem.current?idx:null);}}
                       onDragEnd={()=>{handleDragSort(); setAssetDraggingIdx(null); setAssetDragOverIdx(null);}}
                       onDragOver={e=>e.preventDefault()}
-                      onTouchStart={e=>handleAssetTouchStart(e, idx, a)}
-                      onTouchMove={e=>{ if(assetDragActive.current) handleAssetTouchMove(e); }}
-                      onTouchEnd={e=>{ if(assetDragActive.current) { e.stopPropagation(); handleAssetTouchEnd(); } }}
-                      onTouchCancel={handleAssetTouchEnd}
                       onClick={()=>!dragMode&&setDetailAsset(a)}
-                      style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer",opacity:assetDraggingIdx===idx?0.25:1,userSelect:dragMode?"none":"auto",WebkitUserSelect:dragMode?"none":"auto",touchAction:dragMode?"none":"auto"}}>
+                      style={{padding:"12px 20px",borderBottom:"1px solid #191612",cursor:dragMode?"grab":"pointer",opacity:assetDraggingIdx===idx?0.3:1,userSelect:dragMode?"none":"auto",WebkitUserSelect:dragMode?"none":"auto",background:assetDraggingIdx===idx?"#1A1714":"transparent",transition:"opacity 0.15s,background 0.15s"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
-                        {dragMode&&<div style={{color:"#3A3530",marginRight:4,fontSize:16,cursor:"grab",flexShrink:0}}>⠿</div>}
+                        {dragMode && (
+                          <div
+                            onTouchStart={e=>{e.stopPropagation();handleAssetTouchStart(e,idx,a);}}
+                            onTouchMove={e=>{e.stopPropagation();if(assetDragActive.current)handleAssetTouchMove(e);}}
+                            onTouchEnd={e=>{e.stopPropagation();if(assetDragActive.current){e.preventDefault();handleAssetTouchEnd();}}}
+                            onTouchCancel={handleAssetTouchEnd}
+                            style={{width:32,height:32,borderRadius:8,background:"#252015",border:"1px solid #3A3020",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",flexShrink:0,touchAction:"none"}}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <circle cx="9" cy="6" r="1.5" fill="#6A5A40"/>
+                              <circle cx="15" cy="6" r="1.5" fill="#6A5A40"/>
+                              <circle cx="9" cy="12" r="1.5" fill="#6A5A40"/>
+                              <circle cx="15" cy="12" r="1.5" fill="#6A5A40"/>
+                              <circle cx="9" cy="18" r="1.5" fill="#6A5A40"/>
+                              <circle cx="15" cy="18" r="1.5" fill="#6A5A40"/>
+                            </svg>
+                          </div>
+                        )}
                         <div style={{width:iconSize,height:iconSize,borderRadius:14,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(iconSize*0.3),fontWeight:800,color:a.color,border:`1px solid ${a.color}28`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
