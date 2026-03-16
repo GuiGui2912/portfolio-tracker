@@ -3090,15 +3090,33 @@ export default function App() {
                 const showBarAfter = dragMktMode && isLast && mktDragOverIdx !== null && mktDragOverIdx > realIdx && mktDraggingIdx !== realIdx;
                 return (
                   <div key={a.symbol}>
-                    {showBarBefore && <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 0",boxShadow:"0 0 6px #C8A96E80"}}/>}
-                    <div data-mkt-item={realIdx} onTouchStart={e=>handleMktTouchStart(e,realIdx)}
-                      onTouchMove={e=>{ if(mktDragActive.current) handleMktTouchMove(e); }}
-                      onTouchEnd={e=>{ if(mktDragActive.current){e.stopPropagation();handleMktTouchEnd();} }}
-                      onTouchCancel={handleMktTouchEnd}
+                    {showBarBefore && (
+                      <div style={{height:3,background:"#C8A96E",borderRadius:3,margin:"0 16px",boxShadow:"0 0 8px #C8A96EAA",position:"relative"}}>
+                        <div style={{position:"absolute",left:-4,top:-4,width:10,height:10,borderRadius:5,background:"#C8A96E",boxShadow:"0 0 6px #C8A96EAA"}}/>
+                        <div style={{position:"absolute",right:-4,top:-4,width:10,height:10,borderRadius:5,background:"#C8A96E",boxShadow:"0 0 6px #C8A96EAA"}}/>
+                      </div>
+                    )}
+                    <div data-mkt-item={realIdx}
                       onClick={()=>{ if(dragMktMode) return; setMarketDetailAsset({...a, qty: assets.find(x=>x.symbol===a.symbol)?.qty??0, dividends:[], histories:buildHistories(a.price), transactions:[], extra: a.extra||{}}); }}
-                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"grab":"pointer",opacity:isDragging?0.25:1,transition:"opacity 0.1s",userSelect:"none",WebkitUserSelect:"none",touchAction:dragMktMode?"none":"auto"}}>
+                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #191612",cursor:dragMktMode?"default":"pointer",opacity:isDragging?0.3:1,transition:"opacity 0.15s,background 0.15s",background:isDragging?"#1A1714":"transparent",userSelect:"none",WebkitUserSelect:"none"}}>
                       <div style={{display:"flex",alignItems:"center",gap:11}}>
-                        {dragMktMode&&<div style={{color:isDragging?"#C8A96E":"#3A3530",fontSize:16,flexShrink:0}}>⠿</div>}
+                        {dragMktMode && (
+                          <div
+                            onTouchStart={e=>{e.stopPropagation();handleMktTouchStart(e,realIdx);}}
+                            onTouchMove={e=>{e.stopPropagation();if(mktDragActive.current)handleMktTouchMove(e);}}
+                            onTouchEnd={e=>{e.stopPropagation();if(mktDragActive.current){e.preventDefault();handleMktTouchEnd();}}}
+                            onTouchCancel={handleMktTouchEnd}
+                            style={{width:32,height:32,borderRadius:8,background:"#252015",border:"1px solid #3A3020",display:"flex",alignItems:"center",justifyContent:"center",cursor:"grab",flexShrink:0,touchAction:"none"}}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                              <circle cx="9" cy="6" r="1.5" fill="#6A5A40"/>
+                              <circle cx="15" cy="6" r="1.5" fill="#6A5A40"/>
+                              <circle cx="9" cy="12" r="1.5" fill="#6A5A40"/>
+                              <circle cx="15" cy="12" r="1.5" fill="#6A5A40"/>
+                              <circle cx="9" cy="18" r="1.5" fill="#6A5A40"/>
+                              <circle cx="15" cy="18" r="1.5" fill="#6A5A40"/>
+                            </svg>
+                          </div>
+                        )}
                         <div style={{width:40,height:40,borderRadius:12,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:a.color,border:`1px solid ${a.color}25`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
                         <div><div style={{color:"#F0EDE8",fontWeight:600,fontSize:14}}>{displayName}</div><div style={{color:"#4A4540",fontSize:11,marginTop:1,fontFamily:"'DM Mono',monospace"}}>{a.symbol}</div></div>
                       </div>
@@ -3107,7 +3125,12 @@ export default function App() {
                         <div style={{color:a.change>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600,marginTop:2}}>{a.change>=0?"▲":"▼"} {Math.abs(a.change).toFixed(2)}%</div>
                       </div>}
                     </div>
-                    {showBarAfter && <div style={{height:2,background:"#C8A96E",borderRadius:2,margin:"0 0",boxShadow:"0 0 6px #C8A96E80"}}/>}
+                    {showBarAfter && (
+                      <div style={{height:3,background:"#C8A96E",borderRadius:3,margin:"0 16px",boxShadow:"0 0 8px #C8A96EAA",position:"relative"}}>
+                        <div style={{position:"absolute",left:-4,top:-4,width:10,height:10,borderRadius:5,background:"#C8A96E",boxShadow:"0 0 6px #C8A96EAA"}}/>
+                        <div style={{position:"absolute",right:-4,top:-4,width:10,height:10,borderRadius:5,background:"#C8A96E",boxShadow:"0 0 6px #C8A96EAA"}}/>
+                      </div>
+                    )}
                   </div>
                 );
               })}
