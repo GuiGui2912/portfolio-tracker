@@ -2498,6 +2498,8 @@ export default function App() {
   useEffect(() => { assetsRef.current = assets; }, [assets]);
 
 
+  const eurUsdRef = useRef(eurUsd);
+  useEffect(() => { eurUsdRef.current = eurUsd; }, [eurUsd]);
   const allMarketRef = useRef(allMarket);
   useEffect(() => { allMarketRef.current = allMarket; }, [allMarket]);
 
@@ -2520,7 +2522,7 @@ export default function App() {
       const allPrices    = { ...cryptoPrices, ...stockPrices };
 
       const firstPrice = Object.values(allPrices)[0] as any;
-      const currentEurUsd = firstPrice?.eurUsd ?? eurUsd;
+      const currentEurUsd = firstPrice?.eurUsd ?? eurUsdRef.current;
       if (firstPrice?.eurUsd) setEurUsd(firstPrice.eurUsd);
 
       setAssets(prev => prev.map(a => {
@@ -2601,7 +2603,8 @@ export default function App() {
     fetchPrices().finally(() => setIsRefreshing(false));
     const interval = setInterval(fetchPrices, 60000);
     return () => clearInterval(interval);
-  }, [dbLoading, fetchPrices]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbLoading]);
 
   const fmt         = useFmt(currency, 1/eurUsd);
 
@@ -2803,7 +2806,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.3</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -2813,7 +2816,7 @@ export default function App() {
                 ))}
               </div>
               <button
-                onClick={()=>{ if(isRefreshing) return; setIsRefreshing(true); fetchPricesRef.current?.().finally(()=>setIsRefreshing(false)); }}
+                onClick={()=>{ if(isRefreshing) return; setIsRefreshing(true); fetchPrices().finally(()=>setIsRefreshing(false)); }}
                 style={{width:32,height:32,borderRadius:10,background:"#1A1714",border:"1px solid #252015",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 0.2s",opacity:isRefreshing?0.4:1}}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8A96E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
