@@ -2396,7 +2396,14 @@ export default function App() {
     const init = async () => {
       setDbLoading(true);
       try {
-        const { data: { user: u } } = await supabase.auth.getUser();
+        // Tenter de récupérer la session existante (fonctionne même après fermeture APK)
+        let { data: { session } } = await supabase.auth.getSession();
+        // Si session expirée mais refresh token valide, rafraîchir
+        if (!session) {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          session = refreshed.session;
+        }
+        const u = session?.user;
         if (!u) { setDbLoading(false); return; }
         setUser(u); setUserId(u.id);
         const activeId = await loadUserData(u.id);
@@ -2808,7 +2815,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.8.9"}</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.9.0"}</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
