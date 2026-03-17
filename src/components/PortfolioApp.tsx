@@ -2742,12 +2742,12 @@ export default function App() {
               </div>
             )}
             {isLogin && (
-              <div style={{display:"flex",alignItems:"center",gap:10,padding:"4px 2px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"4px 2px",marginTop:2}}>
                 <div onClick={()=>setRememberMe(v=>!v)}
-                  style={{width:20,height:20,borderRadius:6,border:`2px solid ${rememberMe?"#C8A96E":"#3A3530"}`,background:rememberMe?"#C8A96E":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
-                  {rememberMe&&<div style={{color:"#111009",fontSize:12,fontWeight:900,lineHeight:1}}>✓</div>}
+                  style={{width:22,height:22,borderRadius:6,border:`2px solid ${rememberMe?"#C8A96E":"#3A3530"}`,background:rememberMe?"#C8A96E":"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
+                  {rememberMe&&<div style={{color:"#111009",fontSize:13,fontWeight:900,lineHeight:1}}>✓</div>}
                 </div>
-                <span style={{color:"#8A8580",fontSize:12,cursor:"pointer"}} onClick={()=>setRememberMe(v=>!v)}>Rester connecté</span>
+                <span style={{color:"#8A8580",fontSize:13,cursor:"pointer",userSelect:"none"}} onClick={()=>setRememberMe(v=>!v)}>Rester connecté</span>
               </div>
             )}
             <button onClick={isLogin?handleLogin:handleRegister} disabled={authLoading}
@@ -2808,7 +2808,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.8.8"}</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.8.9"}</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
