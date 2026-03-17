@@ -2795,7 +2795,7 @@ export default function App() {
       `}</style>
       <div style={{width:"100%",maxWidth:430,background:"#151210",borderRadius:0,overflow:"hidden",height:"100vh",position:"relative",display:"flex",flexDirection:"column"}}>
 
-        <div style={{flexShrink:0,background:"#151210"}}>
+        <div style={{flexShrink:0,background:"#151210",position:"relative",zIndex:10}}>
           <div style={{padding:"12px 20px 0",paddingTop:"calc(12px + env(safe-area-inset-top, 0px))",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <div style={{position:"relative"}}>
@@ -2806,7 +2806,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.5</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -2816,7 +2816,7 @@ export default function App() {
                 ))}
               </div>
               <button
-                onClick={()=>{ if(isRefreshing) return; setIsRefreshing(true); fetchPrices().finally(()=>setIsRefreshing(false)); }}
+                onClick={()=>{ console.log("REFRESH CLICKED", isRefreshing); if(isRefreshing) return; setIsRefreshing(true); fetchPrices().then(()=>console.log("FETCH OK")).catch(e=>console.error("FETCH ERR",e)).finally(()=>{ console.log("FETCH DONE"); setIsRefreshing(false); }); }}
                 style={{width:32,height:32,borderRadius:10,background:"#1A1714",border:"1px solid #252015",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 0.2s",opacity:isRefreshing?0.4:1}}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8A96E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
