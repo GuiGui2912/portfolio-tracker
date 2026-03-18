@@ -2133,7 +2133,6 @@ export default function App() {
   const [editPortfolioName, setEditPortfolioName] = useState("");
   const [editProfileName, setEditProfileName]     = useState("");
   const [showPortfolioChart, setShowPortfolioChart] = useState(false);
-  const [portfolioChartScale, setPortfolioChartScale] = useState("1M");
   const [portfolioChartMode, setPortfolioChartMode] = useState("val");
   const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
@@ -2887,7 +2886,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.6</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -2933,7 +2932,7 @@ export default function App() {
 
                 {pageIdx === 0 && (() => {
                   // Calcul données portfolio
-                  const scale = portfolioChartScale;
+                  const scale = listScale;
                   const portfolioData = (() => {
                     if (assets.length === 0) return [];
                     const histories = assets.map(a => a.histories?.[scale] || []);
@@ -3009,13 +3008,6 @@ export default function App() {
                             <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
                           </div>
                         </div>
-                        {/* Sélecteur période */}
-                        <div style={{display:"flex",gap:2,background:"#1A1714",borderRadius:12,padding:3,border:"1px solid #252015",marginTop:12}}>
-                          {["1S","1M","3M","6M","1A","MAX"].map(s=>(
-                            <button key={s} onClick={()=>setPortfolioChartScale(s)}
-                              style={{flex:1,padding:"4px 0",borderRadius:9,border:portfolioChartScale===s?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartScale===s?"#C8A96E20":"transparent",color:portfolioChartScale===s?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartScale===s?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{s}</button>
-                          ))}
-                        </div>
                       </div>
                     )}
 
@@ -3065,13 +3057,6 @@ export default function App() {
                               <text key={i} x={tl.x} y={CH-3} fill="#4A4540" fontSize="8" fontFamily="'DM Mono',monospace" textAnchor={tl.anchor}>{tl.label}</text>
                             ))}
                           </svg>
-                        </div>
-                        {/* Sélecteur période */}
-                        <div style={{display:"flex",gap:2,background:"#1A1714",borderRadius:12,padding:3,border:"1px solid #252015",marginTop:10}}>
-                          {["1S","1M","3M","6M","1A","MAX"].map(s=>(
-                            <button key={s} onClick={()=>setPortfolioChartScale(s)}
-                              style={{flex:1,padding:"4px 0",borderRadius:9,border:portfolioChartScale===s?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartScale===s?"#C8A96E20":"transparent",color:portfolioChartScale===s?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartScale===s?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{s}</button>
-                          ))}
                         </div>
                       </div>
                     )}
