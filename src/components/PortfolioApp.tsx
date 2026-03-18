@@ -2895,7 +2895,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.7</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -2974,7 +2974,7 @@ export default function App() {
                   const pts = pData.map((v,i) => `${toX(i)},${toY(v)}`).join(" ");
                   const uid = `pg${scale}`;
                   const chartColor = pPos ? "#4ADE80" : "#F87171";
-                  const showPct = portfolioChartMode === "pct";
+                  const showPct = false;
                   const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
                   const now = new Date();
                   const tLabels = [0, Math.floor(pData.length/3), Math.floor(2*pData.length/3), pData.length-1].map((i,idx) => ({
@@ -3023,19 +3023,19 @@ export default function App() {
                     {/* ONGLET GRAPHIQUE */}
                     {showPortfolioChart && (
                       <div style={{padding:"14px 20px 12px"}}>
-                        {/* Info valeur + plus-value + toggle val/% */}
+                        {/* Valeur + % + plus-value (même layout que onglet valeur) */}
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
                           <div>
-                            <div style={{fontFamily:"'DM Mono',monospace",fontSize:24,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmt(total,0)}</div>
-                            <div style={{color:totalChange>=0?"#4ADE80":"#F87171",fontSize:11,marginTop:2,fontFamily:"'DM Mono',monospace"}}>
-                              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} sur {listScale} · {pPos?"▲":"▼"} {Math.abs(pPct).toFixed(2)}%
-                            </div>
+                            <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
+                            <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
                           </div>
-                          <div style={{display:"flex",background:"#1A1714",borderRadius:10,padding:2,border:"1px solid #252015",gap:1}}>
-                            {[["val","Val."],["pct","%"]].map(([m,l])=>(
-                              <button key={m} onClick={()=>setPortfolioChartMode(m)}
-                                style={{padding:"3px 8px",borderRadius:8,border:portfolioChartMode===m?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartMode===m?"#C8A96E20":"transparent",color:portfolioChartMode===m?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartMode===m?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{l}</button>
-                            ))}
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,marginTop:3}}>
+                            <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:10,padding:"4px 10px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                              {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
+                            </div>
+                            <div style={{color:totalChange>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace"}}>
+                              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} sur {listScale}
+                            </div>
                           </div>
                         </div>
                         {/* SVG graphique */}
