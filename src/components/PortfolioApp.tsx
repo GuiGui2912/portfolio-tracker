@@ -2887,7 +2887,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.3</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.4</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -2931,165 +2931,163 @@ export default function App() {
 
               <div style={{flexShrink:0}}>
 
-                {pageIdx === 0 && (
-                  <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,padding:"18px 20px 0",border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
-                    <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)"}}/>
-
-                    {/* Header : valeur + % */}
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
-                      <div>
-                        <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
-                        <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
-                        <div style={{color:"#5A5040",fontSize:11,marginTop:4,fontFamily:"'DM Mono',monospace"}}>
-                          {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} aujourd'hui
-                        </div>
-                      </div>
-                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
-                        <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
-                          {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
-                        </div>
-                        {/* Toggle graphique */}
-                        <button onClick={()=>setShowPortfolioChart(s=>!s)}
-                          style={{background:showPortfolioChart?"#C8A96E20":"#1A1714",border:`1px solid ${showPortfolioChart?"#C8A96E60":"#2A2520"}`,borderRadius:10,padding:"4px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,transition:"all 0.2s"}}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={showPortfolioChart?"#C8A96E":"#5A5550"} strokeWidth="2" strokeLinecap="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
-                          <span style={{color:showPortfolioChart?"#C8A96E":"#5A5550",fontSize:9,fontFamily:"'DM Mono',monospace",fontWeight:700}}>Graphique</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Graphique global portfolio */}
-                    {showPortfolioChart && (() => {
-                      // Calculer les données du portfolio global
-                      const scale = portfolioChartScale;
-                      const portfolioData = (() => {
-                        if (assets.length === 0) return [];
-                        // Récupérer la longueur min commune
-                        const histories = assets.map(a => a.histories?.[scale] || []);
-                        const minLen = Math.min(...histories.map(h => h.length).filter(l => l > 0));
-                        if (minLen < 2) return [];
-                        // Sommer les valeurs de chaque actif à chaque point
-                        const result = [];
-                        for (let i = 0; i < minLen; i++) {
-                          let sum = 0;
-                          assets.forEach((a, ai) => {
-                            const h = histories[ai];
-                            if (h.length > 0) {
-                              const idx = Math.round(i / (minLen - 1) * (h.length - 1));
-                              sum += (h[idx] || h[h.length-1]) * a.qty;
-                            }
-                          });
-                          result.push(sum);
+                {pageIdx === 0 && (() => {
+                  // Calcul données portfolio
+                  const scale = portfolioChartScale;
+                  const portfolioData = (() => {
+                    if (assets.length === 0) return [];
+                    const histories = assets.map(a => a.histories?.[scale] || []);
+                    const minLen = Math.min(...histories.map(h => h.length).filter(l => l > 0));
+                    if (minLen < 2) return [];
+                    const result = [];
+                    for (let i = 0; i < minLen; i++) {
+                      let sum = 0;
+                      assets.forEach((a, ai) => {
+                        const h = histories[ai];
+                        if (h.length > 0) {
+                          const idx = Math.round(i / (minLen - 1) * (h.length - 1));
+                          sum += (h[idx] || h[h.length-1]) * a.qty;
                         }
-                        return result;
-                      })();
+                      });
+                      result.push(sum);
+                    }
+                    return result;
+                  })();
+                  const pData = portfolioData.length > 1 ? portfolioData : [total, total];
+                  const pFirst = pData[0], pLast = pData[pData.length-1];
+                  const pPct = pFirst > 0 ? ((pLast - pFirst) / pFirst * 100) : 0;
+                  const pPos = pPct >= 0;
+                  const pMin = Math.min(...pData), pMax = Math.max(...pData), pRange = pMax - pMin || 1;
+                  const CW = 290, CH = 100, PR = 46, PB = 20, PT = 6, PL = 4;
+                  const pPlotW = CW - PR - PL;
+                  const pPlotH = CH - PB - PT;
+                  const toX = (i) => PL + (i / (pData.length-1)) * pPlotW;
+                  const toY = (v) => PT + pPlotH - ((v - pMin) / pRange) * pPlotH;
+                  const pts = pData.map((v,i) => `${toX(i)},${toY(v)}`).join(" ");
+                  const uid = `pg${scale}`;
+                  const chartColor = pPos ? "#4ADE80" : "#F87171";
+                  const showPct = portfolioChartMode === "pct";
+                  const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
+                  const now = new Date();
+                  const tLabels = [0, Math.floor(pData.length/3), Math.floor(2*pData.length/3), pData.length-1].map((i,idx) => ({
+                    label: i===pData.length-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((pData.length-1-i)/(pData.length-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
+                    x: toX(i),
+                    anchor: idx===0?"start":idx===3?"end":"middle",
+                  }));
+                  const pLabels = [0.1, 0.5, 0.9].map(p => ({ value: pMin + pRange*(1-p), y: PT + pPlotH*p }));
 
-                      const pData = portfolioData.length > 1 ? portfolioData : [total, total];
-                      const pFirst = pData[0], pLast = pData[pData.length-1];
-                      const pPct = ((pLast - pFirst) / pFirst * 100);
-                      const pPos = pPct >= 0;
-                      const pMin = Math.min(...pData), pMax = Math.max(...pData), pRange = pMax - pMin || 1;
-                      const CW = 280, CH = 80, PR = 44, PB = 18, PT = 6, PL = 4;
-                      const pPlotW = CW - PR - PL;
-                      const pPlotH = CH - PB - PT;
-                      const toX = (i) => PL + (i / (pData.length-1)) * pPlotW;
-                      const toY = (v) => PT + pPlotH - ((v - pMin) / pRange) * pPlotH;
-                      const pts = pData.map((v,i) => `${toX(i)},${toY(v)}`).join(" ");
-                      const uid = `pg${scale}`;
-                      const color = pPos ? "#4ADE80" : "#F87171";
+                  return (
+                  <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
+                    <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)",pointerEvents:"none"}}/>
 
-                      // Labels temps
-                      const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
-                      const now = new Date();
-                      const tLabels = [0, Math.floor(pData.length/3), Math.floor(2*pData.length/3), pData.length-1].map((i,idx) => ({
-                        label: i===pData.length-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((pData.length-1-i)/(pData.length-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
-                        x: toX(i),
-                      }));
-                      const pLabels = [0.15, 0.5, 0.85].map(p => ({ value: pMin + pRange*(1-p), y: PT + pPlotH*p }));
-
-                      // Toggle valeur/performance
-                      const showPct = portfolioChartMode === "pct";
-
-                      return (
-                        <div style={{marginTop:14}}>
-                          {/* Sélecteur période + toggle */}
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                            <div style={{display:"flex",background:"#1A1714",borderRadius:12,padding:2,border:"1px solid #252015",gap:1}}>
-                              {["1S","1M","3M","6M","1A","MAX"].map(s=>(
-                                <button key={s} onClick={()=>setPortfolioChartScale(s)}
-                                  style={{padding:"3px 7px",borderRadius:9,border:portfolioChartScale===s?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartScale===s?"#C8A96E20":"transparent",color:portfolioChartScale===s?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartScale===s?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{s}</button>
-                              ))}
-                            </div>
-                            <div style={{display:"flex",background:"#1A1714",borderRadius:12,padding:2,border:"1px solid #252015",gap:1}}>
-                              {[["val","Valeur"],["pct","%"]].map(([m,l])=>(
-                                <button key={m} onClick={()=>setPortfolioChartMode(m)}
-                                  style={{padding:"3px 8px",borderRadius:9,border:portfolioChartMode===m?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartMode===m?"#C8A96E20":"transparent",color:portfolioChartMode===m?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartMode===m?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{l}</button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Résumé période */}
-                          <div style={{display:"flex",gap:12,marginBottom:8}}>
-                            <div>
-                              <div style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Sur {scale}</div>
-                              <div style={{color:pPos?"#4ADE80":"#F87171",fontSize:13,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>
-                                {pPos?"▲":"▼"} {showPct ? `${Math.abs(pPct).toFixed(2)}%` : fmt(Math.abs(pLast-pFirst),0)}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* SVG graphique */}
-                          <div style={{background:"#0E0D0A",borderRadius:12,padding:"6px 0 2px",border:`1px solid ${color}18`,marginBottom:6}}>
-                            <svg width="100%" viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="xMidYMid meet" style={{display:"block"}}>
-                              <defs>
-                                <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor={color} stopOpacity="0.3"/>
-                                  <stop offset="100%" stopColor={color} stopOpacity="0"/>
-                                </linearGradient>
-                                <clipPath id={`cp${uid}`}>
-                                  <rect x={PL} y={PT} width={pPlotW} height={pPlotH+2}/>
-                                </clipPath>
-                              </defs>
-                              {pLabels.map((pl,i)=>(
-                                <line key={i} x1={PL} y1={pl.y} x2={PL+pPlotW} y2={pl.y} stroke="#ffffff06" strokeWidth="1"/>
-                              ))}
-                              <g clipPath={`url(#cp${uid})`}>
-                                <polygon points={`${pts} ${toX(pData.length-1)},${CH-PB} ${PL},${CH-PB}`} fill={`url(#${uid})`}/>
-                                <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </g>
-                              <circle cx={toX(pData.length-1)} cy={toY(pLast)} r="3" fill={color}/>
-                              <circle cx={toX(pData.length-1)} cy={toY(pLast)} r="5" fill={color} opacity="0.2"/>
-                              {pLabels.map((pl,i)=>(
-                                <text key={i} x={PL+pPlotW+3} y={pl.y+3} fill="#4A4540" fontSize="8" fontFamily="'DM Mono',monospace">
-                                  {showPct ? `${((pl.value-pFirst)/pFirst*100).toFixed(1)}%` : fmt(pl.value,0)}
-                                </text>
-                              ))}
-                              {tLabels.map((tl,i)=>(
-                                <text key={i} x={tl.x} y={CH-2} fill="#4A4540" fontSize="8" fontFamily="'DM Mono',monospace" textAnchor={i===0?"start":i===tLabels.length-1?"end":"middle"}>{tl.label}</text>
-                              ))}
-                            </svg>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Barre répartition + légende */}
-                    <div style={{marginTop:showPortfolioChart?4:14,paddingBottom:14}}>
-                      <div style={{display:"flex",gap:2,borderRadius:6,overflow:"hidden",height:4}}>
-                        {assets.map(a=><div key={a.id} style={{flex:a.qty*a.price,background:a.color,opacity:0.75}}/>)}
-                      </div>
-                      <div style={{display:"flex",gap:12,marginTop:6,flexWrap:"wrap"}}>
-                        {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
-                          const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
-                          return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:5,height:5,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>{label} {total>0?(val/total*100).toFixed(0):0}%</span></div>;
-                        })}
-                        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
-                          <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
-                          <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
-                        </div>
-                      </div>
+                    {/* Onglets Valeur / Graphique */}
+                    <div style={{display:"flex",borderBottom:"1px solid #2A2018"}}>
+                      {[["val","Valeur totale"],["chart","Graphique"]].map(([id,label])=>(
+                        <button key={id} onClick={()=>setShowPortfolioChart(id==="chart")}
+                          style={{flex:1,padding:"12px 0",background:"transparent",border:"none",borderBottom:`2px solid ${(id==="chart")===showPortfolioChart?"#C8A96E":"transparent"}`,cursor:"pointer",color:(id==="chart")===showPortfolioChart?"#C8A96E":"#5A5550",fontSize:12,fontWeight:(id==="chart")===showPortfolioChart?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>
+                          {label}
+                        </button>
+                      ))}
                     </div>
+
+                    {/* ONGLET VALEUR */}
+                    {!showPortfolioChart && (
+                      <div style={{padding:"16px 20px 14px"}}>
+                        {/* Valeur + % */}
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                          <div>
+                            <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
+                            <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
+                            <div style={{color:totalChange>=0?"#4ADE80":"#F87171",fontSize:11,marginTop:5,fontFamily:"'DM Mono',monospace"}}>
+                              {totalChange>=0?"▲ + ":"▼ - "}{fmt(Math.abs(totalChange),0)} aujourd'hui
+                            </div>
+                          </div>
+                          <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
+                            {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
+                          </div>
+                        </div>
+                        {/* Répartition */}
+                        <div style={{marginTop:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                          {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
+                            const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
+                            return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{label} <span style={{color:"#8A8070",fontWeight:600}}>{total>0?(val/total*100).toFixed(0):0}%</span></span></div>;
+                          })}
+                          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
+                            <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
+                            <span style={{color:"#5A5040",fontSize:9,fontFamily:"'DM Mono',monospace"}}>Live</span>
+                          </div>
+                        </div>
+                        {/* Sélecteur période */}
+                        <div style={{display:"flex",gap:2,background:"#1A1714",borderRadius:12,padding:3,border:"1px solid #252015",marginTop:12}}>
+                          {["1S","1M","3M","6M","1A","MAX"].map(s=>(
+                            <button key={s} onClick={()=>setPortfolioChartScale(s)}
+                              style={{flex:1,padding:"4px 0",borderRadius:9,border:portfolioChartScale===s?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartScale===s?"#C8A96E20":"transparent",color:portfolioChartScale===s?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartScale===s?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{s}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ONGLET GRAPHIQUE */}
+                    {showPortfolioChart && (
+                      <div style={{padding:"14px 20px 14px"}}>
+                        {/* Info valeur + toggle val/% */}
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                          <div>
+                            <div style={{fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmt(total,0)}</div>
+                            <div style={{color:pPos?"#4ADE80":"#F87171",fontSize:11,marginTop:3,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
+                              {pPos?"▲":"▼"} {showPct ? `${Math.abs(pPct).toFixed(2)}%` : fmt(Math.abs(pLast-pFirst),0)} sur {scale}
+                            </div>
+                          </div>
+                          <div style={{display:"flex",background:"#1A1714",borderRadius:12,padding:2,border:"1px solid #252015",gap:1}}>
+                            {[["val","Val."],["pct","%"]].map(([m,l])=>(
+                              <button key={m} onClick={()=>setPortfolioChartMode(m)}
+                                style={{padding:"4px 9px",borderRadius:9,border:portfolioChartMode===m?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartMode===m?"#C8A96E20":"transparent",color:portfolioChartMode===m?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartMode===m?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{l}</button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* SVG graphique */}
+                        <div style={{background:"#0E0D0A",borderRadius:12,padding:"4px 0 2px",border:`1px solid ${chartColor}18`}}>
+                          <svg width="100%" viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="xMidYMid meet" style={{display:"block"}}>
+                            <defs>
+                              <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={chartColor} stopOpacity="0.3"/>
+                                <stop offset="100%" stopColor={chartColor} stopOpacity="0"/>
+                              </linearGradient>
+                              <clipPath id={`cp${uid}`}><rect x={PL} y={PT} width={pPlotW} height={pPlotH+2}/></clipPath>
+                            </defs>
+                            {pLabels.map((pl,i)=>(
+                              <line key={i} x1={PL} y1={pl.y} x2={PL+pPlotW} y2={pl.y} stroke="#ffffff06" strokeWidth="1"/>
+                            ))}
+                            <g clipPath={`url(#cp${uid})`}>
+                              <polygon points={`${pts} ${toX(pData.length-1)},${CH-PB} ${PL},${CH-PB}`} fill={`url(#${uid})`}/>
+                              <polyline points={pts} fill="none" stroke={chartColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                            </g>
+                            <circle cx={toX(pData.length-1)} cy={toY(pLast)} r="3.5" fill={chartColor}/>
+                            <circle cx={toX(pData.length-1)} cy={toY(pLast)} r="6" fill={chartColor} opacity="0.2"/>
+                            {pLabels.map((pl,i)=>(
+                              <text key={i} x={PL+pPlotW+3} y={pl.y+3} fill="#4A4540" fontSize="8" fontFamily="'DM Mono',monospace">
+                                {showPct ? `${((pl.value-pFirst)/Math.max(pFirst,1)*100).toFixed(1)}%` : fmt(pl.value,0)}
+                              </text>
+                            ))}
+                            {tLabels.map((tl,i)=>(
+                              <text key={i} x={tl.x} y={CH-3} fill="#4A4540" fontSize="8" fontFamily="'DM Mono',monospace" textAnchor={tl.anchor}>{tl.label}</text>
+                            ))}
+                          </svg>
+                        </div>
+
+                        {/* Sélecteur période */}
+                        <div style={{display:"flex",gap:2,background:"#1A1714",borderRadius:12,padding:3,border:"1px solid #252015",marginTop:10}}>
+                          {["1S","1M","3M","6M","1A","MAX"].map(s=>(
+                            <button key={s} onClick={()=>setPortfolioChartScale(s)}
+                              style={{flex:1,padding:"4px 0",borderRadius:9,border:portfolioChartScale===s?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartScale===s?"#C8A96E20":"transparent",color:portfolioChartScale===s?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartScale===s?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{s}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                  );
+                })()}
 
                 {pageIdx===0 && (
                   <div style={{padding:"8px 20px 6px",background:"#151210"}}>
