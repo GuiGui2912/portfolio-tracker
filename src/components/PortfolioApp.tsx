@@ -3,6 +3,38 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 
+// Storage persistant pour Capacitor Android
+// Sauvegarde dans localStorage ET dans un cookie (survit aux fermetures WebView)
+const persistentStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    // Essayer localStorage d'abord
+    try {
+      const val = localStorage.getItem(key);
+      if (val) return val;
+    } catch {}
+    // Fallback sur cookie
+    try {
+      const match = document.cookie.match(new RegExp('(^| )' + key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '=([^;]+)'));
+      if (match) return decodeURIComponent(match[2]);
+    } catch {}
+    return null;
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window === 'undefined') return;
+    try { localStorage.setItem(key, value); } catch {}
+    // Sauvegarder aussi dans un cookie (365 jours)
+    try {
+      document.cookie = `${key}=${encodeURIComponent(value)};max-age=31536000;path=/;SameSite=Lax`;
+    } catch {}
+  },
+  removeItem: (key: string): void => {
+    if (typeof window === 'undefined') return;
+    try { localStorage.removeItem(key); } catch {}
+    try { document.cookie = `${key}=;max-age=0;path=/`; } catch {}
+  },
+};
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -10,8 +42,8 @@ const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      storageKey: 'portfolio-tracker-auth',
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storageKey: 'pt-auth-v1',
+      storage: persistentStorage,
     }
   }
 );
@@ -2815,7 +2847,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.9.1"}</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.9.2"}</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
