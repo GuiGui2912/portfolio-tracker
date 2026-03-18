@@ -2887,7 +2887,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.5</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -2980,37 +2980,29 @@ export default function App() {
                   <div style={{margin:"12px 20px",background:"linear-gradient(135deg,#1E1A12,#28200E,#1C1810)",borderRadius:24,border:"1px solid #3A3018",position:"relative",overflow:"hidden"}}>
                     <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#C8A96E0A,transparent 70%)",pointerEvents:"none"}}/>
 
-                    {/* Onglets Valeur / Graphique */}
-                    <div style={{display:"flex",borderBottom:"1px solid #2A2018"}}>
-                      {[["val","Valeur totale"],["chart","Graphique"]].map(([id,label])=>(
-                        <button key={id} onClick={()=>setShowPortfolioChart(id==="chart")}
-                          style={{flex:1,padding:"12px 0",background:"transparent",border:"none",borderBottom:`2px solid ${(id==="chart")===showPortfolioChart?"#C8A96E":"transparent"}`,cursor:"pointer",color:(id==="chart")===showPortfolioChart?"#C8A96E":"#5A5550",fontSize:12,fontWeight:(id==="chart")===showPortfolioChart?700:500,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-
                     {/* ONGLET VALEUR */}
                     {!showPortfolioChart && (
-                      <div style={{padding:"16px 20px 14px"}}>
-                        {/* Valeur + % */}
+                      <div style={{padding:"16px 20px 12px"}}>
+                        {/* Valeur + % + plus-value */}
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                           <div>
                             <div style={{color:"#6A6050",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:4}}>Valeur totale</div>
                             <div style={{fontFamily:"'DM Mono',monospace",fontSize:34,fontWeight:700,color:"#F0EDE8",letterSpacing:-2,lineHeight:1}}>{fmt(total,0)}</div>
-                            <div style={{color:totalChange>=0?"#4ADE80":"#F87171",fontSize:11,marginTop:5,fontFamily:"'DM Mono',monospace"}}>
-                              {totalChange>=0?"▲ + ":"▼ - "}{fmt(Math.abs(totalChange),0)} aujourd'hui
-                            </div>
                           </div>
-                          <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:12,padding:"5px 11px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700,marginTop:3}}>
-                            {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,marginTop:3}}>
+                            <div style={{background:totalPct>=0?"#4ADE8015":"#F8717115",border:`1px solid ${totalPct>=0?"#4ADE8030":"#F8717130"}`,color:totalPct>=0?"#4ADE80":"#F87171",borderRadius:10,padding:"4px 10px",fontSize:12,fontFamily:"'DM Mono',monospace",fontWeight:700}}>
+                              {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
+                            </div>
+                            <div style={{color:totalChange>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace"}}>
+                              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} auj.
+                            </div>
                           </div>
                         </div>
                         {/* Répartition */}
-                        <div style={{marginTop:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                        <div style={{marginTop:12,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
                           {[["crypto","Crypto","#F7931A"],["stock","Actions/ETF","#A3B8C2"]].map(([type,label,col])=>{
                             const val=assets.filter(a=>a.type===type||(type==="stock"&&a.type==="etf")).reduce((s,a)=>s+a.qty*a.price,0);
-                            return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:7,height:7,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{label} <span style={{color:"#8A8070",fontWeight:600}}>{total>0?(val/total*100).toFixed(0):0}%</span></span></div>;
+                            return <div key={type} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:6,height:6,borderRadius:"50%",background:col}}/><span style={{color:"#5A5040",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{label} <span style={{color:"#8A8070",fontWeight:600}}>{total>0?(val/total*100).toFixed(0):0}%</span></span></div>;
                           })}
                           <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:5}}>
                             <div className="live-dot" style={{width:4,height:4,borderRadius:"50%",background:"#4ADE80"}}/>
@@ -3029,23 +3021,22 @@ export default function App() {
 
                     {/* ONGLET GRAPHIQUE */}
                     {showPortfolioChart && (
-                      <div style={{padding:"14px 20px 14px"}}>
-                        {/* Info valeur + toggle val/% */}
+                      <div style={{padding:"14px 20px 12px"}}>
+                        {/* Info valeur + plus-value + toggle val/% */}
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
                           <div>
-                            <div style={{fontFamily:"'DM Mono',monospace",fontSize:22,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmt(total,0)}</div>
-                            <div style={{color:pPos?"#4ADE80":"#F87171",fontSize:11,marginTop:3,fontFamily:"'DM Mono',monospace",fontWeight:600}}>
-                              {pPos?"▲":"▼"} {showPct ? `${Math.abs(pPct).toFixed(2)}%` : fmt(Math.abs(pLast-pFirst),0)} sur {scale}
+                            <div style={{fontFamily:"'DM Mono',monospace",fontSize:24,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmt(total,0)}</div>
+                            <div style={{color:totalChange>=0?"#4ADE80":"#F87171",fontSize:11,marginTop:2,fontFamily:"'DM Mono',monospace"}}>
+                              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} auj. · {pPos?"▲":"▼"} {Math.abs(pPct).toFixed(2)}% sur {scale}
                             </div>
                           </div>
-                          <div style={{display:"flex",background:"#1A1714",borderRadius:12,padding:2,border:"1px solid #252015",gap:1}}>
+                          <div style={{display:"flex",background:"#1A1714",borderRadius:10,padding:2,border:"1px solid #252015",gap:1}}>
                             {[["val","Val."],["pct","%"]].map(([m,l])=>(
                               <button key={m} onClick={()=>setPortfolioChartMode(m)}
-                                style={{padding:"4px 9px",borderRadius:9,border:portfolioChartMode===m?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartMode===m?"#C8A96E20":"transparent",color:portfolioChartMode===m?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartMode===m?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{l}</button>
+                                style={{padding:"3px 8px",borderRadius:8,border:portfolioChartMode===m?"1px solid #C8A96E35":"1px solid transparent",cursor:"pointer",background:portfolioChartMode===m?"#C8A96E20":"transparent",color:portfolioChartMode===m?"#C8A96E":"#4A4540",fontSize:9,fontWeight:portfolioChartMode===m?700:500,fontFamily:"'DM Mono',monospace",transition:"all 0.2s"}}>{l}</button>
                             ))}
                           </div>
                         </div>
-
                         {/* SVG graphique */}
                         <div style={{background:"#0E0D0A",borderRadius:12,padding:"4px 0 2px",border:`1px solid ${chartColor}18`}}>
                           <svg width="100%" viewBox={`0 0 ${CW} ${CH}`} preserveAspectRatio="xMidYMid meet" style={{display:"block"}}>
@@ -3075,7 +3066,6 @@ export default function App() {
                             ))}
                           </svg>
                         </div>
-
                         {/* Sélecteur période */}
                         <div style={{display:"flex",gap:2,background:"#1A1714",borderRadius:12,padding:3,border:"1px solid #252015",marginTop:10}}>
                           {["1S","1M","3M","6M","1A","MAX"].map(s=>(
@@ -3085,6 +3075,16 @@ export default function App() {
                         </div>
                       </div>
                     )}
+
+                    {/* Onglets en bas - petits */}
+                    <div style={{display:"flex",borderTop:"1px solid #2A2018"}}>
+                      {[["val","Valeur totale"],["chart","Graphique"]].map(([id,label])=>(
+                        <button key={id} onClick={()=>setShowPortfolioChart(id==="chart")}
+                          style={{flex:1,padding:"7px 0",background:(id==="chart")===showPortfolioChart?"#C8A96E08":"transparent",border:"none",borderTop:`2px solid ${(id==="chart")===showPortfolioChart?"#C8A96E":"transparent"}`,cursor:"pointer",color:(id==="chart")===showPortfolioChart?"#C8A96E":"#5A5550",fontSize:11,fontWeight:(id==="chart")===showPortfolioChart?700:400,fontFamily:"'DM Sans',sans-serif",transition:"all 0.2s"}}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   );
                 })()}
