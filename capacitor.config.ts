@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Portfolio Tracker',
   webDir: 'out',
   server: {
-    url: 'https://portfolio-tracker-livid-alpha.vercel.app',
+    url: 'https://portfolio-tracker-livid-alpha.vercel.app/portfolio',
     cleartext: true,
   },
 };
