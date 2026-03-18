@@ -2689,8 +2689,17 @@ export default function App() {
   const fmt         = useFmt(currency, 1/eurUsd);
 
   const total       = assets.reduce((s,a)=>s+a.qty*a.price,0);
-  const totalChange = assets.reduce((s,a)=>s+a.qty*a.price*(a.change/100),0);
-  const totalPct    = (totalChange/(total-totalChange))*100;
+  // Calcul variation selon la période sélectionnée (listScale)
+  const totalChange = assets.reduce((s,a)=>{
+    const h = a.histories?.[listScale];
+    if (h && h.length > 1) {
+      const startPrice = h[0];
+      const endPrice = h[h.length-1];
+      return s + a.qty * (endPrice - startPrice);
+    }
+    return s + a.qty*a.price*(a.change/100);
+  }, 0);
+  const totalPct    = total > 0 ? (totalChange/(total-totalChange))*100 : 0;
   const cryptoAssets= assets.filter(a=>a.type==="crypto");
   const stockAssets = assets.filter(a=>a.type!=="crypto");
   const mktList     = mktFilter==="all" ? allMarket : allMarket.filter(a=>a.type===mktFilter);
@@ -2886,7 +2895,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.7</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -2993,7 +3002,7 @@ export default function App() {
                               {totalPct>=0?"▲":"▼"} {Math.abs(totalPct).toFixed(2)}%
                             </div>
                             <div style={{color:totalChange>=0?"#4ADE80":"#F87171",fontSize:11,fontFamily:"'DM Mono',monospace"}}>
-                              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} auj.
+                              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} sur {listScale}
                             </div>
                           </div>
                         </div>
@@ -3019,7 +3028,7 @@ export default function App() {
                           <div>
                             <div style={{fontFamily:"'DM Mono',monospace",fontSize:24,fontWeight:700,color:"#F0EDE8",letterSpacing:-1}}>{fmt(total,0)}</div>
                             <div style={{color:totalChange>=0?"#4ADE80":"#F87171",fontSize:11,marginTop:2,fontFamily:"'DM Mono',monospace"}}>
-                              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} auj. · {pPos?"▲":"▼"} {Math.abs(pPct).toFixed(2)}% sur {scale}
+                              {totalChange>=0?"+ ":"- "}{fmt(Math.abs(totalChange),0)} sur {listScale} · {pPos?"▲":"▼"} {Math.abs(pPct).toFixed(2)}%
                             </div>
                           </div>
                           <div style={{display:"flex",background:"#1A1714",borderRadius:10,padding:2,border:"1px solid #252015",gap:1}}>
