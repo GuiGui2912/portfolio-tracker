@@ -2135,6 +2135,7 @@ export default function App() {
   const [showPortfolioChart, setShowPortfolioChart] = useState(false);
   const [portfolioChartScale, setPortfolioChartScale] = useState("1M");
   const [portfolioChartMode, setPortfolioChartMode] = useState("val");
+  const [dragMode, setDragMode]         = useState(false);
   const [dragMktMode, setDragMktMode]   = useState(false);
   const [assetDraggingIdx, setAssetDraggingIdx] = useState(null);
   const [assetDragOverIdx, setAssetDragOverIdx] = useState(null);
@@ -2886,7 +2887,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.8.0"}</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.8.5"}</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
