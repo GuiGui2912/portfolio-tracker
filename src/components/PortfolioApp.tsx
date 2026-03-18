@@ -3,35 +3,37 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// Storage persistant pour Capacitor Android
-// Sauvegarde dans localStorage ET dans un cookie (survit aux fermetures WebView)
-const persistentStorage = {
-  getItem: (key: string): string | null => {
-    if (typeof window === 'undefined') return null;
-    // Essayer localStorage d'abord
+// Helpers Capacitor Preferences (natif Android, survit aux fermetures)
+const CapPrefs = {
+  get: async (key: string): Promise<string|null> => {
     try {
-      const val = localStorage.getItem(key);
-      if (val) return val;
+      if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()) {
+        const { Preferences } = await import('@capacitor/preferences');
+        const { value } = await Preferences.get({ key });
+        return value;
+      }
     } catch {}
-    // Fallback sur cookie
-    try {
-      const match = document.cookie.match(new RegExp('(^| )' + key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '=([^;]+)'));
-      if (match) return decodeURIComponent(match[2]);
-    } catch {}
-    return null;
+    try { return localStorage.getItem(key); } catch { return null; }
   },
-  setItem: (key: string, value: string): void => {
-    if (typeof window === 'undefined') return;
+  set: async (key: string, value: string): Promise<void> => {
+    try {
+      if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()) {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.set({ key, value });
+        return;
+      }
+    } catch {}
     try { localStorage.setItem(key, value); } catch {}
-    // Sauvegarder aussi dans un cookie (365 jours)
-    try {
-      document.cookie = `${key}=${encodeURIComponent(value)};max-age=31536000;path=/;SameSite=Lax`;
-    } catch {}
   },
-  removeItem: (key: string): void => {
-    if (typeof window === 'undefined') return;
+  remove: async (key: string): Promise<void> => {
+    try {
+      if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()) {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.remove({ key });
+        return;
+      }
+    } catch {}
     try { localStorage.removeItem(key); } catch {}
-    try { document.cookie = `${key}=;max-age=0;path=/`; } catch {}
   },
 };
 
@@ -43,7 +45,6 @@ const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       storageKey: 'pt-auth-v1',
-      storage: persistentStorage,
     }
   }
 );
@@ -2428,9 +2429,39 @@ export default function App() {
     const init = async () => {
       setDbLoading(true);
       try {
-        // Tenter de récupérer la session existante (fonctionne même après fermeture APK)
+        // Essayer de restaurer la session depuis Capacitor Preferences
+        const savedSession = await CapPrefs.get('pt-session');
+        if (savedSession) {
+          try {
+            const { access_token, refresh_token } = JSON.parse(savedSession);
+            if (refresh_token) {
+              const { data: restored } = await supabase.auth.setSession({ access_token, refresh_token });
+              if (restored.session) {
+                const u = restored.session.user;
+                setUser(u); setUserId(u.id);
+                const activeId = await loadUserData(u.id);
+                const { data } = await supabase.from("assets").select("*")
+                  .eq("user_id", u.id).eq("portfolio_id", activeId)
+                  .order("created_at", { ascending: true });
+                if (data && data.length > 0) {
+                  const loaded = data.map(row => ({
+                    id:row.id, symbol:row.symbol, name:row.name, type:row.type,
+                    qty:Number(row.qty), price:Number(row.current_price)||0, change:Number(row.price_change_24h??0), color:row.color,
+                    dividends:[], histories:buildHistories(Number(row.current_price)||0),
+                    purchase:row.purchase_data??null,
+                    transactions:row.purchase_data?.transactions??[],
+                  }));
+                  setAssets(loaded); setChartAsset(loaded[0]);
+                }
+                setDbLoading(false);
+                return;
+              }
+            }
+          } catch(e) { console.error("restore session:", e); }
+        }
+
+        // Fallback: getSession standard
         let { data: { session } } = await supabase.auth.getSession();
-        // Si session expirée mais refresh token valide, rafraîchir
         if (!session) {
           const { data: refreshed } = await supabase.auth.refreshSession();
           session = refreshed.session;
@@ -2463,8 +2494,13 @@ export default function App() {
     setAuthLoading(true); setAuthError("");
     const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
     if (error) { setAuthError(error.message); setAuthLoading(false); return; }
-    if (rememberMe) {
-      await supabase.auth.refreshSession();
+    const { data: { session } } = await supabase.auth.getSession();
+    // Sauvegarder la session dans Capacitor Preferences si "Rester connecté"
+    if (rememberMe && session) {
+      await CapPrefs.set('pt-session', JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      }));
     }
     const { data: { user: u } } = await supabase.auth.getUser();
     setUser(u); setUserId(u.id);
@@ -2510,6 +2546,7 @@ export default function App() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    await CapPrefs.remove('pt-session');
     setUser(null); setUserId(null); setAssets([]); setChartAsset(null);
     setPortfolios([{id:"default", name:"Mon Portefeuille"}]);
     setActivePortfolioId("default");
@@ -2847,7 +2884,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.9.2"}</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>{lastRefresh ? `↻ ${lastRefresh}` : "v1.9.3"}</div>
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -2857,7 +2894,7 @@ export default function App() {
                 ))}
               </div>
               <button
-                onClick={()=>{ if(isRefreshing) return; setIsRefreshing(true); window.location.reload(); }}
+                onClick={()=>{ if(isRefreshing) return; setIsRefreshing(true); fetchPrices().finally(()=>setIsRefreshing(false)); }}
                 style={{width:32,height:32,borderRadius:10,background:"#1A1714",border:"1px solid #252015",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 0.2s",opacity:isRefreshing?0.4:1}}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8A96E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
