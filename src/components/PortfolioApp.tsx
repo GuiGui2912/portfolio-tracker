@@ -2895,7 +2895,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.1</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -3141,8 +3141,10 @@ export default function App() {
                 <div ref={assetsListRef} onTouchMove={handleAssetTouchMove} onTouchEnd={handleAssetTouchEnd}>
                 {assets.map((a,idx)=>{
                   const scaleData=a.histories?.[listScale]||[a.price];
-                  // Pour la liste : utiliser a.change qui est déjà calculé en USD/USD dans fetchPrices
-                  const scalePct = a.change;
+                  // Calculer la variation selon la période sélectionnée
+                  const scalePct = scaleData.length > 1
+                    ? ((scaleData[scaleData.length-1] - scaleData[0]) / scaleData[0]) * 100
+                    : a.change;
                   const scaleAmt = a.qty * a.price * (scalePct / 100);
                   const pos=scalePct>=0; const iconSize=44,chartW=68,chartH=28,fontSize=15;
                   return (
@@ -3217,7 +3219,7 @@ export default function App() {
                   </div>
                   {cryptoAssets.map(a=>{
                     const scaleData=a.histories?.[listScale]||[a.price];
-                    const scalePct = a.change;
+                    const scalePct = scaleData.length > 1 ? ((scaleData[scaleData.length-1] - scaleData[0]) / scaleData[0]) * 100 : a.change;
                     const scaleAmt = a.qty * a.price * (scalePct / 100);
                     const pos=scalePct>=0; const iconSize=40,chartW=60,chartH=24,fontSize=14;
                     return (
@@ -3250,7 +3252,7 @@ export default function App() {
                   </div>
                   {stockAssets.map(a=>{
                     const scaleData=a.histories?.[listScale]||[a.price];
-                    const scalePct = a.change;
+                    const scalePct = scaleData.length > 1 ? ((scaleData[scaleData.length-1] - scaleData[0]) / scaleData[0]) * 100 : a.change;
                     const scaleAmt = a.qty * a.price * (scalePct / 100);
                     const pos=scalePct>=0; const iconSize=40,chartW=60,chartH=24,fontSize=14;
                     return (
