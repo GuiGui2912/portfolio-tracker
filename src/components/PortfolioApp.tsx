@@ -372,6 +372,8 @@ const SYMBOL_DATABASE = [
   { symbol:"SPY",   name:"SPDR S&P 500 ETF",              type:"etf" },
   { symbol:"SPY5.DE", name:"SPDR S&P 500 UCITS ETF (Xetra)", type:"etf" },
   { symbol:"SPYL.DE", name:"SPDR S&P 500 UCITS ETF Dist (Xetra)", type:"etf" },
+  { symbol:"VUAA.DE", name:"Vanguard S&P 500 UCITS ETF Acc (Xetra)", type:"etf" },
+  { symbol:"VUSA.DE", name:"Vanguard S&P 500 UCITS ETF Dist (Xetra)", type:"etf" },
   { symbol:"QQQ",   name:"Invesco Nasdaq 100 ETF",   type:"etf" },
   { symbol:"VTI",   name:"Vanguard Total Market ETF",type:"etf" },
   { symbol:"VOO",   name:"Vanguard S&P 500 ETF",     type:"etf" },
@@ -2985,7 +2987,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.3</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
