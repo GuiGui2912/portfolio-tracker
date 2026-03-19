@@ -803,6 +803,8 @@ function TimePicker({ value, onChange }) {
     </div>
   );
 }
+
+function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
   const today = new Date().toISOString().slice(0,10);
   const nowTime = new Date().toTimeString().slice(0,5);
   const [form, setForm] = useState({ type:"buy", date:today, time:nowTime, qty:"", price:"", currency:"USD", priceMode:"unit" });
