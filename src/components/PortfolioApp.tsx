@@ -608,12 +608,11 @@ function AddAssetModal({ onClose, onAdd }) {
 
         {/* Modal tuto */}
         {showTuto && (
-          <div style={{position:"fixed",inset:0,zIndex:5000,background:"#000b",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowTuto(false)}>
-            <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"24px 22px 40px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
-              <div style={{width:36,height:4,borderRadius:2,background:"#3A3530",margin:"0 auto 20px"}}/>
-              <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:16}}>📖 Comment ajouter un actif</div>
+          <div style={{position:"fixed",inset:0,zIndex:5000,background:"#000b",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={()=>setShowTuto(false)}>
+            <div style={{width:"100%",maxWidth:390,background:"#1A1714",borderRadius:24,padding:"24px 22px 28px",border:"1px solid #2A2520",maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+              <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:16,textAlign:"center"}}>📖 Comment ajouter un actif</div>
 
-              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={{background:"#111009",borderRadius:14,padding:"14px",border:"1px solid #252015"}}>
                   <div style={{color:"#C8A96E",fontSize:12,fontWeight:700,marginBottom:6}}>✅ Actif présent dans la liste</div>
                   <div style={{color:"#8A8580",fontSize:12,lineHeight:1.5}}>Tape le nom ou le ticker dans le champ de recherche. Sélectionne l'actif dans les suggestions qui apparaissent.</div>
@@ -628,12 +627,12 @@ function AddAssetModal({ onClose, onAdd }) {
 
                 <div style={{background:"#111009",borderRadius:14,padding:"14px",border:"1px solid #252015"}}>
                   <div style={{color:"#C8A96E",fontSize:12,fontWeight:700,marginBottom:6}}>💡 Trouver le bon ticker</div>
-                  <div style={{color:"#8A8580",fontSize:12,lineHeight:1.5}}>Cherche ton actif sur <span style={{color:"#C8A96E"}}>finance.yahoo.com</span> et utilise le ticker affiché. Pour les actifs européens, ajoute l'extension de la bourse.</div>
+                  <div style={{color:"#8A8580",fontSize:12,lineHeight:1.5}}>Cherche ton actif sur <span style={{color:"#C8A96E"}}>finance.yahoo.com</span> et utilise le ticker affiché.</div>
                   <div style={{color:"#5A5550",fontSize:11,marginTop:6,fontFamily:"'DM Mono',monospace"}}>.PA = Paris · .DE = Xetra · .AS = Amsterdam · .L = Londres</div>
                 </div>
               </div>
 
-              <button onClick={()=>setShowTuto(false)} style={{width:"100%",marginTop:20,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              <button onClick={()=>setShowTuto(false)} style={{width:"100%",marginTop:16,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>
                 Compris !
               </button>
             </div>
@@ -651,6 +650,9 @@ function AddAssetModal({ onClose, onAdd }) {
                 <div style={{marginLeft:"auto",color:"#3A3530",fontSize:18}}>›</div>
               </button>
             ))}
+            <button onClick={()=>setShowTuto(true)} style={{background:"transparent",border:"1px dashed #2A2520",borderRadius:14,padding:"12px",cursor:"pointer",color:"#5A5550",fontSize:12,fontFamily:"'DM Sans',sans-serif",textAlign:"center",marginTop:4}}>
+              📖 Comment ajouter un actif ?
+            </button>
           </div>
         )}
         {step===1 && (
@@ -3025,7 +3027,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.5</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
