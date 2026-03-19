@@ -601,15 +601,15 @@ function AddAssetModal({ onClose, onAdd }) {
             {step===1&&assetType&&<div style={{color:"#5A5550",fontSize:11,marginTop:2}}>{typeOptions.find(t=>t.value===assetType)?.desc}</div>}
           </div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <button onClick={()=>setShowTuto(true)} style={{background:"#C8A96E15",border:"1px solid #C8A96E40",borderRadius:10,padding:"6px 10px",cursor:"pointer",color:"#C8A96E",fontSize:11,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>? Aide</button>
+            {step===1 && <button onClick={()=>setShowTuto(true)} style={{background:"#C8A96E15",border:"1px solid #C8A96E40",borderRadius:10,padding:"6px 10px",cursor:"pointer",color:"#C8A96E",fontSize:11,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>? Aide</button>}
             <button onClick={onClose} style={{background:"#252015",border:"none",width:32,height:32,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
           </div>
         </div>
 
         {/* Modal tuto */}
         {showTuto && (
-          <div style={{position:"fixed",inset:0,zIndex:5000,background:"#000b",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}} onClick={()=>setShowTuto(false)}>
-            <div style={{width:"100%",maxWidth:390,background:"#1A1714",borderRadius:24,padding:"24px 22px 28px",border:"1px solid #2A2520",maxHeight:"80vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+          <div style={{position:"fixed",inset:0,zIndex:5000,background:"#000c",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",touchAction:"none"}} onClick={()=>setShowTuto(false)}>
+            <div style={{width:"100%",maxWidth:390,background:"#1A1714",borderRadius:24,padding:"24px 22px 28px",border:"1px solid #2A2520"}} onClick={e=>{e.stopPropagation();e.preventDefault();}}>
               <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:16,textAlign:"center"}}>📖 Comment ajouter un actif</div>
 
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -3024,7 +3024,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.7</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
