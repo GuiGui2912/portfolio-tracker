@@ -587,7 +587,7 @@ function AddAssetModal({ onClose, onAdd }) {
     };
     onAdd(newAsset); onClose();
   };
-  const transactionFields = [["buyTime","Heure d'achat","","text"]];
+  const transactionFields = [];
   return (
     <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",background:"#000000AA",backdropFilter:"blur(6px)"}}>
       <div className="fadein" style={{width:390,background:"#1A1714",borderRadius:"28px 28px 0 0",padding:"22px 22px 40px",border:"1px solid #2A2520",borderBottom:"none",maxHeight:"90vh",overflowY:"auto"}}>
@@ -633,8 +633,9 @@ function AddAssetModal({ onClose, onAdd }) {
                 <DatePicker value={form.buyDate} onChange={v=>set("buyDate",v)} hasError={!!errors.buyDate}/>
                 {errors.buyDate&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.buyDate}</div>}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-                {transactionFields.map(([k,l,p,t])=><InputField key={k} form={form} errors={errors} onChange={set} fkey={k} label={l} placeholder={p} type={t}/>)}
+              <div style={{marginBottom:10}}>
+                <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Heure d'achat (optionnel)</div>
+                <TimePicker value={form.buyTime} onChange={v=>set("buyTime",v)}/>
               </div>
               <div style={{marginBottom:10}}>
                 <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Devise du prix d'achat</div>
@@ -781,7 +782,27 @@ function DatePicker({ value, onChange, hasError = false }) {
   );
 }
 
-function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
+function TimePicker({ value, onChange }) {
+  const parts = value ? value.split(":") : ["", ""];
+  const hour = parts[0] || "";
+  const min  = parts[1] || "";
+  const update = (h, m) => { if (h !== "" && m !== "") onChange(`${h.padStart(2,"0")}:${m.padStart(2,"0")}`); else onChange(""); };
+  const hours = Array.from({length:24}, (_,i) => String(i).padStart(2,"0"));
+  const mins  = Array.from({length:12}, (_,i) => String(i*5).padStart(2,"0"));
+  const selStyle = {background:"#0E0D0A",border:"1px solid #252015",borderRadius:10,padding:"10px 6px",color:"#F0EDE8",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",cursor:"pointer",width:"100%",appearance:"none" as const,WebkitAppearance:"none" as const};
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+      <select value={hour} onChange={e=>update(e.target.value,min)} style={selStyle}>
+        <option value="">Heure</option>
+        {hours.map(h=><option key={h} value={h}>{h}h</option>)}
+      </select>
+      <select value={min} onChange={e=>update(hour,e.target.value)} style={selStyle}>
+        <option value="">Min</option>
+        {mins.map(m=><option key={m} value={m}>{m}</option>)}
+      </select>
+    </div>
+  );
+}
   const today = new Date().toISOString().slice(0,10);
   const nowTime = new Date().toTimeString().slice(0,5);
   const [form, setForm] = useState({ type:"buy", date:today, time:nowTime, qty:"", price:"", currency:"USD", priceMode:"unit" });
@@ -831,7 +852,7 @@ function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
           </div>
           <div style={{marginBottom:12}}>
             <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Heure (optionnel)</div>
-            <input type="text" value={form.time} onChange={e=>set("time",e.target.value)} placeholder="ex: 14:30" style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            <TimePicker value={form.time} onChange={v=>set("time",v)}/>
           </div>
           {/* Devise */}
           <div style={{marginBottom:12}}>
@@ -941,7 +962,7 @@ function EditTransactionModal({ tx, asset, fmt, onClose, onSave }) {
           </div>
           <div style={{marginBottom:12}}>
             <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Heure (optionnel)</div>
-            <input type="text" value={form.time} onChange={e=>set("time",e.target.value)} placeholder="ex: 14:30" style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            <TimePicker value={form.time} onChange={v=>set("time",v)}/>
           </div>
           {/* Devise */}
           <div style={{marginBottom:12}}>
@@ -2942,7 +2963,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>8.5</divv1.>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
