@@ -592,8 +592,8 @@ function AddAssetModal({ onClose, onAdd }) {
   };
   const transactionFields = [];
   return (
-    <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",background:"#000000AA",backdropFilter:"blur(6px)"}}>
-      <div className="fadein" style={{width:390,background:"#1A1714",borderRadius:"28px 28px 0 0",padding:"22px 22px 40px",border:"1px solid #2A2520",borderBottom:"none",maxHeight:"90vh",overflowY:"auto"}}>
+    <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:step===0?"center":"flex-end",justifyContent:"center",background:"#000000AA",backdropFilter:"blur(6px)"}}>
+      <div className="fadein" style={{width:390,background:"#1A1714",borderRadius:step===0?"24px":"28px 28px 0 0",padding:"22px 22px 40px",border:"1px solid #2A2520",borderBottom:step===0?"1px solid #2A2520":"none",maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{width:36,height:4,borderRadius:2,background:"#3A3530",margin:"0 auto 18px"}}/>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
           <div>
@@ -650,9 +650,6 @@ function AddAssetModal({ onClose, onAdd }) {
                 <div style={{marginLeft:"auto",color:"#3A3530",fontSize:18}}>›</div>
               </button>
             ))}
-            <button onClick={()=>setShowTuto(true)} style={{background:"transparent",border:"1px dashed #2A2520",borderRadius:14,padding:"12px",cursor:"pointer",color:"#5A5550",fontSize:12,fontFamily:"'DM Sans',sans-serif",textAlign:"center",marginTop:4}}>
-              📖 Comment ajouter un actif ?
-            </button>
           </div>
         )}
         {step===1 && (
@@ -3027,7 +3024,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.6</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
