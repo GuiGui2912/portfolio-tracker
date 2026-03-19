@@ -748,10 +748,6 @@ function DatePicker({ value, onChange, hasError = false }) {
   const month = parts[1] || "";
   const day = parts[2] || "";
 
-  const update = (y, m, d) => {
-    if (y && m && d) onChange(`${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
-  };
-
   const inputStyle = (hasErr=false) => ({
     background:"#0E0D0A",
     border:`1px solid ${hasErr?"#F87171":"#252015"}`,
@@ -772,7 +768,13 @@ function DatePicker({ value, onChange, hasError = false }) {
         placeholder="JJ"
         maxLength={2}
         value={day}
-        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,2);update(year,month,v);}}
+        onChange={e=>{
+          const v=e.target.value.replace(/\D/g,"").slice(0,2);
+          const y = year || new Date().getFullYear().toString();
+          const m = month || "01";
+          if (v) onChange(`${y}-${m.padStart(2,"0")}-${v.padStart(2,"0")}`);
+          else onChange("");
+        }}
         style={inputStyle(hasError)}
       />
       <input
@@ -780,7 +782,13 @@ function DatePicker({ value, onChange, hasError = false }) {
         placeholder="MM"
         maxLength={2}
         value={month}
-        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,2);update(year,v,day);}}
+        onChange={e=>{
+          const v=e.target.value.replace(/\D/g,"").slice(0,2);
+          const y = year || new Date().getFullYear().toString();
+          const d = day || "01";
+          if (v) onChange(`${y}-${v.padStart(2,"0")}-${d.padStart(2,"0")}`);
+          else onChange("");
+        }}
         style={inputStyle(hasError)}
       />
       <input
@@ -788,7 +796,13 @@ function DatePicker({ value, onChange, hasError = false }) {
         placeholder="AAAA"
         maxLength={4}
         value={year}
-        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,4);update(v,month,day);}}
+        onChange={e=>{
+          const v=e.target.value.replace(/\D/g,"").slice(0,4);
+          const m = month || "01";
+          const d = day || "01";
+          if (v.length===4) onChange(`${v}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
+          else onChange("");
+        }}
         style={inputStyle(hasError)}
       />
     </div>
@@ -799,11 +813,6 @@ function TimePicker({ value, onChange }) {
   const parts = value ? value.split(":") : ["", ""];
   const hour = parts[0] || "";
   const min  = parts[1] || "";
-
-  const update = (h, m) => {
-    if (h !== "" && m !== "") onChange(`${h.padStart(2,"0")}:${m.padStart(2,"0")}`);
-    else onChange("");
-  };
 
   const inputStyle = {
     background:"#0E0D0A",
@@ -825,7 +834,12 @@ function TimePicker({ value, onChange }) {
         placeholder="HH"
         maxLength={2}
         value={hour}
-        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,2);update(v,min);}}
+        onChange={e=>{
+          const v=e.target.value.replace(/\D/g,"").slice(0,2);
+          const m = min || "00";
+          if (v) onChange(`${v.padStart(2,"0")}:${m.padStart(2,"0")}`);
+          else onChange("");
+        }}
         style={inputStyle}
       />
       <span style={{color:"#5A5550",fontFamily:"'DM Mono',monospace",fontSize:16,textAlign:"center"}}>:</span>
@@ -834,7 +848,12 @@ function TimePicker({ value, onChange }) {
         placeholder="MM"
         maxLength={2}
         value={min}
-        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,2);update(hour,v);}}
+        onChange={e=>{
+          const v=e.target.value.replace(/\D/g,"").slice(0,2);
+          const h = hour || "00";
+          if (v) onChange(`${h.padStart(2,"0")}:${v.padStart(2,"0")}`);
+          else onChange("");
+        }}
         style={inputStyle}
       />
     </div>
@@ -3002,7 +3021,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.1</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
