@@ -752,59 +752,36 @@ function DatePicker({ value, onChange, hasError = false }) {
     background:"#0E0D0A",
     border:`1px solid ${hasErr?"#F87171":"#252015"}`,
     borderRadius:10,
-    padding:"10px 6px",
+    padding:"10px 8px",
     color:"#F0EDE8",
-    fontSize:14,
+    fontSize:16,
     fontFamily:"'DM Mono',monospace",
     outline:"none",
     width:"100%",
     textAlign:"center" as const,
   });
 
+  const dayRef = React.useRef(null);
+  const monRef = React.useRef(null);
+  const yrRef  = React.useRef(null);
+
+  const emit = () => {
+    const d = dayRef.current?.value || day;
+    const m = monRef.current?.value || month;
+    const y = yrRef.current?.value || year;
+    if (d && m && y && y.length === 4) {
+      onChange(`${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
+    }
+  };
+
   return (
-    <div style={{display:"grid",gridTemplateColumns:"2fr 3fr 3fr",gap:4}}>
-      <input
-        inputMode="numeric"
-        placeholder="JJ"
-        maxLength={2}
-        value={day}
-        onChange={e=>{
-          const v=e.target.value.replace(/\D/g,"").slice(0,2);
-          const y = year || new Date().getFullYear().toString();
-          const m = month || "01";
-          if (v) onChange(`${y}-${m.padStart(2,"0")}-${v.padStart(2,"0")}`);
-          else onChange("");
-        }}
-        style={inputStyle(hasError)}
-      />
-      <input
-        inputMode="numeric"
-        placeholder="MM"
-        maxLength={2}
-        value={month}
-        onChange={e=>{
-          const v=e.target.value.replace(/\D/g,"").slice(0,2);
-          const y = year || new Date().getFullYear().toString();
-          const d = day || "01";
-          if (v) onChange(`${y}-${v.padStart(2,"0")}-${d.padStart(2,"0")}`);
-          else onChange("");
-        }}
-        style={inputStyle(hasError)}
-      />
-      <input
-        inputMode="numeric"
-        placeholder="AAAA"
-        maxLength={4}
-        value={year}
-        onChange={e=>{
-          const v=e.target.value.replace(/\D/g,"").slice(0,4);
-          const m = month || "01";
-          const d = day || "01";
-          if (v.length===4) onChange(`${v}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
-          else onChange("");
-        }}
-        style={inputStyle(hasError)}
-      />
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 2fr",gap:6}}>
+      <input ref={dayRef} inputMode="numeric" placeholder="JJ" maxLength={2}
+        defaultValue={day} onBlur={emit} onChange={emit} style={inputStyle(hasError)}/>
+      <input ref={monRef} inputMode="numeric" placeholder="MM" maxLength={2}
+        defaultValue={month} onBlur={emit} onChange={emit} style={inputStyle(hasError)}/>
+      <input ref={yrRef} inputMode="numeric" placeholder="AAAA" maxLength={4}
+        defaultValue={year} onBlur={emit} onChange={emit} style={inputStyle(hasError)}/>
     </div>
   );
 }
@@ -814,13 +791,22 @@ function TimePicker({ value, onChange }) {
   const hour = parts[0] || "";
   const min  = parts[1] || "";
 
+  const hrRef  = React.useRef(null);
+  const minRef = React.useRef(null);
+
+  const emit = () => {
+    const h = hrRef.current?.value || hour;
+    const m = minRef.current?.value || min;
+    if (h && m) onChange(`${h.padStart(2,"0")}:${m.padStart(2,"0")}`);
+  };
+
   const inputStyle = {
     background:"#0E0D0A",
     border:"1px solid #252015",
     borderRadius:10,
-    padding:"10px 6px",
+    padding:"10px 8px",
     color:"#F0EDE8",
-    fontSize:14,
+    fontSize:16,
     fontFamily:"'DM Mono',monospace",
     outline:"none",
     width:"100%",
@@ -829,33 +815,11 @@ function TimePicker({ value, onChange }) {
 
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:4,alignItems:"center"}}>
-      <input
-        inputMode="numeric"
-        placeholder="HH"
-        maxLength={2}
-        value={hour}
-        onChange={e=>{
-          const v=e.target.value.replace(/\D/g,"").slice(0,2);
-          const m = min || "00";
-          if (v) onChange(`${v.padStart(2,"0")}:${m.padStart(2,"0")}`);
-          else onChange("");
-        }}
-        style={inputStyle}
-      />
-      <span style={{color:"#5A5550",fontFamily:"'DM Mono',monospace",fontSize:16,textAlign:"center"}}>:</span>
-      <input
-        inputMode="numeric"
-        placeholder="MM"
-        maxLength={2}
-        value={min}
-        onChange={e=>{
-          const v=e.target.value.replace(/\D/g,"").slice(0,2);
-          const h = hour || "00";
-          if (v) onChange(`${h.padStart(2,"0")}:${v.padStart(2,"0")}`);
-          else onChange("");
-        }}
-        style={inputStyle}
-      />
+      <input ref={hrRef} inputMode="numeric" placeholder="HH" maxLength={2}
+        defaultValue={hour} onBlur={emit} onChange={emit} style={inputStyle}/>
+      <span style={{color:"#5A5550",fontFamily:"'DM Mono',monospace",fontSize:18}}>:</span>
+      <input ref={minRef} inputMode="numeric" placeholder="MM" maxLength={2}
+        defaultValue={min} onBlur={emit} onChange={emit} style={inputStyle}/>
     </div>
   );
 }
@@ -3021,7 +2985,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.1</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.2</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
