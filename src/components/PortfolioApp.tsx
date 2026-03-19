@@ -734,6 +734,47 @@ function AddDividendModal({ asset, onClose, onAdd }) {
   );
 }
 
+// Sélecteur de date compatible Android (remplace input type="date" qui bug)
+function DatePicker({ value, onChange, hasError = false }) {
+  const parts = value ? value.split("-") : ["", "", ""];
+  const year = parts[0] || "";
+  const month = parts[1] || "";
+  const day = parts[2] || "";
+
+  const update = (y, m, d) => {
+    if (y && m && d) onChange(`${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
+  };
+
+  const now = new Date();
+  const years = Array.from({length:10}, (_,i) => String(now.getFullYear() - i));
+  const months = [
+    ["01","Janvier"],["02","Février"],["03","Mars"],["04","Avril"],
+    ["05","Mai"],["06","Juin"],["07","Juillet"],["08","Août"],
+    ["09","Septembre"],["10","Octobre"],["11","Novembre"],["12","Décembre"],
+  ];
+  const daysInMonth = new Date(Number(year)||now.getFullYear(), Number(month)||1, 0).getDate();
+  const days = Array.from({length: daysInMonth || 31}, (_,i) => String(i+1).padStart(2,"0"));
+
+  const selStyle = {background:"#0E0D0A",border:`1px solid ${hasError?"#F87171":"#252015"}`,borderRadius:10,padding:"10px 6px",color:"#F0EDE8",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",cursor:"pointer",width:"100%",appearance:"none" as const,WebkitAppearance:"none" as const};
+
+  return (
+    <div style={{display:"grid",gridTemplateColumns:"2fr 3fr 2fr",gap:4}}>
+      <select value={day} onChange={e=>{update(year,month,e.target.value);}} style={selStyle}>
+        <option value="">Jour</option>
+        {days.map(d=><option key={d} value={d}>{d}</option>)}
+      </select>
+      <select value={month} onChange={e=>{update(year,e.target.value,day);}} style={selStyle}>
+        <option value="">Mois</option>
+        {months.map(([v,l])=><option key={v} value={v}>{l}</option>)}
+      </select>
+      <select value={year} onChange={e=>{update(e.target.value,month,day);}} style={selStyle}>
+        <option value="">Année</option>
+        {years.map(y=><option key={y} value={y}>{y}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
   const today = new Date().toISOString().slice(0,10);
   const nowTime = new Date().toTimeString().slice(0,5);
@@ -777,16 +818,14 @@ function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
             ))}
           </div>
           {/* Date + Heure */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <div>
-              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Date</div>
-              <input type="date" value={form.date} onChange={e=>set("date",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.date?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-              {errors.date&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.date}</div>}
-            </div>
-            <div>
-              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Heure</div>
-              <input type="time" value={form.time} onChange={e=>set("time",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-            </div>
+          <div style={{marginBottom:12}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Date</div>
+            <DatePicker value={form.date} onChange={v=>set("date",v)} hasError={!!errors.date}/>
+            {errors.date&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.date}</div>}
+          </div>
+          <div style={{marginBottom:12}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Heure (optionnel)</div>
+            <input type="text" value={form.time} onChange={e=>set("time",e.target.value)} placeholder="ex: 14:30" style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
           </div>
           {/* Devise */}
           <div style={{marginBottom:12}}>
@@ -890,13 +929,13 @@ function EditTransactionModal({ tx, asset, fmt, onClose, onSave }) {
             ))}
           </div>
           {/* Date + Heure */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            {[["date","Date","date"],["time","Heure","time"]].map(([k,l,t])=>(
-              <div key={k}>
-                <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{l}</div>
-                <input type={t} value={form[k]} onChange={e=>set(k,e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-              </div>
-            ))}
+          <div style={{marginBottom:12}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Date</div>
+            <DatePicker value={form.date} onChange={v=>set("date",v)}/>
+          </div>
+          <div style={{marginBottom:12}}>
+            <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Heure (optionnel)</div>
+            <input type="text" value={form.time} onChange={e=>set("time",e.target.value)} placeholder="ex: 14:30" style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
           </div>
           {/* Devise */}
           <div style={{marginBottom:12}}>
@@ -2897,7 +2936,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.3</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
