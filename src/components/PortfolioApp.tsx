@@ -741,7 +741,7 @@ function AddDividendModal({ asset, onClose, onAdd }) {
   );
 }
 
-// Sélecteur de date compatible Android (remplace input type="date" qui bug)
+// Sélecteur de date simple - champs texte compatibles Android
 function DatePicker({ value, onChange, hasError = false }) {
   const parts = value ? value.split("-") : ["", "", ""];
   const year = parts[0] || "";
@@ -752,32 +752,45 @@ function DatePicker({ value, onChange, hasError = false }) {
     if (y && m && d) onChange(`${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
   };
 
-  const now = new Date();
-  const years = Array.from({length:10}, (_,i) => String(now.getFullYear() - i));
-  const months = [
-    ["01","Janvier"],["02","Février"],["03","Mars"],["04","Avril"],
-    ["05","Mai"],["06","Juin"],["07","Juillet"],["08","Août"],
-    ["09","Septembre"],["10","Octobre"],["11","Novembre"],["12","Décembre"],
-  ];
-  const daysInMonth = new Date(Number(year)||now.getFullYear(), Number(month)||1, 0).getDate();
-  const days = Array.from({length: daysInMonth || 31}, (_,i) => String(i+1).padStart(2,"0"));
-
-  const selStyle = {background:"#0E0D0A",border:`1px solid ${hasError?"#F87171":"#252015"}`,borderRadius:10,padding:"10px 6px",color:"#F0EDE8",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",cursor:"pointer",width:"100%",appearance:"none" as const,WebkitAppearance:"none" as const};
+  const inputStyle = (hasErr=false) => ({
+    background:"#0E0D0A",
+    border:`1px solid ${hasErr?"#F87171":"#252015"}`,
+    borderRadius:10,
+    padding:"10px 6px",
+    color:"#F0EDE8",
+    fontSize:14,
+    fontFamily:"'DM Mono',monospace",
+    outline:"none",
+    width:"100%",
+    textAlign:"center" as const,
+  });
 
   return (
-    <div style={{display:"grid",gridTemplateColumns:"2fr 3fr 2fr",gap:4}}>
-      <select value={day} onChange={e=>{update(year,month,e.target.value);}} style={selStyle}>
-        <option value="">Jour</option>
-        {days.map(d=><option key={d} value={d}>{d}</option>)}
-      </select>
-      <select value={month} onChange={e=>{update(year,e.target.value,day);}} style={selStyle}>
-        <option value="">Mois</option>
-        {months.map(([v,l])=><option key={v} value={v}>{l}</option>)}
-      </select>
-      <select value={year} onChange={e=>{update(e.target.value,month,day);}} style={selStyle}>
-        <option value="">Année</option>
-        {years.map(y=><option key={y} value={y}>{y}</option>)}
-      </select>
+    <div style={{display:"grid",gridTemplateColumns:"2fr 3fr 3fr",gap:4}}>
+      <input
+        inputMode="numeric"
+        placeholder="JJ"
+        maxLength={2}
+        value={day}
+        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,2);update(year,month,v);}}
+        style={inputStyle(hasError)}
+      />
+      <input
+        inputMode="numeric"
+        placeholder="MM"
+        maxLength={2}
+        value={month}
+        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,2);update(year,v,day);}}
+        style={inputStyle(hasError)}
+      />
+      <input
+        inputMode="numeric"
+        placeholder="AAAA"
+        maxLength={4}
+        value={year}
+        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,4);update(v,month,day);}}
+        style={inputStyle(hasError)}
+      />
     </div>
   );
 }
@@ -786,20 +799,44 @@ function TimePicker({ value, onChange }) {
   const parts = value ? value.split(":") : ["", ""];
   const hour = parts[0] || "";
   const min  = parts[1] || "";
-  const update = (h, m) => { if (h !== "" && m !== "") onChange(`${h.padStart(2,"0")}:${m.padStart(2,"0")}`); else onChange(""); };
-  const hours = Array.from({length:24}, (_,i) => String(i).padStart(2,"0"));
-  const mins  = Array.from({length:12}, (_,i) => String(i*5).padStart(2,"0"));
-  const selStyle = {background:"#0E0D0A",border:"1px solid #252015",borderRadius:10,padding:"10px 6px",color:"#F0EDE8",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",cursor:"pointer",width:"100%",appearance:"none" as const,WebkitAppearance:"none" as const};
+
+  const update = (h, m) => {
+    if (h !== "" && m !== "") onChange(`${h.padStart(2,"0")}:${m.padStart(2,"0")}`);
+    else onChange("");
+  };
+
+  const inputStyle = {
+    background:"#0E0D0A",
+    border:"1px solid #252015",
+    borderRadius:10,
+    padding:"10px 6px",
+    color:"#F0EDE8",
+    fontSize:14,
+    fontFamily:"'DM Mono',monospace",
+    outline:"none",
+    width:"100%",
+    textAlign:"center" as const,
+  };
+
   return (
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
-      <select value={hour} onChange={e=>update(e.target.value,min)} style={selStyle}>
-        <option value="">Heure</option>
-        {hours.map(h=><option key={h} value={h}>{h}h</option>)}
-      </select>
-      <select value={min} onChange={e=>update(hour,e.target.value)} style={selStyle}>
-        <option value="">Min</option>
-        {mins.map(m=><option key={m} value={m}>{m}</option>)}
-      </select>
+    <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",gap:4,alignItems:"center"}}>
+      <input
+        inputMode="numeric"
+        placeholder="HH"
+        maxLength={2}
+        value={hour}
+        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,2);update(v,min);}}
+        style={inputStyle}
+      />
+      <span style={{color:"#5A5550",fontFamily:"'DM Mono',monospace",fontSize:16,textAlign:"center"}}>:</span>
+      <input
+        inputMode="numeric"
+        placeholder="MM"
+        maxLength={2}
+        value={min}
+        onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,2);update(hour,v);}}
+        style={inputStyle}
+      />
     </div>
   );
 }
@@ -2965,7 +3002,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v1.8.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.0</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
