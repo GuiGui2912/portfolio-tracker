@@ -446,7 +446,7 @@ function SymbolSearch({ value, onChange, onSelect, placeholder, error }) {
     ? SYMBOL_DATABASE.filter(s =>
         s.symbol.startsWith(value.toUpperCase()) ||
         s.name.toLowerCase().includes(value.toLowerCase())
-      ).slice(0, 6)
+      ).slice(0, 8)
     : [];
 
   useEffect(() => {
@@ -553,6 +553,7 @@ function InputField({ form, errors, onChange, fkey, label, placeholder, type }) 
 
 function AddAssetModal({ onClose, onAdd }) {
   const [step, setStep]           = useState(0);
+  const [showTuto, setShowTuto]   = useState(false);
   const [assetType, setAssetType] = useState(null);
   const today = new Date().toISOString().slice(0,10);
   const nowTime = new Date().toTimeString().slice(0,5);
@@ -599,8 +600,45 @@ function AddAssetModal({ onClose, onAdd }) {
             <div style={{color:"#F0EDE8",fontSize:17,fontWeight:700}}>{step===0?"Ajouter un actif":`Nouvel actif · ${typeOptions.find(t=>t.value===assetType)?.label}`}</div>
             {step===1&&assetType&&<div style={{color:"#5A5550",fontSize:11,marginTop:2}}>{typeOptions.find(t=>t.value===assetType)?.desc}</div>}
           </div>
-          <button onClick={onClose} style={{background:"#252015",border:"none",width:32,height:32,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <button onClick={()=>setShowTuto(true)} style={{background:"#C8A96E15",border:"1px solid #C8A96E40",borderRadius:10,padding:"6px 10px",cursor:"pointer",color:"#C8A96E",fontSize:11,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>? Aide</button>
+            <button onClick={onClose} style={{background:"#252015",border:"none",width:32,height:32,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          </div>
         </div>
+
+        {/* Modal tuto */}
+        {showTuto && (
+          <div style={{position:"fixed",inset:0,zIndex:5000,background:"#000b",display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowTuto(false)}>
+            <div style={{width:"100%",maxWidth:430,background:"#1A1714",borderRadius:"24px 24px 0 0",padding:"24px 22px 40px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
+              <div style={{width:36,height:4,borderRadius:2,background:"#3A3530",margin:"0 auto 20px"}}/>
+              <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:16}}>📖 Comment ajouter un actif</div>
+
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                <div style={{background:"#111009",borderRadius:14,padding:"14px",border:"1px solid #252015"}}>
+                  <div style={{color:"#C8A96E",fontSize:12,fontWeight:700,marginBottom:6}}>✅ Actif présent dans la liste</div>
+                  <div style={{color:"#8A8580",fontSize:12,lineHeight:1.5}}>Tape le nom ou le ticker dans le champ de recherche. Sélectionne l'actif dans les suggestions qui apparaissent.</div>
+                  <div style={{color:"#5A5550",fontSize:11,marginTop:6,fontFamily:"'DM Mono',monospace"}}>Ex: tape "Apple" ou "AAPL" → sélectionne AAPL</div>
+                </div>
+
+                <div style={{background:"#111009",borderRadius:14,padding:"14px",border:"1px solid #252015"}}>
+                  <div style={{color:"#C8A96E",fontSize:12,fontWeight:700,marginBottom:6}}>🔍 Actif absent de la liste</div>
+                  <div style={{color:"#8A8580",fontSize:12,lineHeight:1.5}}>Entre le ticker exact tel qu'il apparaît sur Yahoo Finance. Ne clique pas sur une suggestion — laisse le ticker tel quel et continue.</div>
+                  <div style={{color:"#5A5550",fontSize:11,marginTop:6,fontFamily:"'DM Mono',monospace"}}>Ex: VUAA.DE · TTE.PA · BNP.PA · ASML.AS</div>
+                </div>
+
+                <div style={{background:"#111009",borderRadius:14,padding:"14px",border:"1px solid #252015"}}>
+                  <div style={{color:"#C8A96E",fontSize:12,fontWeight:700,marginBottom:6}}>💡 Trouver le bon ticker</div>
+                  <div style={{color:"#8A8580",fontSize:12,lineHeight:1.5}}>Cherche ton actif sur <span style={{color:"#C8A96E"}}>finance.yahoo.com</span> et utilise le ticker affiché. Pour les actifs européens, ajoute l'extension de la bourse.</div>
+                  <div style={{color:"#5A5550",fontSize:11,marginTop:6,fontFamily:"'DM Mono',monospace"}}>.PA = Paris · .DE = Xetra · .AS = Amsterdam · .L = Londres</div>
+                </div>
+              </div>
+
+              <button onClick={()=>setShowTuto(false)} style={{width:"100%",marginTop:20,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+                Compris !
+              </button>
+            </div>
+          </div>
+        )}
         {step===0 && (
           <div style={{display:"flex",flexDirection:"column",gap:9}}>
             {typeOptions.map(t=>(
@@ -2987,7 +3025,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.3</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.4</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
