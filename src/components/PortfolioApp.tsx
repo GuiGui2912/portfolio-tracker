@@ -2320,18 +2320,25 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
           onSelect={(name)=>{setShowConnect(false);connectBank(name);}} spinStyle={spinStyle}/>
       )}
       {selectedBank && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setSelectedBank(null)}>
-          <div style={{background:"#111009",borderRadius:"28px 28px 0 0",width:"100%",maxWidth:430,maxHeight:"85vh",display:"flex",flexDirection:"column",paddingBottom:"calc(24px + env(safe-area-inset-bottom,0px))"}} onClick={e=>e.stopPropagation()}>
-            <div style={{width:40,height:4,borderRadius:2,background:"#2A2520",margin:"12px auto 8px",flexShrink:0}}/>
-            <div style={{padding:"8px 20px 14px",borderBottom:"1px solid #1E1B16",flexShrink:0,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{position:"fixed",inset:0,background:"#0E0D0A",zIndex:2000,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+          {/* Header */}
+          <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #1E1B16",display:"flex",alignItems:"center",gap:14,background:"#111009",position:"sticky",top:0,zIndex:10}}>
+            <button onClick={()=>setSelectedBank(null)} style={{background:"#252015",border:"none",width:36,height:36,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>←</button>
+            <div style={{flex:1}}>
               <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700}}>{selectedBank}</div>
-              <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:15,fontWeight:700}}>
+              <div style={{color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontSize:12,marginTop:1}}>
                 {selectedBankAccounts.reduce((s,a)=>s+getBalance(a.uid),0).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
               </div>
             </div>
-            <div style={{overflowY:"auto",flex:1,padding:"14px 20px"}}>
-              {selectedBankAccounts.map(acc => (
-                <div key={acc.uid} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:"1px solid #1A1A15"}}>
+          </div>
+
+          <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:14,paddingBottom:40}}>
+
+            {/* Comptes */}
+            <div style={{background:"#111009",borderRadius:18,border:"1px solid #1E2A1E",overflow:"hidden"}}>
+              <div style={{padding:"12px 16px 8px",color:"#5A5550",fontSize:10,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:1.5}}>Comptes</div>
+              {selectedBankAccounts.map((acc, i) => (
+                <div key={acc.uid} style={{padding:"12px 16px",borderTop: i===0?"none":"1px solid #1A1A15",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <div style={{color:"#C8C4BC",fontSize:13,fontWeight:500}}>{getAccountLabel(acc)}</div>
                     <div style={{color:"#3A3530",fontSize:10,fontFamily:"'DM Mono',monospace",marginTop:2}}>
@@ -2343,42 +2350,45 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
                   </div>
                 </div>
               ))}
-              {selectedBankTxs.length > 0 && (
-                <div style={{marginTop:16}}>
-                  <div style={{color:"#5A5550",fontSize:10,letterSpacing:2,textTransform:"uppercase",fontFamily:"'DM Mono',monospace",marginBottom:10}}>
-                    Transactions · {selectedBankTxs.length}
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                    {selectedBankTxs.slice(0,50).map((tx,i) => {
-                      const amount = Number(tx.transaction_amount?.amount || 0);
-                      const isPos = amount >= 0;
-                      const label = tx.remittance_information?.unstructured?.[0] || tx.creditor_name || tx.debtor_name || "Transaction";
-                      const date = tx.booking_date || tx.value_date || "";
-                      return (
-                        <div key={tx.transaction_id||i} style={{background:"#0E0D0A",borderRadius:12,padding:"11px 14px",border:"1px solid #1A1A15",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{color:"#C8C4BC",fontSize:12,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</div>
-                            <div style={{color:"#3A3530",fontSize:10,marginTop:2,fontFamily:"'DM Mono',monospace"}}>{date ? new Date(date).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}) : ""}</div>
-                          </div>
-                          <div style={{color:isPos?"#4ADE80":"#F87171",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,flexShrink:0}}>
-                            {isPos?"+":""}{amount.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              {selectedBankTxs.length === 0 && (
-                <div style={{textAlign:"center",padding:"20px 0",color:"#3A5A40",fontSize:12,border:"1px dashed #1E3A28",borderRadius:12,marginTop:16}}>
+            </div>
+
+            {/* Transactions */}
+            <div>
+              <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600,marginBottom:10}}>
+                Transactions {selectedBankTxs.length > 0 ? `· ${selectedBankTxs.length}` : ""}
+              </div>
+              {selectedBankTxs.length === 0 ? (
+                <div style={{textAlign:"center",padding:"24px",color:"#3A5A40",fontSize:12,border:"1px dashed #1E3A28",borderRadius:14}}>
                   Aucune transaction disponible
                 </div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {selectedBankTxs.slice(0,50).map((tx,i) => {
+                    const amount = Number(tx.transaction_amount?.amount || 0);
+                    const isPos = amount >= 0;
+                    const label = tx.remittance_information?.unstructured?.[0] || tx.creditor_name || tx.debtor_name || "Transaction";
+                    const date = tx.booking_date || tx.value_date || "";
+                    return (
+                      <div key={tx.transaction_id||i} style={{background:"#111009",borderRadius:12,padding:"11px 14px",border:"1px solid #1A1A15",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{color:"#C8C4BC",fontSize:12,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</div>
+                          <div style={{color:"#3A3530",fontSize:10,marginTop:2,fontFamily:"'DM Mono',monospace"}}>{date ? new Date(date).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}) : ""}</div>
+                        </div>
+                        <div style={{color:isPos?"#4ADE80":"#F87171",fontFamily:"'DM Mono',monospace",fontSize:13,fontWeight:700,flexShrink:0}}>
+                          {isPos?"+":""}{amount.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})} €
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-              <button onClick={()=>disconnectBank(selectedBank)}
-                style={{width:"100%",marginTop:24,background:"#F8717112",border:"1px solid #F8717150",borderRadius:14,padding:"13px",color:"#F87171",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                Déconnecter {selectedBank}
-              </button>
             </div>
+
+            {/* Bouton déconnecter */}
+            <button onClick={()=>{disconnectBank(selectedBank);setSelectedBank(null);}}
+              style={{width:"100%",marginTop:8,background:"transparent",border:"1px solid #3A1A1A",borderRadius:14,padding:"13px",color:"#F87171",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+              🔌 Déconnecter {selectedBank}
+            </button>
           </div>
         </div>
       )}
@@ -3333,7 +3343,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.8</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.9</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
