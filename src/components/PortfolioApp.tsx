@@ -1292,7 +1292,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const handleDragMove = () => {};
   const handleDragEnd  = () => {};
 
-  const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["info","Informations"]];
+  const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["transactions","Transactions"],["info","Informations"]];
 
   return (
     <>
@@ -1424,83 +1424,6 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 </div>
               </div>
 
-              {/* Transactions */}
-              <div style={{margin:"12px 20px 0"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                  <div>
-                    <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Transactions</div>
-                    <div style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>{txs.length} opération{txs.length!==1?"s":""}</div>
-                  </div>
-                  <button onClick={()=>setTxModal(true)} style={{background:"#1A1A2A",border:"1px solid #2A2A4A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#A3B8C2",fontSize:12,fontWeight:600}}>
-                    <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
-                  </button>
-                </div>
-                {/* Filtre par année */}
-                {txs.length > 0 && (() => {
-                  const years = ["Toutes", ...Array.from(new Set(txs.map(tx => tx.date?.slice(0,4)).filter(Boolean))).sort((a,b)=>Number(b)-Number(a))];
-                  return (
-                    <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap" as const}}>
-                      {years.map(y => (
-                        <button key={y} onClick={()=>setTxYearFilter(y)}
-                          style={{background:txYearFilter===y?"#C8A96E":"#111009",border:`1px solid ${txYearFilter===y?"#C8A96E":"#252015"}`,borderRadius:8,padding:"4px 10px",color:txYearFilter===y?"#111009":"#6A6560",fontSize:11,fontFamily:"'DM Mono',monospace",cursor:"pointer",fontWeight:txYearFilter===y?700:400}}>
-                          {y}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-                {txs.length===0 ? (
-                  <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
-                    <div style={{fontSize:22,marginBottom:5}}>📋</div>
-                    <div style={{color:"#4A4540",fontSize:12}}>Aucune transaction enregistrée</div>
-                  </div>
-                ) : (
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {[...txs]
-                      .sort((a,b) => (b.date+b.time||"") > (a.date+a.time||"") ? 1 : -1)
-                      .filter(tx => txYearFilter==="Toutes" || tx.date?.startsWith(txYearFilter))
-                      .map(tx=>{
-                      const isBuy    = tx.type==="buy";
-                      const cVal     = tx.qty * asset.price;
-                      const costVal  = tx.qty * tx.priceUSD;
-                      const txPnl    = isBuy ? cVal - costVal : null;
-                      const txPnlPct = isBuy && costVal>0 ? ((cVal-costVal)/costVal*100) : null;
-                      const sym      = tx.currency==="EUR"?"€":tx.currency==="GBP"?"£":"$";
-                      return (
-                        <div key={tx.id} style={{background:"#111009",borderRadius:14,padding:"12px 14px",border:`1px solid ${isBuy?"#4ADE8018":"#F8717118"}`}}>
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                            <div style={{display:"flex",alignItems:"center",gap:8}}>
-                              <div style={{width:28,height:28,borderRadius:8,background:isBuy?"#4ADE8020":"#F8717120",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>{isBuy?"▲":"▼"}</div>
-                              <div>
-                                <div style={{color:isBuy?"#4ADE80":"#F87171",fontSize:12,fontWeight:700}}>{isBuy?"Achat":"Vente"}</div>
-                                <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{tx.date}{tx.time?` · ${tx.time}`:""}</div>
-                              </div>
-                            </div>
-                            <div style={{display:"flex",gap:6}}>
-                              <button onClick={()=>setEditTx(tx)} style={{background:"#1A1714",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#C8A96E",fontSize:11,cursor:"pointer"}}>✏️</button>
-                              <button onClick={()=>onDeleteTransaction(asset.id, tx.id)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
-                            </div>
-                          </div>
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                            {[
-                              ["Quantité",       `${tx.qty} ${asset.symbol}`],
-                              ["Prix d'achat",   `${tx.priceOriginal?.toFixed(2)}${sym}`],
-                              ["Valeur actuelle", fmt(cVal, 2)],
-                              isBuy ? ["P&L", <span style={{color:txPnl>=0?"#4ADE80":"#F87171"}}>{txPnl>=0?"▲ ":"▼ "}{fmt(Math.abs(txPnl),2)} ({txPnlPct>=0?"+":""}{txPnlPct?.toFixed(2)}%)</span>] : ["Montant", fmt(costVal,2)],
-                            ].map(([k,v],i)=>(
-                              <div key={i} style={{background:"#0E0D0A",borderRadius:8,padding:"7px 10px",border:"1px solid #1E1B16"}}>
-                                <div style={{color:"#4A4540",fontSize:9,marginBottom:2,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
-                                <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
               {/* Dividendes reçus */}
               {!isCrypto && (
                 <div style={{margin:"12px 20px 0"}}>
@@ -1552,6 +1475,85 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                   Supprimer cet actif
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* ═══ ONGLET TRANSACTIONS ═══ */}
+          {detailTab==="transactions" && (
+            <div style={{padding:"0 20px 8px"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:12,marginBottom:10}}>
+                <div>
+                  <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Transactions</div>
+                  <div style={{color:"#5A5550",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>{txs.length} opération{txs.length!==1?"s":""}</div>
+                </div>
+                <button onClick={()=>setTxModal(true)} style={{background:"#1A1A2A",border:"1px solid #2A2A4A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#A3B8C2",fontSize:12,fontWeight:600}}>
+                  <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
+                </button>
+              </div>
+              {/* Filtre par année */}
+              {txs.length > 0 && (() => {
+                const years = ["Toutes", ...Array.from(new Set(txs.map(tx => tx.date?.slice(0,4)).filter(Boolean))).sort((a,b)=>Number(b)-Number(a))];
+                return (
+                  <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap" as const}}>
+                    {years.map(y => (
+                      <button key={y} onClick={()=>setTxYearFilter(y)}
+                        style={{background:txYearFilter===y?"#C8A96E":"#111009",border:`1px solid ${txYearFilter===y?"#C8A96E":"#252015"}`,borderRadius:8,padding:"4px 10px",color:txYearFilter===y?"#111009":"#6A6560",fontSize:11,fontFamily:"'DM Mono',monospace",cursor:"pointer",fontWeight:txYearFilter===y?700:400}}>
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
+              {txs.length===0 ? (
+                <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
+                  <div style={{fontSize:22,marginBottom:5}}>📋</div>
+                  <div style={{color:"#4A4540",fontSize:12}}>Aucune transaction enregistrée</div>
+                </div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {[...txs]
+                    .sort((a,b) => (b.date+(b.time||"")) > (a.date+(a.time||"")) ? 1 : -1)
+                    .filter(tx => txYearFilter==="Toutes" || tx.date?.startsWith(txYearFilter))
+                    .map(tx => {
+                      const isBuy    = tx.type==="buy";
+                      const cVal     = tx.qty * asset.price;
+                      const costVal  = tx.qty * tx.priceUSD;
+                      const txPnl    = isBuy ? cVal - costVal : null;
+                      const txPnlPct = isBuy && costVal>0 ? ((cVal-costVal)/costVal*100) : null;
+                      const sym      = tx.currency==="EUR"?"€":tx.currency==="GBP"?"£":"$";
+                      return (
+                        <div key={tx.id} style={{background:"#111009",borderRadius:14,padding:"12px 14px",border:`1px solid ${isBuy?"#4ADE8018":"#F8717118"}`}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <div style={{width:28,height:28,borderRadius:8,background:isBuy?"#4ADE8020":"#F8717120",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>{isBuy?"▲":"▼"}</div>
+                              <div>
+                                <div style={{color:isBuy?"#4ADE80":"#F87171",fontSize:12,fontWeight:700}}>{isBuy?"Achat":"Vente"}</div>
+                                <div style={{color:"#4A4540",fontSize:10,fontFamily:"'DM Mono',monospace"}}>{tx.date}{tx.time?` · ${tx.time}`:""}</div>
+                              </div>
+                            </div>
+                            <div style={{display:"flex",gap:6}}>
+                              <button onClick={()=>setEditTx(tx)} style={{background:"#1A1714",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#C8A96E",fontSize:11,cursor:"pointer"}}>✏️</button>
+                              <button onClick={()=>onDeleteTransaction(asset.id, tx.id)} style={{background:"transparent",border:"1px solid #2A2520",borderRadius:8,padding:"4px 9px",color:"#5A5550",fontSize:11,cursor:"pointer"}}>✕</button>
+                            </div>
+                          </div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                            {[
+                              ["Quantité",        `${tx.qty} ${asset.symbol}`],
+                              ["Prix d'achat",    `${tx.priceOriginal?.toFixed(2)}${sym}`],
+                              ["Valeur actuelle", fmt(cVal, 2)],
+                              isBuy ? ["P&L", <span style={{color:txPnl>=0?"#4ADE80":"#F87171"}}>{txPnl>=0?"▲ ":"▼ "}{fmt(Math.abs(txPnl),2)} ({txPnlPct>=0?"+":""}{txPnlPct?.toFixed(2)}%)</span>] : ["Montant", fmt(costVal,2)],
+                            ].map(([k,v],i)=>(
+                              <div key={i} style={{background:"#0E0D0A",borderRadius:8,padding:"7px 10px",border:"1px solid #1E1B16"}}>
+                                <div style={{color:"#4A4540",fontSize:9,marginBottom:2,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5}}>{k}</div>
+                                <div style={{color:"#F0EDE8",fontWeight:600,fontSize:12,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
 
@@ -3139,7 +3141,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.3</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.4</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
