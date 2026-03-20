@@ -2088,8 +2088,14 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
           if (sid) {
             try {
               const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
-              const exists = sessions.find(s => s.session_id === sid);
+              // Dédupliquer par bank_name ET session_id
+              const exists = sessions.find(s => s.session_id === sid || s.bank_name === bankName);
               if (!exists) sessions.push({ session_id: sid, bank_name: bankName });
+              else if (exists.bank_name === bankName && exists.session_id !== sid) {
+                // Remplacer l'ancienne session par la nouvelle
+                const idx = sessions.indexOf(exists);
+                sessions[idx] = { session_id: sid, bank_name: bankName };
+              }
               saveSessionsSync(sessions);
             } catch {}
             sessionStorage.removeItem("eb_bank_name");
@@ -2263,7 +2269,9 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
 
   const selectedBankAccounts = selectedBank ? (accountsByBank[selectedBank] || []) : [];
   const selectedBankTxs = selectedBankAccounts
-    .flatMap(acc => (transactions[acc.uid]?.transactions?.booked || []))
+    .flatMap(acc => {
+      try { return transactions[acc.uid]?.transactions?.booked || []; } catch { return []; }
+    })
     .sort((a,b) => new Date(b.booking_date||0).getTime() - new Date(a.booking_date||0).getTime());
 
   return (
@@ -3325,7 +3333,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.7</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.8</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
