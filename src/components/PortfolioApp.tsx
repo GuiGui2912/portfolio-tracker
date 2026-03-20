@@ -579,14 +579,41 @@ function AddAssetModal({ onClose, onAdd }) {
     setErrors(e);
     return !Object.keys(e).length;
   };
-  const submit = () => {
+  const [checkingTicker, setCheckingTicker] = useState(false);
+  const [tickerWarning, setTickerWarning]   = useState("");
+
+  const submit = async () => {
     if (!validate()) return;
     const fxRate = form.buyCurrency === "EUR" ? (1/EUR_RATE) : form.buyCurrency === "GBP" ? 1.27 : 1;
     const qty = +form.buyQty;
     const unitPriceInCurrency = form.priceMode === "total" ? +form.buyPrice / qty : +form.buyPrice;
     const unitPriceUSD = unitPriceInCurrency * fxRate;
+
+    // Recherche automatique du bon suffixe si ticker sans suffixe
+    let finalSymbol = form.symbol.toUpperCase().trim();
+    if (!finalSymbol.includes(".") && assetType !== "crypto") {
+      setCheckingTicker(true);
+      const suffixes = [".DE", ".F", ".PA", ".AS", ".L", ".MI"];
+      try {
+        for (const sfx of suffixes) {
+          const res = await fetch(`/api/prices/stocks?symbols=${finalSymbol+sfx}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data[finalSymbol+sfx]?.price > 0) {
+              finalSymbol = finalSymbol + sfx;
+              break;
+            }
+          }
+        }
+      } catch {}
+      setCheckingTicker(false);
+      if (finalSymbol === form.symbol.toUpperCase().trim()) {
+        setTickerWarning(`Ticker "${finalSymbol}" introuvable. Tu pourras le corriger depuis la fiche actif.`);
+      }
+    }
+
     const newAsset = {
-      id: crypto.randomUUID(), symbol: form.symbol.toUpperCase().trim(), name: form.name.trim(),
+      id: crypto.randomUUID(), symbol: finalSymbol, name: form.name.trim() || finalSymbol,
       type: assetType, qty, price: Math.round(unitPriceUSD * 100) / 100, change: 0,
       color: form.color, dividends: [], histories: buildHistories(unitPriceUSD),
       purchase: { date:form.buyDate, time:form.buyTime, priceUSD:unitPriceUSD, priceOriginal:unitPriceInCurrency, currency:form.buyCurrency, priceMode:form.priceMode, qty },
@@ -738,8 +765,15 @@ function AddAssetModal({ onClose, onAdd }) {
             </div>
             <div style={{display:"flex",gap:10,marginTop:2}}>
               <button onClick={()=>setStep(0)} style={{flex:1,background:"#111009",border:"1px solid #252015",borderRadius:14,padding:"13px",color:"#8B8580",fontSize:13,fontWeight:600,cursor:"pointer"}}>← Retour</button>
-              <button onClick={submit} style={{flex:2,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:"pointer"}}>Ajouter l'actif</button>
+              <button onClick={submit} disabled={checkingTicker} style={{flex:2,background:checkingTicker?"#555":"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:14,padding:"13px",color:"#111009",fontSize:14,fontWeight:700,cursor:checkingTicker?"not-allowed":"pointer"}}>
+                {checkingTicker ? "⏳ Vérification…" : "Ajouter l'actif"}
+              </button>
             </div>
+            {tickerWarning && (
+              <div style={{marginTop:10,background:"#2A1500",border:"1px solid #C8A96E40",borderRadius:12,padding:"10px 12px",color:"#C8A96E",fontSize:11,lineHeight:1.4}}>
+                ⚠️ {tickerWarning}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1300,6 +1334,21 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
               <span style={{color:"#3A3530",fontSize:10,fontFamily:"'DM Mono',monospace"}}>sur {scale}</span>
             </div>
           </div>
+
+          {/* Avertissement prix introuvable */}
+          {(!asset.price || asset.price === 0) && (
+            <div style={{margin:"12px 20px 0",background:"#2A1500",border:"1px solid #C8A96E40",borderRadius:14,padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:18}}>⚠️</span>
+              <div style={{flex:1}}>
+                <div style={{color:"#C8A96E",fontSize:12,fontWeight:700,marginBottom:2}}>Prix introuvable</div>
+                <div style={{color:"#8A7550",fontSize:11,lineHeight:1.4}}>Le ticker <span style={{fontFamily:"'DM Mono',monospace",color:"#C8A96E"}}>{asset.symbol}</span> n'est pas reconnu. Essaie d'ajouter un suffixe de bourse.</div>
+                <div style={{color:"#5A4530",fontSize:10,marginTop:4,fontFamily:"'DM Mono',monospace"}}>.DE · .F · .PA · .AS · .L · .MI</div>
+              </div>
+              <button onClick={()=>setShowEditAsset(true)} style={{background:"#C8A96E20",border:"1px solid #C8A96E50",borderRadius:10,padding:"6px 10px",color:"#C8A96E",fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap" as const}}>
+                Modifier
+              </button>
+            </div>
+          )}
 
           {/* Graphique */}
           <div style={{margin:"14px 20px 0"}}>
@@ -3072,7 +3121,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.1</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
