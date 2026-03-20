@@ -1113,6 +1113,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const [showEditAsset, setShowEditAsset] = useState(false);
   const [editSymbol, setEditSymbol]   = useState(asset.symbol);
   const [editName, setEditName]       = useState(asset.name||"");
+  const [txYearFilter, setTxYearFilter] = useState("Toutes");
   const [scale, setScale]             = useState("1M");
   const [detailTab, setDetailTab]     = useState(marketMode ? "info" : "position");
   const sheetRef       = useRef(null);
@@ -1434,6 +1435,20 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                     <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
                   </button>
                 </div>
+                {/* Filtre par année */}
+                {txs.length > 0 && (() => {
+                  const years = ["Toutes", ...Array.from(new Set(txs.map(tx => tx.date?.slice(0,4)).filter(Boolean))).sort((a,b)=>Number(b)-Number(a))];
+                  return (
+                    <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap" as const}}>
+                      {years.map(y => (
+                        <button key={y} onClick={()=>setTxYearFilter(y)}
+                          style={{background:txYearFilter===y?"#C8A96E":"#111009",border:`1px solid ${txYearFilter===y?"#C8A96E":"#252015"}`,borderRadius:8,padding:"4px 10px",color:txYearFilter===y?"#111009":"#6A6560",fontSize:11,fontFamily:"'DM Mono',monospace",cursor:"pointer",fontWeight:txYearFilter===y?700:400}}>
+                          {y}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
                 {txs.length===0 ? (
                   <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
                     <div style={{fontSize:22,marginBottom:5}}>📋</div>
@@ -1441,7 +1456,10 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                   </div>
                 ) : (
                   <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {[...txs].reverse().map(tx=>{
+                    {[...txs]
+                      .sort((a,b) => (b.date+b.time||"") > (a.date+a.time||"") ? 1 : -1)
+                      .filter(tx => txYearFilter==="Toutes" || tx.date?.startsWith(txYearFilter))
+                      .map(tx=>{
                       const isBuy    = tx.type==="buy";
                       const cVal     = tx.qty * asset.price;
                       const costVal  = tx.qty * tx.priceUSD;
@@ -3121,7 +3139,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.1</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.2</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
