@@ -2320,7 +2320,7 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
           onSelect={(name)=>{setShowConnect(false);connectBank(name);}} spinStyle={spinStyle}/>
       )}
       {selectedBank && (
-        <div style={{position:"fixed",inset:0,background:"#0E0D0A",zIndex:2000,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+        <div style={{position:"fixed",inset:0,background:"#0E0D0A",zIndex:4000,display:"flex",flexDirection:"column",overflowY:"auto"}}>
           {/* Header */}
           <div style={{padding:"16px 20px 12px",borderBottom:"1px solid #1E1B16",display:"flex",alignItems:"center",gap:14,background:"#111009",position:"sticky",top:0,zIndex:10}}>
             <button onClick={()=>setSelectedBank(null)} style={{background:"#252015",border:"none",width:36,height:36,borderRadius:10,cursor:"pointer",color:"#8B8580",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>←</button>
@@ -3343,7 +3343,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.9</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.2.0</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
