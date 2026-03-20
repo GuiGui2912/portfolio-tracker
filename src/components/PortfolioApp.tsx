@@ -1293,7 +1293,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
   const handleDragMove = () => {};
   const handleDragEnd  = () => {};
 
-  const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["transactions","Transactions"],["info","Informations"]];
+  const tabs = marketMode ? [["info","Informations"]] : [["position","Ma position"],["transactions","Transactions"],["dividendes","Dividendes"],["info","Informations"]];
 
   return (
     <>
@@ -1425,41 +1425,19 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 </div>
               </div>
 
-              {/* Dividendes reçus */}
-              {!isCrypto && (
+              {/* Dividendes — lien vers onglet dédié */}
+              {!isCrypto && totalDivs > 0 && (
                 <div style={{margin:"12px 20px 0"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                    <div>
-                      <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Dividendes reçus</div>
-                      <div style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>Total : {fmt(totalDivs,2)}</div>
+                  <button onClick={()=>setDetailTab("dividendes")} style={{width:"100%",background:"#111009",border:"1px solid #1E1B16",borderRadius:14,padding:"12px 15px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:18}}>💰</span>
+                      <div style={{textAlign:"left"}}>
+                        <div style={{color:"#F0EDE8",fontSize:12,fontWeight:600}}>Dividendes reçus</div>
+                        <div style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",marginTop:1}}>{fmt(totalDivs,2)} total · {asset.dividends.length} versement{asset.dividends.length!==1?"s":""}</div>
+                      </div>
                     </div>
-                    <button onClick={()=>setDivModal(true)} style={{background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:11,padding:"7px 13px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#4ADE80",fontSize:12,fontWeight:600}}>
-                      <span style={{fontSize:15,lineHeight:1}}>+</span> Ajouter
-                    </button>
-                  </div>
-                  {asset.dividends.length===0 ? (
-                    <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
-                      <div style={{fontSize:22,marginBottom:5}}>🌱</div>
-                      <div style={{color:"#4A4540",fontSize:12}}>Aucun dividende enregistré</div>
-                    </div>
-                  ) : (
-                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                      {[...asset.dividends].reverse().map(d=>(
-                        <div key={d.id} style={{background:"#111009",borderRadius:12,padding:"11px 13px",border:"1px solid #1E1B16",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:10}}>
-                            <div style={{width:30,height:30,borderRadius:9,background:"#1A2A1A",border:"1px solid #2A3A2A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>💰</div>
-                            <div>
-                              <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(d.amount,2)}</div>
-                              <div style={{color:"#4A4540",fontSize:10,marginTop:1}}>{d.date}{d.perShare>0&&` · ${fmt(d.perShare,4)}/action`}</div>
-                            </div>
-                          </div>
-                          <div style={{background:"#4ADE8015",border:"1px solid #4ADE8030",borderRadius:8,padding:"3px 9px"}}>
-                            <span style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>{fmt(d.amount,2)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    <span style={{color:"#3A3530",fontSize:16}}>›</span>
+                  </button>
                 </div>
               )}
 
@@ -1555,6 +1533,155 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                     })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ═══ ONGLET DIVIDENDES ═══ */}
+          {detailTab==="dividendes" && (
+            <div style={{padding:"0 20px 8px"}}>
+              {isCrypto ? (
+                <div style={{background:"#111009",borderRadius:14,padding:"28px",textAlign:"center",border:"1px dashed #252015",marginTop:16}}>
+                  <div style={{fontSize:28,marginBottom:8}}>₿</div>
+                  <div style={{color:"#4A4540",fontSize:13}}>Les cryptomonnaies ne versent pas de dividendes.</div>
+                </div>
+              ) : (() => {
+                const divs = [...(asset.dividends||[])].sort((a,b)=>b.date>a.date?1:-1);
+                const totalRecu = divs.reduce((s,d)=>s+d.amount,0);
+
+                // Projection basée sur yield Yahoo Finance ET dernier dividende
+                const yieldPct = parseFloat(info.yield) || 0;
+                const currentValEur = totalQty * asset.price * EUR_RATE;
+                const projectionYield = yieldPct > 0 ? currentValEur * (yieldPct/100) : 0;
+
+                // Fréquence estimée depuis l'historique
+                let projectionHistory = 0;
+                if (divs.length >= 2) {
+                  const avgDiv = divs.slice(0,4).reduce((s,d)=>s+d.amount,0) / Math.min(divs.length,4);
+                  const firstDate = new Date(divs[divs.length-1].date);
+                  const lastDate  = new Date(divs[0].date);
+                  const monthsSpan = Math.max(1,(lastDate.getTime()-firstDate.getTime())/(1000*60*60*24*30));
+                  const freqPerYear = Math.round(divs.length / (monthsSpan/12));
+                  projectionHistory = avgDiv * Math.max(1, freqPerYear);
+                } else if (divs.length === 1) {
+                  projectionHistory = divs[0].amount * 4; // suppose trimestriel
+                }
+
+                // Combiné : moyenne des deux si disponibles
+                const projectionAnnuelle = projectionYield > 0 && projectionHistory > 0
+                  ? (projectionYield + projectionHistory) / 2
+                  : projectionYield || projectionHistory;
+
+                // Regrouper par année pour graphique
+                const byYear: Record<string,number> = {};
+                divs.forEach(d => {
+                  const y = d.date?.slice(0,4)||"?";
+                  byYear[y] = (byYear[y]||0) + d.amount;
+                });
+                const years = Object.keys(byYear).sort();
+                const maxVal = Math.max(...Object.values(byYear), projectionAnnuelle, 0.01);
+
+                // Prochain versement estimé
+                let nextDate = "—";
+                if (divs.length >= 2) {
+                  const gap = new Date(divs[0].date).getTime() - new Date(divs[1].date).getTime();
+                  const next = new Date(new Date(divs[0].date).getTime() + gap);
+                  nextDate = next.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"});
+                } else if (divs.length === 1) {
+                  const next = new Date(new Date(divs[0].date).getTime() + 90*24*60*60*1000);
+                  nextDate = next.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}) + " (estimé)";
+                }
+
+                return (
+                  <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:12}}>
+
+                    {/* Résumé haut */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div style={{background:"#111009",borderRadius:14,padding:"13px",border:"1px solid #1E1B16"}}>
+                        <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>Total reçu</div>
+                        <div style={{color:"#4ADE80",fontSize:18,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{fmt(totalRecu,2)}</div>
+                        <div style={{color:"#3A3530",fontSize:10,marginTop:2}}>{divs.length} versement{divs.length!==1?"s":""}</div>
+                      </div>
+                      <div style={{background:"#111009",borderRadius:14,padding:"13px",border:"1px solid #1E1B16"}}>
+                        <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.8,marginBottom:4}}>Projection annuelle</div>
+                        <div style={{color:"#C8A96E",fontSize:18,fontWeight:700,fontFamily:"'DM Mono',monospace"}}>{projectionAnnuelle>0?fmt(projectionAnnuelle,2):"—"}</div>
+                        <div style={{color:"#3A3530",fontSize:10,marginTop:2}}>{yieldPct>0?`yield ${yieldPct}%`:"basé sur historique"}</div>
+                      </div>
+                    </div>
+
+                    {/* Calendrier prochain versement */}
+                    <div style={{background:"#111009",borderRadius:14,padding:"13px 15px",border:"1px solid #1E1B16",display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{width:38,height:38,borderRadius:11,background:"#C8A96E15",border:"1px solid #C8A96E30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>📅</div>
+                      <div>
+                        <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.8,marginBottom:2}}>Prochain versement estimé</div>
+                        <div style={{color:"#F0EDE8",fontSize:13,fontWeight:600}}>{nextDate}</div>
+                        {projectionAnnuelle>0 && <div style={{color:"#5A5550",fontSize:10,marginTop:1}}>≈ {fmt(projectionAnnuelle/12,2)} / mois estimé</div>}
+                      </div>
+                    </div>
+
+                    {/* Graphique annuel */}
+                    {years.length > 0 && (
+                      <div style={{background:"#111009",borderRadius:14,padding:"14px",border:"1px solid #1E1B16"}}>
+                        <div style={{color:"#F0EDE8",fontSize:12,fontWeight:600,marginBottom:12}}>Dividendes par année</div>
+                        <div style={{display:"flex",alignItems:"flex-end",gap:6,height:80}}>
+                          {years.map(y => {
+                            const val = byYear[y];
+                            const h = Math.max(4, (val/maxVal)*72);
+                            return (
+                              <div key={y} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                                <div style={{fontSize:9,color:"#4ADE80",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmt(val,0)}</div>
+                                <div style={{width:"100%",height:h,background:"linear-gradient(180deg,#4ADE80,#22C55E)",borderRadius:"4px 4px 0 0",opacity:0.85}}/>
+                                <div style={{fontSize:9,color:"#4A4540",fontFamily:"'DM Mono',monospace"}}>{y}</div>
+                              </div>
+                            );
+                          })}
+                          {/* Barre projection année en cours */}
+                          {projectionAnnuelle > 0 && (
+                            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                              <div style={{fontSize:9,color:"#C8A96E",fontFamily:"'DM Mono',monospace",fontWeight:700}}>{fmt(projectionAnnuelle,0)}</div>
+                              <div style={{width:"100%",height:Math.max(4,(projectionAnnuelle/maxVal)*72),background:"linear-gradient(180deg,#C8A96E,#A08040)",borderRadius:"4px 4px 0 0",opacity:0.6,border:"1px dashed #C8A96E60"}}/>
+                              <div style={{fontSize:9,color:"#C8A96E",fontFamily:"'DM Mono',monospace"}}>est.</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Historique des versements */}
+                    <div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                        <div style={{color:"#F0EDE8",fontWeight:600,fontSize:13}}>Historique</div>
+                        <button onClick={()=>setDivModal(true)} style={{background:"#1A2A1A",border:"1px solid #2A4A2A",borderRadius:11,padding:"6px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:"#4ADE80",fontSize:12,fontWeight:600}}>
+                          <span style={{fontSize:14,lineHeight:1}}>+</span> Ajouter
+                        </button>
+                      </div>
+                      {divs.length===0 ? (
+                        <div style={{background:"#111009",borderRadius:14,padding:"18px",textAlign:"center",border:"1px dashed #252015"}}>
+                          <div style={{fontSize:22,marginBottom:5}}>🌱</div>
+                          <div style={{color:"#4A4540",fontSize:12}}>Aucun dividende enregistré</div>
+                        </div>
+                      ) : (
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                          {divs.map(d=>(
+                            <div key={d.id} style={{background:"#111009",borderRadius:12,padding:"11px 13px",border:"1px solid #1E1B16",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                                <div style={{width:30,height:30,borderRadius:9,background:"#1A2A1A",border:"1px solid #2A3A2A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>💰</div>
+                                <div>
+                                  <div style={{color:"#4ADE80",fontWeight:700,fontSize:13,fontFamily:"'DM Mono',monospace"}}>{fmt(d.amount,2)}</div>
+                                  <div style={{color:"#4A4540",fontSize:10,marginTop:1}}>{d.date}{d.perShare>0?` · ${fmt(d.perShare,4)}/action`:""}</div>
+                                </div>
+                              </div>
+                              <div style={{background:"#4ADE8015",border:"1px solid #4ADE8030",borderRadius:8,padding:"3px 9px"}}>
+                                <span style={{color:"#4ADE80",fontSize:11,fontFamily:"'DM Mono',monospace",fontWeight:600}}>+{fmt(d.amount,2)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -3149,7 +3276,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.5</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.6</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
