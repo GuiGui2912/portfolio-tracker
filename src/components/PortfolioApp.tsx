@@ -123,6 +123,7 @@ const generateHistory = (base, periods, volatility=0.015) => {
 };
 
 const TIME_SCALES = [
+  { label:"1J",  periods:1,   vol:0.008 },
   { label:"1S",  periods:7,   vol:0.012 },
   { label:"1M",  periods:30,  vol:0.015 },
   { label:"3M",  periods:90,  vol:0.018 },
@@ -1224,7 +1225,7 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
     if (n < 2) return [];
     const indices = [0, Math.floor(n/3), Math.floor(2*n/3), n-1];
     const now = new Date();
-    const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
+    const days = scale==="1J"?1:scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
     // Espacer uniformément sur plotW au lieu de suivre les index réels
     const totalSpan = PAD_LEFT + plotW;
     const positions = [PAD_LEFT + 22, PAD_LEFT + plotW*0.35, PAD_LEFT + plotW*0.67, PAD_LEFT + plotW - 12];
@@ -2329,7 +2330,13 @@ export default function App() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [detailAsset, setDetailAsset]   = useState(null);
   const [marketDetailAsset, setMarketDetailAsset] = useState(null);
-  const [listScale, setListScale]       = useState("1M");
+  const [listScale, setListScaleRaw]    = useState(() => {
+    try { return localStorage.getItem("pt-listScale") || "1M"; } catch { return "1M"; }
+  });
+  const setListScale = (s) => {
+    setListScaleRaw(s);
+    try { localStorage.setItem("pt-listScale", s); } catch {}
+  };
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [showSettings, setShowSettings]       = useState(false);
@@ -2864,6 +2871,7 @@ export default function App() {
             if (h && Object.keys(h).length > 0) return { id: a.id, histories: h };
           } else {
             const periodMap: Record<string,{range:string,interval:string}> = {
+              '1J':{range:'1d',interval:'5m'},
               '1S':{range:'7d',interval:'1d'}, '1M':{range:'1mo',interval:'1d'},
               '3M':{range:'3mo',interval:'1d'}, '6M':{range:'6mo',interval:'1wk'},
               '1A':{range:'1y',interval:'1wk'}, 'MAX':{range:'5y',interval:'1mo'},
@@ -3141,7 +3149,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.4</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.5</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -3221,7 +3229,7 @@ export default function App() {
                   const uid = `pg${scale}`;
                   const chartColor = pPos ? "#4ADE80" : "#F87171";
                   const showPct = false;
-                  const days = scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
+                  const days = scale==="1J"?1:scale==="1S"?7:scale==="1M"?30:scale==="3M"?90:scale==="6M"?180:scale==="1A"?365:730;
                   const now = new Date();
                   const tLabels = [0, Math.floor(pData.length/3), Math.floor(2*pData.length/3), pData.length-1].map((i,idx) => ({
                     label: i===pData.length-1 ? "Auj." : (() => { const d=new Date(now); d.setDate(d.getDate()-Math.round((pData.length-1-i)/(pData.length-1)*days)); return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); })(),
