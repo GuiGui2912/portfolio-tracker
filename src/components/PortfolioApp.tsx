@@ -1942,6 +1942,16 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
   const fmtEur = (v, dec=2) => Number(v||0).toLocaleString("fr-FR", {minimumFractionDigits:dec, maximumFractionDigits:dec}) + " €";
   const fmtDate = (d) => { try { return new Date(d).toLocaleDateString("fr-FR", {day:"2-digit", month:"short"}); } catch { return d||""; } };
 
+  const saveSessionsSync = async (sessions) => {
+    const val = JSON.stringify(sessions);
+    localStorage.setItem("eb_sessions", val);
+    if (userId) {
+      try {
+        await supabase.from("user_settings").upsert({ user_id: userId, key: "eb_sessions", value: val }, { onConflict: "user_id,key" });
+      } catch {}
+    }
+  };
+
   const [accounts, setAccounts]       = useState([]);
   const [balances, setBalances]       = useState({});
   const [transactions, setTransactions] = useState({});
@@ -1974,6 +1984,16 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
       let sessions = [];
       try { sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]"); } catch {}
 
+      // Si localStorage vide, essayer de restaurer depuis Supabase
+      if (sessions.length === 0 && userId) {
+        try {
+          const { data } = await supabase.from("user_settings").select("value").eq("user_id", userId).eq("key", "eb_sessions").single();
+          if (data?.value) {
+            sessions = JSON.parse(data.value);
+            localStorage.setItem("eb_sessions", data.value);
+          }
+        } catch {}
+      }
       if (sessions.length === 0) { setLoading(false); return; }
 
       const allAccounts = [];
@@ -2027,7 +2047,7 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
         const sessionsToRemove = sessionIds.filter(id => !validSessionIds.has(id));
         if (sessionsToRemove.length > 0) {
           const kept = sessions.filter(s => !sessionsToRemove.includes(s.session_id));
-          localStorage.setItem("eb_sessions", JSON.stringify(kept));
+          saveSessionsSync(kept);
         }
       }
       const validAccounts = allAccounts.filter(a => !invalidUids.has(a.uid));
@@ -2070,7 +2090,7 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
               const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
               const exists = sessions.find(s => s.session_id === sid);
               if (!exists) sessions.push({ session_id: sid, bank_name: bankName });
-              localStorage.setItem("eb_sessions", JSON.stringify(sessions));
+              saveSessionsSync(sessions);
             } catch {}
             sessionStorage.removeItem("eb_bank_name");
             setError("");
@@ -2135,7 +2155,7 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
           const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
           if (!sessions.find(s => s.session_id === sid)) {
             sessions.push({ session_id: sid, bank_name: bankName });
-            localStorage.setItem("eb_sessions", JSON.stringify(sessions));
+            saveSessionsSync(sessions);
           }
           localStorage.removeItem("eb_pending_code");
           localStorage.removeItem("eb_pending_ts");
@@ -2187,7 +2207,7 @@ function BankTab({ userId, connectTrigger = 0, onRequestConnect = null }) {
       const unique = [...new Set(bankSids)];
       const sessions = JSON.parse(localStorage.getItem("eb_sessions") || "[]");
       const filtered = sessions.filter(s => !unique.includes(s.session_id));
-      localStorage.setItem("eb_sessions", JSON.stringify(filtered));
+      saveSessionsSync(filtered);
     } catch {}
     setAccounts(prev => prev.filter(a => a.bank_name !== bankName));
     setSelectedBank(null);
