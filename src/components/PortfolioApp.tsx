@@ -1549,7 +1549,11 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 const totalRecu = divs.reduce((s,d)=>s+d.amount,0);
 
                 // Projection basée sur yield Yahoo Finance ET dernier dividende
-                const yieldPct = parseFloat(info.yield) || 0;
+                const yahooYield   = extra.dividendYield   || "—";
+                const yahooDivRate = extra.dividendRate    || "—";
+                const yahooExDiv   = extra.exDividendDate  || "—";
+                const yahooPayDate = extra.payDividendDate || "—";
+                const yieldPct = parseFloat(info.yield) || parseFloat(yahooYield) || 0;
                 const currentValEur = totalQty * asset.price * EUR_RATE;
                 const projectionYield = yieldPct > 0 ? currentValEur * (yieldPct/100) : 0;
 
@@ -1580,16 +1584,18 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                 const years = Object.keys(byYear).sort();
                 const maxVal = Math.max(...Object.values(byYear), projectionAnnuelle, 0.01);
 
-                // Prochain versement estimé
-                let nextDate = "—";
-                if (divs.length >= 2) {
-                  const gap = new Date(divs[0].date).getTime() - new Date(divs[1].date).getTime();
-                  const next = new Date(new Date(divs[0].date).getTime() + gap);
-                  nextDate = next.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"});
-                } else if (divs.length === 1) {
-                  const next = new Date(new Date(divs[0].date).getTime() + 90*24*60*60*1000);
-                  nextDate = next.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}) + " (estimé)";
-                }
+                // Prochain versement : Yahoo en priorité sinon estimé
+                const nextDate = yahooPayDate !== "—" ? yahooPayDate
+                  : divs.length >= 2 ? (() => {
+                      const gap = new Date(divs[0].date).getTime() - new Date(divs[1].date).getTime();
+                      const next = new Date(new Date(divs[0].date).getTime() + gap);
+                      return next.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}) + " (estimé)";
+                    })()
+                  : divs.length === 1 ? (() => {
+                      const next = new Date(new Date(divs[0].date).getTime() + 90*24*60*60*1000);
+                      return next.toLocaleDateString("fr-FR",{day:"2-digit",month:"short",year:"numeric"}) + " (estimé)";
+                    })()
+                  : "—";
 
                 return (
                   <div style={{display:"flex",flexDirection:"column",gap:14,marginTop:12}}>
@@ -1607,6 +1613,29 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                         <div style={{color:"#3A3530",fontSize:10,marginTop:2}}>{yieldPct>0?`yield ${yieldPct}%`:"basé sur historique"}</div>
                       </div>
                     </div>
+
+                    {/* Données Yahoo Finance */}
+                    {(yahooDivRate!=="—" || yahooYield!=="—" || yahooExDiv!=="—") && (
+                      <div style={{background:"#111009",borderRadius:14,padding:"13px 15px",border:"1px solid #1E1B16"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
+                          <span style={{fontSize:12}}>📊</span>
+                          <span style={{color:"#6A6560",fontSize:10,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.8}}>Données Yahoo Finance</span>
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                          {[
+                            ["Div. annuel",  yahooDivRate],
+                            ["Rendement",    yahooYield],
+                            ["Ex-dividende", yahooExDiv],
+                            ["Paiement",     yahooPayDate],
+                          ].map(([k,v])=>(
+                            <div key={k}>
+                              <div style={{color:"#4A4540",fontSize:9,fontFamily:"'DM Mono',monospace",textTransform:"uppercase",letterSpacing:0.5,marginBottom:2}}>{k}</div>
+                              <div style={{color:v==="—"?"#3A3530":"#F0EDE8",fontSize:12,fontWeight:600,fontFamily:"'DM Mono',monospace"}}>{v}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Calendrier prochain versement */}
                     <div style={{background:"#111009",borderRadius:14,padding:"13px 15px",border:"1px solid #1E1B16",display:"flex",alignItems:"center",gap:12}}>
@@ -3276,7 +3305,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.6</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.7</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
