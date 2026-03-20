@@ -970,17 +970,17 @@ function AddTransactionModal({ asset, fmt, onClose, onAdd }) {
               ))}
             </div>
           </div>
-          {/* Quantité + Prix */}
+          {/* Prix + Quantité */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <div>
-              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Quantité</div>
-              <input type="number" value={form.qty} onChange={e=>set("qty",e.target.value)} placeholder="ex: 0.5" style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.qty?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-              {errors.qty&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.qty}</div>}
-            </div>
             <div>
               <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{form.priceMode==="unit"?`Prix unitaire (${form.currency})`:`Montant total (${form.currency})`}</div>
               <input type="number" value={form.price} onChange={e=>set("price",e.target.value)} placeholder={form.priceMode==="unit"?"ex: 189.30":"ex: 1893.00"} style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.price?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
               {errors.price&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.price}</div>}
+            </div>
+            <div>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Quantité</div>
+              <input type="number" value={form.qty} onChange={e=>set("qty",e.target.value)} placeholder="ex: 0.5" style={{width:"100%",background:"#0E0D0A",border:`1px solid ${errors.qty?"#F87171":"#252015"}`,borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+              {errors.qty&&<div style={{color:"#F87171",fontSize:10,marginTop:3}}>{errors.qty}</div>}
             </div>
           </div>
           {/* Récap total */}
@@ -1080,15 +1080,15 @@ function EditTransactionModal({ tx, asset, fmt, onClose, onSave }) {
               ))}
             </div>
           </div>
-          {/* Qty + Prix */}
+          {/* Prix + Qty */}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-            <div>
-              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Quantité</div>
-              <input type="number" value={form.qty} onChange={e=>set("qty",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
-            </div>
             <div>
               <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>{form.priceMode==="unit"?`Prix unit. (${form.currency})`:`Total (${form.currency})`}</div>
               <input type="number" value={form.price} onChange={e=>set("price",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            </div>
+            <div>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Quantité</div>
+              <input type="number" value={form.qty} onChange={e=>set("qty",e.target.value)} style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
             </div>
           </div>
           {+form.qty>0 && +form.price>0 && (
@@ -3139,7 +3139,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.3</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
