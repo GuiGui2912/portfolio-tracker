@@ -1485,47 +1485,6 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
                   Supprimer cet actif
                 </button>
               </div>
-
-              {/* Modal modifier actif */}
-              {showEditAsset && (
-                <div style={{position:"fixed",inset:0,zIndex:5000,background:"#000c",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",touchAction:"none"}} onClick={()=>setShowEditAsset(false)}>
-                  <div style={{width:"100%",maxWidth:380,background:"#1A1714",borderRadius:24,padding:"24px 22px 28px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
-                    <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:6}}>✏️ Modifier l'actif</div>
-                    <div style={{color:"#5A5550",fontSize:12,marginBottom:20}}>Les transactions existantes sont conservées.</div>
-
-                    <div style={{marginBottom:14}}>
-                      <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Ticker / Symbole</div>
-                      <input
-                        value={editSymbol}
-                        onChange={e=>setEditSymbol(e.target.value.toUpperCase().trim())}
-                        placeholder="ex: TOTB.F, TTE.PA"
-                        style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none",boxSizing:"border-box"}}
-                      />
-                    </div>
-
-                    <div style={{marginBottom:20}}>
-                      <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Nom complet</div>
-                      <input
-                        value={editName}
-                        onChange={e=>setEditName(e.target.value)}
-                        placeholder="ex: TotalEnergies"
-                        style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box"}}
-                      />
-                    </div>
-
-                    <div style={{display:"flex",gap:10}}>
-                      <button onClick={()=>setShowEditAsset(false)} style={{flex:1,background:"#252015",border:"none",borderRadius:12,padding:"12px",color:"#8A8580",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                        Annuler
-                      </button>
-                      <button onClick={()=>{
-                        if (editSymbol) { onEditAsset(asset.id, editSymbol, editName); setShowEditAsset(false); }
-                      }} style={{flex:2,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:12,padding:"12px",color:"#111009",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                        Enregistrer
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -1720,6 +1679,29 @@ function AssetDetailSheet({ asset, fmt, onClose, onAddDividend, onDelete, onAddT
       {divModal && <AddDividendModal asset={asset} onClose={()=>setDivModal(false)} onAdd={(div)=>{onAddDividend(asset.id,div);setDivModal(false);}}/>}
       {txModal  && <AddTransactionModal asset={asset} fmt={fmt} onClose={()=>setTxModal(false)} onAdd={(tx)=>{onAddTransaction(asset.id,tx);setTxModal(false);}}/>}
       {editTx   && <EditTransactionModal tx={editTx} asset={asset} fmt={fmt} onClose={()=>setEditTx(null)} onSave={(updated)=>{onEditTransaction(asset.id,updated);setEditTx(null);}}/>}
+      {showEditAsset && (
+        <div style={{position:"fixed",inset:0,zIndex:5000,background:"#000c",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",touchAction:"none"}} onClick={()=>setShowEditAsset(false)}>
+          <div style={{width:"100%",maxWidth:380,background:"#1A1714",borderRadius:24,padding:"24px 22px 28px",border:"1px solid #2A2520"}} onClick={e=>e.stopPropagation()}>
+            <div style={{color:"#F0EDE8",fontSize:16,fontWeight:700,marginBottom:6}}>✏️ Modifier l'actif</div>
+            <div style={{color:"#5A5550",fontSize:12,marginBottom:20}}>Les transactions existantes sont conservées.</div>
+            <div style={{marginBottom:14}}>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Ticker / Symbole</div>
+              <input value={editSymbol} onChange={e=>setEditSymbol(e.target.value.toUpperCase().trim())} placeholder="ex: TOTB.F, TTE.PA"
+                style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Mono',monospace",outline:"none",boxSizing:"border-box" as const}}/>
+            </div>
+            <div style={{marginBottom:20}}>
+              <div style={{color:"#6A6560",fontSize:10,marginBottom:5,fontFamily:"'DM Mono',monospace",letterSpacing:0.8,textTransform:"uppercase"}}>Nom complet</div>
+              <input value={editName} onChange={e=>setEditName(e.target.value)} placeholder="ex: TotalEnergies"
+                style={{width:"100%",background:"#0E0D0A",border:"1px solid #252015",borderRadius:12,padding:"11px 13px",color:"#F0EDE8",fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box" as const}}/>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>setShowEditAsset(false)} style={{flex:1,background:"#252015",border:"none",borderRadius:12,padding:"12px",color:"#8A8580",fontSize:13,fontWeight:600,cursor:"pointer"}}>Annuler</button>
+              <button onClick={()=>{ if(editSymbol){onEditAsset(asset.id,editSymbol,editName);setShowEditAsset(false);}}}
+                style={{flex:2,background:"linear-gradient(135deg,#C8A96E,#A08040)",border:"none",borderRadius:12,padding:"12px",color:"#111009",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -3090,7 +3072,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.0.9</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.1.0</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
