@@ -3343,7 +3343,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.2.0</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.2.1</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -3589,11 +3589,22 @@ export default function App() {
                 <div ref={assetsListRef} onTouchMove={handleAssetTouchMove} onTouchEnd={handleAssetTouchEnd}>
                 {assets.map((a,idx)=>{
                   const scaleData=a.histories?.[listScale]||[a.price];
-                  // Calculer la variation selon la période sélectionnée
-                  const scalePct = scaleData.length > 1
+                  // Vrai P&L basé sur le prix d'achat
+                  const txs = a.transactions||[];
+                  const buyTxs = txs.filter(t=>t.type==="buy");
+                  const totalQtyA = txs.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty,0);
+                  const totalCostA = buyTxs.reduce((s,t)=>s+t.qty*t.priceUSD,0);
+                  const avgBuyA = buyTxs.length>0&&totalQtyA>0?totalCostA/totalQtyA:(a.purchase?.priceUSD??a.price);
+                  const realPnlPct = avgBuyA>0?((a.price-avgBuyA)/avgBuyA)*100:0;
+                  const realPnlAmt = (a.price-avgBuyA)*totalQtyA;
+                  // Variation de période depuis l'historique
+                  const histPct = scaleData.length > 1
                     ? ((scaleData[scaleData.length-1] - scaleData[0]) / scaleData[0]) * 100
                     : a.change;
-                  const scaleAmt = a.qty * a.price * (scalePct / 100);
+                  const histAmt = a.qty * a.price * (histPct / 100);
+                  // MAX = vrai P&L, autres périodes = variation historique
+                  const scalePct = listScale==="MAX" ? realPnlPct : histPct;
+                  const scaleAmt = listScale==="MAX" ? realPnlAmt : histAmt;
                   const pos=scalePct>=0; const iconSize=44,chartW=68,chartH=28,fontSize=15;
                   return (
                     <div key={a.id}>
@@ -3667,8 +3678,12 @@ export default function App() {
                   </div>
                   {cryptoAssets.map(a=>{
                     const scaleData=a.histories?.[listScale]||[a.price];
-                    const scalePct = scaleData.length > 1 ? ((scaleData[scaleData.length-1] - scaleData[0]) / scaleData[0]) * 100 : a.change;
-                    const scaleAmt = a.qty * a.price * (scalePct / 100);
+                    const txsA=a.transactions||[]; const buyTxsA=txsA.filter(t=>t.type==="buy");
+                    const totalQtyB=txsA.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty,0);
+                    const avgBuyB=buyTxsA.length>0&&totalQtyB>0?buyTxsA.reduce((s,t)=>s+t.qty*t.priceUSD,0)/totalQtyB:(a.purchase?.priceUSD??a.price);
+                    const histPctB=scaleData.length>1?((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0])*100:a.change;
+                    const scalePct=listScale==="MAX"?(avgBuyB>0?((a.price-avgBuyB)/avgBuyB)*100:0):histPctB;
+                    const scaleAmt=listScale==="MAX"?(a.price-avgBuyB)*totalQtyB:a.qty*a.price*(histPctB/100);
                     const pos=scalePct>=0; const iconSize=40,chartW=60,chartH=24,fontSize=14;
                     return (
                       <div key={a.id} className="asset-row" onClick={()=>setDetailAsset(a)} style={{padding:"12px 20px",borderBottom:"1px solid #191612"}}>
@@ -3700,8 +3715,12 @@ export default function App() {
                   </div>
                   {stockAssets.map(a=>{
                     const scaleData=a.histories?.[listScale]||[a.price];
-                    const scalePct = scaleData.length > 1 ? ((scaleData[scaleData.length-1] - scaleData[0]) / scaleData[0]) * 100 : a.change;
-                    const scaleAmt = a.qty * a.price * (scalePct / 100);
+                    const txsC=a.transactions||[]; const buyTxsC=txsC.filter(t=>t.type==="buy");
+                    const totalQtyC=txsC.reduce((s,t)=>t.type==="buy"?s+t.qty:s-t.qty,0);
+                    const avgBuyC=buyTxsC.length>0&&totalQtyC>0?buyTxsC.reduce((s,t)=>s+t.qty*t.priceUSD,0)/totalQtyC:(a.purchase?.priceUSD??a.price);
+                    const histPctC=scaleData.length>1?((scaleData[scaleData.length-1]-scaleData[0])/scaleData[0])*100:a.change;
+                    const scalePct=listScale==="MAX"?(avgBuyC>0?((a.price-avgBuyC)/avgBuyC)*100:0):histPctC;
+                    const scaleAmt=listScale==="MAX"?(a.price-avgBuyC)*totalQtyC:a.qty*a.price*(histPctC/100);
                     const pos=scalePct>=0; const iconSize=40,chartW=60,chartH=24,fontSize=14;
                     return (
                       <div key={a.id} className="asset-row" onClick={()=>setDetailAsset(a)} style={{padding:"12px 20px",borderBottom:"1px solid #191612"}}>
