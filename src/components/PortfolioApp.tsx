@@ -3362,7 +3362,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.2.2</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.2.3</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
@@ -3663,9 +3663,9 @@ export default function App() {
                         <div style={{width:iconSize,height:iconSize,borderRadius:14,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(iconSize*0.3),fontWeight:800,color:a.color,border:`1px solid ${a.color}28`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                            <div>
+                            <div style={{minWidth:0,flex:1,marginRight:8}}>
                               <div style={{display:"flex",alignItems:"center",gap:5}}>
-                                <span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Sans',sans-serif"}}>{a.name||a.symbol}</span>
+                                <span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"130px",display:"inline-block"}}>{a.name||a.symbol}</span>
                                 {a.type==="etf"&&<span style={{background:"#00A4EF20",color:"#00A4EF",fontSize:8,fontWeight:700,borderRadius:4,padding:"1px 5px",fontFamily:"'DM Mono',monospace"}}>ETF</span>}
                                 {a.type!=="crypto"&&a.dividends.length>0&&<span style={{fontSize:10}}>💰</span>}
                               </div>
@@ -3710,7 +3710,7 @@ export default function App() {
                           <div style={{width:iconSize,height:iconSize,borderRadius:14,background:`${a.color}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(iconSize*0.3),fontWeight:800,color:a.color,border:`1px solid ${a.color}28`,flexShrink:0,fontFamily:"'DM Mono',monospace"}}>{a.symbol.slice(0,2)}</div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                              <div><span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Sans',sans-serif"}}>{a.name||a.symbol}</span><div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div></div>
+                              <div><span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"130px",display:"inline-block"}}>{a.name||a.symbol}</span><div style={{color:"#4A4540",fontSize:10,marginTop:2}}>{a.qty} {a.symbol}</div></div>
                               <div style={{textAlign:"right",marginRight:8}}>
                                 <div style={{fontFamily:"'DM Mono',monospace",color:"#F0EDE8",fontWeight:600,fontSize:Math.round(fontSize*0.93)}}>{fmt(a.qty*a.price,0)}</div>
                                 <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end",marginTop:2}}>
@@ -3749,7 +3749,7 @@ export default function App() {
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                               <div>
                                 <div style={{display:"flex",alignItems:"center",gap:5}}>
-                                  <span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Sans',sans-serif"}}>{a.name||a.symbol}</span>
+                                  <span style={{color:"#F0EDE8",fontWeight:600,fontSize,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"130px",display:"inline-block"}}>{a.name||a.symbol}</span>
                                   {a.type==="etf"&&<span style={{background:"#00A4EF20",color:"#00A4EF",fontSize:8,fontWeight:700,borderRadius:4,padding:"1px 5px",fontFamily:"'DM Mono',monospace"}}>ETF</span>}
                                   {a.dividends.length>0&&<span style={{fontSize:10}}>💰</span>}
                                 </div>
