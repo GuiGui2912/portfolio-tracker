@@ -2655,6 +2655,8 @@ export default function App() {
       const dragged = arr.splice(assetDragFrom.current, 1)[0];
       arr.splice(assetDragTo.current, 0, dragged);
       setAssets(arr);
+      // Sauvegarder l'ordre dans localStorage
+      try { localStorage.setItem("pt-asset-order", JSON.stringify(arr.map(a=>a.id))); } catch {}
     }
     assetDragActive.current = false;
     assetDragFrom.current = null;
@@ -2756,6 +2758,23 @@ export default function App() {
     setMktAddLoading(false);
   };
 
+  // Restaure l'ordre des actifs depuis localStorage
+  const applyOrder = (arr) => {
+    try {
+      const order = JSON.parse(localStorage.getItem("pt-asset-order") || "[]");
+      if (!order.length) return arr;
+      const indexed = arr.slice().sort((a,b) => {
+        const ia = order.indexOf(a.id);
+        const ib = order.indexOf(b.id);
+        if (ia === -1 && ib === -1) return 0;
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      });
+      return indexed;
+    } catch { return arr; }
+  };
+
   const loadUserData = async (uid) => {
     const [profileRes, portfoliosRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', uid).single(),
@@ -2852,7 +2871,7 @@ export default function App() {
           purchase: row.purchase_data ?? null,
           transactions: row.purchase_data?.transactions ?? [],
         }));
-        setAssets(loaded);
+        setAssets(applyOrder(loaded));
         setChartAsset(loaded[0]);
       }
     } catch(e) { console.error("switchPortfolio:", e); }
@@ -2888,7 +2907,7 @@ export default function App() {
                     purchase:row.purchase_data??null,
                     transactions:row.purchase_data?.transactions??[],
                   }));
-                  setAssets(loaded); setChartAsset(loaded[0]);
+                  setAssets(applyOrder(loaded)); setChartAsset(applyOrder(loaded)[0]);
                 }
                 setDbLoading(false);
                 return;
@@ -2919,7 +2938,7 @@ export default function App() {
             purchase:row.purchase_data??null,
             transactions:row.purchase_data?.transactions??[],
           }));
-          setAssets(loaded); setChartAsset(loaded[0]);
+          setAssets(applyOrder(loaded)); setChartAsset(applyOrder(loaded)[0]);
         }
       } catch(e) { console.error("init:", e); }
       setDbLoading(false);
@@ -2954,7 +2973,7 @@ export default function App() {
         purchase:row.purchase_data??null,
         transactions:row.purchase_data?.transactions??[],
       }));
-      setAssets(loaded); setChartAsset(loaded[0]);
+      setAssets(applyOrder(loaded)); setChartAsset(applyOrder(loaded)[0]);
     }
     setDbLoading(false); setAuthLoading(false);
     if (!rememberMe || sessionDuration !== "always") {
@@ -3343,7 +3362,7 @@ export default function App() {
               </div>
               <div style={{display:"flex",flexDirection:"column"}}>
                 <div style={{color:"#F0EDE8",fontSize:21,fontWeight:700,letterSpacing:-0.3}}>{portfolioName}</div>
-                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.2.1</div>
+                <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>v2.2.2</div>
                 {lastRefresh && <div style={{color:"#3A3530",fontSize:9,fontFamily:"'DM Mono',monospace",letterSpacing:0.5}}>↻ {lastRefresh}</div>}
               </div>
             </div>
